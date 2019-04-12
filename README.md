@@ -33,7 +33,7 @@ The `AwsSequence` class provides a standardized way of chaining a set of Lambda 
     const sequence = LambdaSequence.add('fn1').add('fn2').errorHandler('errFn');
     ```
 
-## Chaining Execution
+### Chaining Execution
 
 The current function must call the `invoke` function from the **aws-log** library and provide it with the parameters which come from this library's `next()` function:
 
@@ -60,3 +60,7 @@ export async function handler(event, context, cb) {
   // ... do stuff
 }
 ```
+
+## `FanOut` class
+
+not yet implemented
