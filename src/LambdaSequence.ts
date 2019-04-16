@@ -120,7 +120,6 @@ export function handler(event, context, callback) {
       this.nextFn.arn,
       { ...this.nextFn.params, ...additionalParams, _sequence: this.steps } as Sequence<T>
     ];
-    console.log(this.nextFn.arn);
 
     if (this.activeFn) {
       const results = { ...tuple[1] };
@@ -132,7 +131,6 @@ export function handler(event, context, callback) {
     this.dynamicProperties.map(p => {
       tuple[1][p.key] = tuple[1][p.from];
     });
-    console.log(tuple[1]._sequence);
 
     return tuple;
   }
@@ -157,8 +155,10 @@ export function handler(event, context, callback) {
     }
     // looks like a valid sequence
     this._steps = request._sequence;
-
+    // active function's output is sent into next's params
     const transformedRequest = { ...request, ...this.activeFn.params };
+    // remove the sequence data from the request as this payload will be
+    // available in the return LambdaSequence object
     delete transformedRequest._sequence;
     return { request: transformedRequest, apiGateway, sequence: this };
   }
@@ -212,12 +212,42 @@ export function handler(event, context, callback) {
   public get dynamicProperties(): Array<{ key: string; from: string }> {
     return Object.keys(this.activeFn.params).reduce((prev, key) => {
       const currentValue = this.activeFn.params[key];
-      console.log(currentValue);
-
       const valueIsDynamic = String(currentValue).slice(0, 1) === ":";
-      console.log(valueIsDynamic);
 
       return valueIsDynamic ? prev.concat({ key, from: currentValue.slice(1) }) : prev;
     }, []);
+  }
+
+  public toString() {
+    return JSON.stringify(this.toObject(), null, 2);
+  }
+  public toObject() {
+    const obj: IDictionary = {
+      isASequence: this._isASequence
+    };
+    if (this._isASequence) {
+      obj.totalSteps = this.steps.length;
+      obj.completedSteps = this.completed.length;
+      if (this.activeFn) {
+        obj.activeFn = { arn: this.activeFn.arn, params: this.activeFn.params };
+      }
+      if (this.completed) {
+        obj.completed = this.completed.map(i => i.arn);
+      }
+      if (this.remaining) {
+        obj.remaining = this.remaining.map(i => i.arn);
+      }
+      obj.results = this.completed.reduce(
+        (acc, curr) => {
+          acc[curr.arn] = curr.results;
+          return acc;
+        },
+        {} as IDictionary
+      );
+    }
+    return obj;
+  }
+  public toJSON() {
+    return this.toObject();
   }
 }

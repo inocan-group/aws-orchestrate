@@ -108,11 +108,8 @@ describe("Lambda Sequence => ", () => {
   });
 
   it("calling next() returns invoke() params", async () => {
-    const sequence = LambdaSequence.add("fn1", { a: 1, b: 2 })
-      .add("fn2", { c: 3 })
-      .add("fn3", { d: 4 });
-
-    const nxt = sequence.next();
+    const s = LambdaSequence.add("fn1", { foo: 1, bar: 2 }).add("fn2", { width: 50 });
+    const nxt = s.next();
     expect(nxt).to.be.an("array");
   });
 
@@ -144,5 +141,17 @@ describe("Lambda Sequence => ", () => {
 
     expect(req2).haveOwnProperty("data");
     expect(req2).haveOwnProperty("input");
+  });
+  it("Sequence converted to a string returns meaningful structure", async () => {
+    const sequence = LambdaSequence.add("fn1", { a: 1, b: 2, c: ":foobar" })
+      .add("fn2", { c: 3 })
+      .add("fn3", { d: 4 });
+    const [_, args] = sequence.next({ foobart: "bar" });
+    const { request: r2, sequence: s2 } = LambdaSequence.from(args);
+    console.log(r2);
+
+    console.log("b" + sequence);
+    console.log(JSON.stringify(s2));
+    console.log(s2);
   });
 });
