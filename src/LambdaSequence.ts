@@ -116,7 +116,11 @@ export function handler(event, context, callback) {
       );
     }
     if (logger) {
-      logger.info(`the next() function is ${this.nextFn.arn}`, { nextFn: this.nextFn });
+      logger.info(`the next() function is ${this.nextFn.arn}`, {
+        nextFn: this.nextFn,
+        completed: this.completed,
+        remaining: this.remaining
+      });
     }
 
     const tuple: ILambdaSequenceNextTuple<T> = [

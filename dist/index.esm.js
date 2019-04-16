@@ -59,7 +59,9 @@ function () {
 
       if (logger) {
         logger.info("the next() function is ".concat(this.nextFn.arn), {
-          nextFn: this.nextFn
+          nextFn: this.nextFn,
+          completed: this.completed,
+          remaining: this.remaining
         });
       }
 
