@@ -52,7 +52,8 @@ export function handler(event, context, callback) {
 ```
    */
   public static from<T extends IDictionary = IDictionary>(
-    event: T | IAWSLambdaProxyIntegrationRequest
+    event: T | IAWSLambdaProxyIntegrationRequest,
+    logger?: import("aws-log").ILoggerApi
   ) {
     const obj = new LambdaSequence();
 

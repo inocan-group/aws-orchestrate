@@ -2,7 +2,7 @@ import { IAWSLambdaProxyIntegrationRequest, IDictionary } from "common-types";
 import { ILambdaFunctionType, ILambdaSequenceStep, ILambdaSequenceNextTuple, ILambaSequenceFromResponse } from "./@types";
 export declare class LambdaSequence {
     static add<T extends IDictionary = IDictionary>(arn: string, params?: Partial<T>, type?: ILambdaFunctionType): LambdaSequence;
-    static from<T extends IDictionary = IDictionary>(event: T | IAWSLambdaProxyIntegrationRequest): ILambaSequenceFromResponse<T>;
+    static from<T extends IDictionary = IDictionary>(event: T | IAWSLambdaProxyIntegrationRequest, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
     static notASequence(): LambdaSequence;
     private _steps;
     private _isASequence;

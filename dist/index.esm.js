@@ -241,7 +241,7 @@ function () {
     }
   }, {
     key: "from",
-    value: function from(event) {
+    value: function from(event, logger) {
       var obj = new LambdaSequence();
       return obj.from(event);
     }
