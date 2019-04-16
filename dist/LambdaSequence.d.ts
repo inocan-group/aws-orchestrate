@@ -7,8 +7,8 @@ export declare class LambdaSequence {
     private _steps;
     private _isASequence;
     add<T extends IDictionary = IDictionary>(arn: string, params?: Partial<T>, type?: ILambdaFunctionType): this;
-    next<T extends IDictionary = IDictionary>(additionalParams?: Partial<T>): ILambdaSequenceNextTuple<T>;
-    from<T extends IDictionary = IDictionary>(request: T | IAWSLambdaProxyIntegrationRequest): ILambaSequenceFromResponse<T>;
+    next<T extends IDictionary = IDictionary>(additionalParams?: Partial<T>, logger?: import("aws-log").ILoggerApi): ILambdaSequenceNextTuple<T>;
+    from<T extends IDictionary = IDictionary>(request: T | IAWSLambdaProxyIntegrationRequest, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
     isSequence(): boolean;
     isDone(): boolean;
     readonly remaining: ILambdaSequenceStep<IDictionary<any>>[];
@@ -21,5 +21,7 @@ export declare class LambdaSequence {
         key: string;
         from: string;
     }>;
-    toString(): void;
+    toString(): string;
+    toObject(): IDictionary<any>;
+    toJSON(): IDictionary<any>;
 }

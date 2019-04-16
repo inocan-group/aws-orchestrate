@@ -106,7 +106,8 @@ export function handler(event, context, callback) {
    * additional values set here as the optional `additionalParams` value.
    */
   public next<T extends IDictionary = IDictionary>(
-    additionalParams: Partial<T> = {}
+    additionalParams: Partial<T> = {},
+    logger?: import("aws-log").ILoggerApi
   ): ILambdaSequenceNextTuple<T> {
     if (this.isDone()) {
       throw createError(
@@ -114,7 +115,13 @@ export function handler(event, context, callback) {
         `Attempt to call next() on a sequence which is already completed. Always check sequence's state with isDone() before running next().`
       );
     }
-    console.log(this.nextFn.arn);
+    if (logger) {
+      logger.info(`the next() function is ${this.nextFn.arn}`, {
+        nextFn: this.nextFn,
+        completed: this.completed,
+        remaining: this.remaining
+      });
+    }
 
     const tuple: ILambdaSequenceNextTuple<T> = [
       this.nextFn.arn,
@@ -141,7 +148,8 @@ export function handler(event, context, callback) {
    * comments are in static method
    */
   public from<T extends IDictionary = IDictionary>(
-    request: T | IAWSLambdaProxyIntegrationRequest
+    request: T | IAWSLambdaProxyIntegrationRequest,
+    logger?: import("aws-log").ILoggerApi
   ): ILambaSequenceFromResponse<T> {
     let apiGateway: IAWSLambdaProxyIntegrationRequest | undefined;
     // separate possible LambdaProxy request from main request
@@ -151,6 +159,9 @@ export function handler(event, context, callback) {
     }
     // there is no sequence property on the request
     if (!request._sequence) {
+      if (logger) {
+        logger.info("This execution is not part of a sequence");
+      }
       return { request, apiGateway, sequence: LambdaSequence.notASequence() };
     }
     // looks like a valid sequence
@@ -160,6 +171,9 @@ export function handler(event, context, callback) {
     // remove the sequence data from the request as this payload will be
     // available in the return LambdaSequence object
     delete transformedRequest._sequence;
+    if (logger) {
+      logger.info("This execution is part of a sequence", { sequence: String(this) });
+    }
     return { request: transformedRequest, apiGateway, sequence: this };
   }
 

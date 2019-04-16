@@ -55,16 +55,23 @@ function () {
     key: "next",
     value: function next() {
       var additionalParams = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var logger = arguments.length > 1 ? arguments[1] : undefined;
 
       if (this.isDone()) {
         throw commonTypes.createError("aws-orchestration/sequence-done", "Attempt to call next() on a sequence which is already completed. Always check sequence's state with isDone() before running next().");
       }
 
-      console.log(this.nextFn.arn);
+      if (logger) {
+        logger.info("the next() function is ".concat(this.nextFn.arn), {
+          nextFn: this.nextFn,
+          completed: this.completed,
+          remaining: this.remaining
+        });
+      }
+
       var tuple = [this.nextFn.arn, Object.assign({}, this.nextFn.params, additionalParams, {
         _sequence: this.steps
       })];
-      console.log(this.nextFn.arn);
 
       if (this.activeFn) {
         var results = Object.assign({}, tuple[1]);
@@ -77,12 +84,11 @@ function () {
       this.dynamicProperties.map(function (p) {
         tuple[1][p.key] = tuple[1][p.from];
       });
-      console.log(tuple[1]._sequence);
       return tuple;
     }
   }, {
     key: "from",
-    value: function from(request) {
+    value: function from(request, logger) {
       var apiGateway;
 
       if (commonTypes.isLambdaProxyRequest(request)) {
@@ -91,6 +97,10 @@ function () {
       }
 
       if (!request._sequence) {
+        if (logger) {
+          logger.info("This execution is not part of a sequence");
+        }
+
         return {
           request: request,
           apiGateway: apiGateway,
@@ -101,6 +111,13 @@ function () {
       this._steps = request._sequence;
       var transformedRequest = Object.assign({}, request, this.activeFn.params);
       delete transformedRequest._sequence;
+
+      if (logger) {
+        logger.info("This execution is part of a sequence", {
+          sequence: String(this)
+        });
+      }
+
       return {
         request: transformedRequest,
         apiGateway: apiGateway,
@@ -120,13 +137,24 @@ function () {
   }, {
     key: "toString",
     value: function toString() {
+      return JSON.stringify(this.toObject(), null, 2);
+    }
+  }, {
+    key: "toObject",
+    value: function toObject() {
       var obj = {
         isASequence: this._isASequence
       };
 
       if (this._isASequence) {
+        obj.totalSteps = this.steps.length;
+        obj.completedSteps = this.completed.length;
+
         if (this.activeFn) {
-          obj.activeFn = this.activeFn.arn;
+          obj.activeFn = {
+            arn: this.activeFn.arn,
+            params: this.activeFn.params
+          };
         }
 
         if (this.completed) {
@@ -146,6 +174,13 @@ function () {
           return acc;
         }, {});
       }
+
+      return obj;
+    }
+  }, {
+    key: "toJSON",
+    value: function toJSON() {
+      return this.toObject();
     }
   }, {
     key: "remaining",
@@ -192,9 +227,7 @@ function () {
 
       return Object.keys(this.activeFn.params).reduce(function (prev, key) {
         var currentValue = _this.activeFn.params[key];
-        console.log(currentValue);
         var valueIsDynamic = String(currentValue).slice(0, 1) === ":";
-        console.log(valueIsDynamic);
         return valueIsDynamic ? prev.concat({
           key: key,
           from: currentValue.slice(1)
