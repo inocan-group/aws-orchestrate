@@ -13,6 +13,14 @@ import {
   ILambaSequenceFromResponse
 } from "./@types";
 
+function size(obj: IDictionary) {
+  let size = 0,
+    key;
+  for (key in obj) {
+    if (obj.hasOwnProperty(key)) size++;
+  }
+  return size;
+}
 export class LambdaSequence {
   /**
    * **add** (static initializer)
@@ -117,11 +125,7 @@ export function handler(event, context, callback) {
       );
     }
     if (logger) {
-      logger.info(`the next() function is ${this.nextFn.arn}`, {
-        nextFn: this.nextFn,
-        completed: this.completed,
-        remaining: this.remaining
-      });
+      logger.info(`the next() function is ${this.nextFn.arn}`, this.toJSON());
     }
 
     const tuple: ILambdaSequenceNextTuple<T> = [
@@ -254,7 +258,14 @@ export function handler(event, context, callback) {
       }
       obj.results = this.completed.reduce(
         (acc, curr) => {
-          acc[curr.arn] = curr.results;
+          const objSize = size(curr.results);
+          acc[curr.arn] =
+            objSize < 4096
+              ? curr.results
+              : {
+                  message: `truncated due to size [ ${objSize} ]`,
+                  properties: Object.keys(curr.results)
+                };
           return acc;
         },
         {} as IDictionary

@@ -22,6 +22,17 @@ function _createClass(Constructor, protoProps, staticProps) {
   return Constructor;
 }
 
+function size(obj) {
+  var size = 0,
+      key;
+
+  for (key in obj) {
+    if (obj.hasOwnProperty(key)) size++;
+  }
+
+  return size;
+}
+
 var LambdaSequence =
 /*#__PURE__*/
 function () {
@@ -58,11 +69,7 @@ function () {
       }
 
       if (logger) {
-        logger.info("the next() function is ".concat(this.nextFn.arn), {
-          nextFn: this.nextFn,
-          completed: this.completed,
-          remaining: this.remaining
-        });
+        logger.info("the next() function is ".concat(this.nextFn.arn), this.toJSON());
       }
 
       var tuple = [this.nextFn.arn, Object.assign({}, this.nextFn.params, additionalParams, {
@@ -166,7 +173,11 @@ function () {
         }
 
         obj.results = this.completed.reduce(function (acc, curr) {
-          acc[curr.arn] = curr.results;
+          var objSize = size(curr.results);
+          acc[curr.arn] = objSize < 4096 ? curr.results : {
+            message: "truncated due to size [ ".concat(objSize, " ]"),
+            properties: Object.keys(curr.results)
+          };
           return acc;
         }, {});
       }
@@ -258,4 +269,32 @@ function () {
   return LambdaSequence;
 }();
 
-export { LambdaSequence };
+var LambdaEventParser =
+/*#__PURE__*/
+function () {
+  function LambdaEventParser() {
+    _classCallCheck(this, LambdaEventParser);
+  }
+
+  _createClass(LambdaEventParser, null, [{
+    key: "parse",
+    value: function parse(event) {
+      var request = isLambdaProxyRequest(event) ? JSON.parse(event.body) : event;
+
+      if (isLambdaProxyRequest(event)) {
+        delete event.body;
+      } else {
+        event = undefined;
+      }
+
+      return {
+        request: request,
+        apiGateway: event
+      };
+    }
+  }]);
+
+  return LambdaEventParser;
+}();
+
+export { LambdaEventParser, LambdaSequence };
