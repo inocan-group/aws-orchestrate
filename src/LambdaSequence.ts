@@ -5,12 +5,14 @@ import {
   getBodyFromPossibleLambdaProxyRequest,
   createError
 } from "common-types";
+
 import {
   ILambdaFunctionType,
   ILambdaSequenceStep,
   Sequence,
   ILambdaSequenceNextTuple,
-  ILambaSequenceFromResponse
+  ILambaSequenceFromResponse,
+  ILambdaSequenceParams
 } from "./@types";
 
 function size(obj: IDictionary) {
@@ -29,7 +31,7 @@ export class LambdaSequence {
    */
   public static add<T extends IDictionary = IDictionary>(
     arn: string,
-    params: Partial<T> = {},
+    params: ILambdaSequenceParams<T> = {},
     type: ILambdaFunctionType = "task"
   ) {
     const obj = new LambdaSequence();
@@ -100,10 +102,10 @@ export function handler(event, context, callback) {
    */
   public add<T extends IDictionary = IDictionary>(
     arn: string,
-    params: Partial<T> = {},
+    params: ILambdaSequenceParams<T> = {},
     type: ILambdaFunctionType = "task"
   ) {
-    this._steps.push({ arn, params, type, status: "assigned" });
+    this._steps.push({ arn, params: params, type, status: "assigned" });
     return this;
   }
 
@@ -130,7 +132,11 @@ export function handler(event, context, callback) {
 
     const tuple: ILambdaSequenceNextTuple<T> = [
       this.nextFn.arn,
-      { ...this.nextFn.params, ...additionalParams, _sequence: this.steps } as Sequence<T>
+      {
+        ...this.nextFn.params,
+        ...additionalParams,
+        _sequence: this.steps
+      } as Sequence<T>
     ];
 
     if (this.activeFn) {
@@ -177,7 +183,9 @@ export function handler(event, context, callback) {
     // available in the return LambdaSequence object
     delete transformedRequest._sequence;
     if (logger) {
-      logger.info("This execution is part of a sequence", { sequence: String(this) });
+      logger.info("This execution is part of a sequence", {
+        sequence: String(this)
+      });
     }
     return { request: transformedRequest, apiGateway, sequence: this };
   }
@@ -233,7 +241,9 @@ export function handler(event, context, callback) {
       const currentValue = this.activeFn.params[key];
       const valueIsDynamic = String(currentValue).slice(0, 1) === ":";
 
-      return valueIsDynamic ? prev.concat({ key, from: currentValue.slice(1) }) : prev;
+      return valueIsDynamic
+        ? prev.concat({ key, from: currentValue.slice(1) })
+        : prev;
     }, []);
   }
 

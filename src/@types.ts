@@ -3,13 +3,18 @@ import { LambdaSequence } from "./LambdaSequence";
 
 export interface ILambdaSequenceStep<T = IDictionary> {
   arn: string;
-  params: Partial<T>;
+  params: ILambdaSequenceParams<T>;
   type: ILambdaFunctionType;
   status: "assigned" | "active" | "completed";
   results?: T;
 }
 
-export type ILambdaFunctionType = "task" | "fan-out" | "step-start" | "fan-in" | "other";
+export type ILambdaFunctionType =
+  | "task"
+  | "fan-out"
+  | "step-start"
+  | "fan-in"
+  | "other";
 
 export type Sequence<T> = T & { _sequence: ILambdaSequenceStep[] };
 
@@ -28,3 +33,9 @@ export interface ILambaSequenceFromResponse<T> {
  * `_sequence` property to pass along the sequence meta-data
  */
 export type ILambdaSequenceNextTuple<T> = [string, Sequence<T>];
+
+/**
+ * Pass in either a partial hash of the type `T` or a serialized
+ * string that was serialized by `src/shared/serialize()`
+ */
+export type ILambdaSequenceParams<T> = Partial<T> | string;
