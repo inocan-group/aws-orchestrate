@@ -1,6 +1,13 @@
 import { IDictionary, IAWSLambdaProxyIntegrationRequest } from "common-types";
 import { LambdaSequence } from "./LambdaSequence";
 
+/**
+ * **ILambdSequenceStep**
+ *
+ * A _step_ in a `LambdaSequence`. This includes the function name (`arn`), parameters passed
+ * into the step (`params`), workflow status (assigned/active/completed), as well the `results` of
+ * execution if the status is in the `completed` status.
+ */
 export interface ILambdaSequenceStep<T = IDictionary> {
   arn: string;
   params: Partial<T>;
@@ -9,7 +16,12 @@ export interface ILambdaSequenceStep<T = IDictionary> {
   results?: T;
 }
 
-export type ILambdaFunctionType = "task" | "fan-out" | "step-start" | "fan-in" | "other";
+export type ILambdaFunctionType =
+  | "task"
+  | "fan-out"
+  | "step-start"
+  | "fan-in"
+  | "other";
 
 export type Sequence<T> = T & { _sequence: ILambdaSequenceStep[] };
 

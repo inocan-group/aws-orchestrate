@@ -1,4 +1,4 @@
-import { createError, isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest } from 'common-types';
+import { isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest } from 'common-types';
 
 function _classCallCheck(instance, Constructor) {
   if (!(instance instanceof Constructor)) {
@@ -64,20 +64,28 @@ function () {
       var additionalParams = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var logger = arguments.length > 1 ? arguments[1] : undefined;
 
+      if (logger) {
+        logger.getContext();
+      }
+
       if (this.isDone()) {
-        throw createError("aws-orchestration/sequence-done", "Attempt to call next() on a sequence which is already completed. Always check sequence's state with isDone() before running next().");
+        if (logger) {
+          logger.info("The next() function [ ".concat(this.activeFn.arn, " ] was called but we are now done with the sequence so exiting."));
+        }
+
+        return;
       }
 
       if (logger) {
         logger.info("the next() function is ".concat(this.nextFn.arn), this.toJSON());
       }
 
-      var tuple = [this.nextFn.arn, Object.assign({}, this.nextFn.params, additionalParams, {
+      var nextFunctionTuple = [this.nextFn.arn, Object.assign({}, this.nextFn.params, additionalParams, {
         _sequence: this.steps
       })];
 
       if (this.activeFn) {
-        var results = Object.assign({}, tuple[1]);
+        var results = Object.assign({}, nextFunctionTuple[1]);
         delete results._sequence;
         this.activeFn.results = results;
         this.activeFn.status = "completed";
@@ -85,9 +93,9 @@ function () {
 
       this.nextFn.status = "active";
       this.dynamicProperties.map(function (p) {
-        tuple[1][p.key] = tuple[1][p.from];
+        nextFunctionTuple[1][p.key] = nextFunctionTuple[1][p.from];
       });
-      return tuple;
+      return nextFunctionTuple;
     }
   }, {
     key: "from",
