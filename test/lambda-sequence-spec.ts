@@ -1,6 +1,7 @@
 import chai from "chai";
 import { LambdaSequence } from "../src/LambdaSequence";
-import { ILambdaSequenceStep, Sequence } from "../src";
+import { Sequence } from "../src";
+import { IDictionary } from "common-types";
 
 const expect = chai.expect;
 
@@ -18,7 +19,7 @@ describe("Lambda Sequence => ", () => {
     expect(request).to.equal(event);
     expect(apiGateway).to.equal(undefined);
     expect(sequence).to.be.instanceOf(LambdaSequence);
-    expect(sequence.isSequence()).to.equal(false);
+    expect(sequence.isSequence).to.equal(false);
   });
 
   it("from() returns proper properties when sequence but no proxy request", async () => {
@@ -77,10 +78,9 @@ describe("Lambda Sequence => ", () => {
       width: number;
       height: number;
     }
-    const s = LambdaSequence.add<IFakeInput>("fn1", { foo: 1, bar: 2 }).add<IAnotherFake>(
-      "fn2",
-      { width: 50 }
-    );
+    const s = LambdaSequence.add<IFakeInput>("fn1", { foo: 1, bar: 2 }).add<
+      IAnotherFake
+    >("fn2", { width: 50 });
 
     const [fn, event] = s.next({ baz: "hello world" });
 
@@ -104,11 +104,13 @@ describe("Lambda Sequence => ", () => {
     expect(secondTime.request)
       .to.haveOwnProperty("width")
       .and.equal(50);
-    expect(secondTime.sequence.isDone()).to.equal(true);
+    expect(secondTime.sequence.isDone).to.equal(true);
   });
 
   it("calling next() returns invoke() params", async () => {
-    const s = LambdaSequence.add("fn1", { foo: 1, bar: 2 }).add("fn2", { width: 50 });
+    const s = LambdaSequence.add("fn1", { foo: 1, bar: 2 }).add("fn2", {
+      width: 50
+    });
     const nxt = s.next();
     expect(nxt).to.be.an("array");
   });
@@ -130,7 +132,7 @@ describe("Lambda Sequence => ", () => {
     expect(request).haveOwnProperty("baz");
     expect(sequence).to.have.lengthOf(2);
     expect(sequence.remaining.length).to.equal(1);
-    expect(sequence.isDone()).to.equal(false);
+    expect(sequence.isDone).to.equal(false);
 
     const [fn2, p2] = sequence.next({ data: "foobar" });
     expect(fn2).to.equal("fn2");
@@ -139,19 +141,80 @@ describe("Lambda Sequence => ", () => {
     // fn2 is executing
     const { request: req2, sequence: seq2 } = LambdaSequence.from(p2);
 
-    expect(req2).haveOwnProperty("data");
-    expect(req2).haveOwnProperty("input");
+    expect(req2)
+      .haveOwnProperty("input")
+      .and.equal("foobar");
+    expect(req2).not.haveOwnProperty("data");
   });
-  it("Sequence converted to a string returns meaningful structure", async () => {
-    const sequence = LambdaSequence.add("fn1", { a: 1, b: 2, c: ":foobar" })
-      .add("fn2", { c: 3 })
-      .add("fn3", { d: 4 });
-    const [_, args] = sequence.next({ foobart: "bar" });
-    const { request: r2, sequence: s2 } = LambdaSequence.from(args);
-    console.log(r2);
 
-    console.log("b" + sequence);
-    console.log(JSON.stringify(s2));
-    console.log(s2);
+  it("Full sequence test produces correct results throughout", () => {
+    // Sequence defined
+    const sequenceDefn = LambdaSequence.add("fn1", { a: 1, b: 2, c: "see" })
+      .add("fn2", { c: 3, temperature: ":data" })
+      .add("fn3", { d: 4, func1: ":fn1.data", func2: ":fn2.data" });
+
+    expect(sequenceDefn.steps.length).to.equal(sequenceDefn.remaining.length);
+
+    // initiate call to first function in sequence
+    let [fn, params] = sequenceDefn.next<IDictionary>({
+      data: { foo: "bar" }
+    });
+
+    expect(fn).to.equal("fn1");
+    expect(sequenceDefn.dynamicProperties.length).to.equal(0);
+    expect(Object.keys(params)).to.include("a");
+    expect(Object.keys(params)).to.include("b");
+    expect(Object.keys(params)).to.include("c");
+    expect(Object.keys(params)).to.include("data");
+    expect(Object.keys(params.data)).to.include("foo");
+
+    // retrieve sequence in first function after conductor; data passed by conductor should be part of params
+    const { request, sequence: sequence1 } = LambdaSequence.from(params);
+    expect(sequence1.isSequence).to.equal(true);
+    expect(sequence1.completed.length).to.equal(0);
+    expect(Object.keys(sequence1.activeFn.params)).to.include("a");
+    expect(Object.keys(sequence1.activeFn.params)).to.include("b");
+    expect(Object.keys(sequence1.activeFn.params)).to.include("c");
+    expect(Object.keys(sequence1.activeFn.params)).to.include("data");
+    expect(Object.keys(request)).to.include("a");
+    expect(Object.keys(request)).to.include("data");
+
+    // initiate call to second function; which had a dynamic property referencing prior fn
+    [fn, params] = sequence1.next({ data: 45 });
+    expect(fn).to.equal("fn2");
+    expect(params).to.haveOwnProperty("_sequence");
+
+    // retrieve sequence in second function after conductor
+    const { request: request2, sequence: sequence2 } = LambdaSequence.from(
+      params
+    );
+
+    expect(sequence2.isSequence).to.equal(true);
+    expect(sequence2.completed.length).to.equal(1);
+    expect(request2).to.haveOwnProperty("c");
+    expect(request2).to.haveOwnProperty("temperature"); // this was mapped to
+    expect(request2).to.not.haveOwnProperty("data"); // this was mapped away from
+    expect(Object.keys(request2)).to.have.lengthOf(2);
+    Object.keys(request2).forEach(key =>
+      expect(sequence2.activeFn.params).to.haveOwnProperty(key)
+    );
+
+    // initiate call to second function; which had a dynamic property
+    // which is NOT the prior function
+    [fn, params] = sequence2.next({ data: "i am a result of fn2" });
+    expect(fn).to.equal("fn3");
+    expect(params).to.haveOwnProperty("_sequence");
+
+    // retrieve sequence in second function after conductor
+    const { request: request3, sequence: sequence3 } = LambdaSequence.from(
+      params
+    );
+
+    expect(request3)
+      .to.haveOwnProperty("func1")
+      .and.equal(45);
+    expect(request3)
+      .to.haveOwnProperty("func2")
+      .and.equal("i am a result of fn2");
   });
 });
