@@ -113,44 +113,81 @@ export function handler(event, context, callback) {
    * Executes the _next_ function in the sequence. It will pass parameters which are a
    * merge of those set during the original setup (aka, with the `add()` method) and
    * additional values set here as the optional `additionalParams` value.
+   *
+   * If this were not clear from the prior paragraph, it is expected that if a given function
+   * produces meaningful output that it would both _return_ the output (for non-orchestrated
+   * executions) and also add it to the `additionalParams` value in `next()` (for orchestrated
+   * executions)
+   *
+   * Finally, while this function doesn't _require_ you state the generic type, if you do then
+   * you will get more precise typing for the expected input of the next function
    */
   public next<T extends IDictionary = IDictionary>(
     additionalParams: Partial<T> = {},
     logger?: import("aws-log").ILoggerApi
   ): ILambdaSequenceNextTuple<T> {
-    if (this.isDone()) {
-      throw createError(
-        `aws-orchestration/sequence-done`,
-        `Attempt to call next() on a sequence which is already completed. Always check sequence's state with isDone() before running next().`
-      );
+    if (logger) {
+      logger.getContext();
     }
+    if (this.isDone) {
+      if (logger) {
+        logger.info(
+          `The next() function [ ${
+            this.activeFn.arn
+          } ] was called but we are now done with the sequence so exiting.`
+        );
+      }
+      return;
+    }
+
     if (logger) {
       logger.info(`the next() function is ${this.nextFn.arn}`, this.toJSON());
     }
 
-    const tuple: ILambdaSequenceNextTuple<T> = [
-      this.nextFn.arn,
-      { ...this.nextFn.params, ...additionalParams, _sequence: this.steps } as Sequence<T>
-    ];
-
+    /**
+     * if there is an active function, set it to completed
+     * and assign _results_
+     */
     if (this.activeFn) {
-      const results = { ...tuple[1] };
+      const results = additionalParams;
       delete results._sequence;
       this.activeFn.results = results;
       this.activeFn.status = "completed";
     }
-    this.nextFn.status = "active";
-    this.dynamicProperties.map(p => {
-      tuple[1][p.key] = tuple[1][p.from];
-    });
 
-    return tuple;
+    // resolve dynamic props in next function
+    this._steps = this._steps.map(i =>
+      i.arn === this.nextFn.arn
+        ? {
+            ...i,
+            params: this.resolveDynamicProperties(
+              this.nextFn.params,
+              additionalParams
+            )
+          }
+        : i
+    );
+
+    const nextFunctionTuple: ILambdaSequenceNextTuple<T> = [
+      // the arn
+      this.nextFn.arn,
+      // the params passed forward
+      {
+        ...this.nextFn.params,
+        _sequence: this.steps
+      } as Sequence<T>
+    ];
+
+    // set the next function to active
+    this.nextFn.status = "active";
+
+    return nextFunctionTuple;
   }
 
   /**
    * **from**
    *
-   * comments are in static method
+   * unboxes request, sequence, and apiGateway data structures
    */
   public from<T extends IDictionary = IDictionary>(
     request: T | IAWSLambdaProxyIntegrationRequest,
@@ -169,24 +206,47 @@ export function handler(event, context, callback) {
       }
       return { request, apiGateway, sequence: LambdaSequence.notASequence() };
     }
+
     // looks like a valid sequence
     this._steps = request._sequence;
+
     // active function's output is sent into next's params
     const transformedRequest = { ...request, ...this.activeFn.params };
+
     // remove the sequence data from the request as this payload will be
-    // available in the return LambdaSequence object
+    // available in the returned LambdaSequence object
     delete transformedRequest._sequence;
+
+    /**
+     * swap out the conductor's generic understanding of params
+     * with the actual request params (aka, dynamic props resolved)
+     */
+    this._steps = this._steps.map(s => {
+      const resolvedParams =
+        s.arn === this.activeFn.arn ? transformedRequest : s.params;
+
+      s.params = resolvedParams;
+      return s;
+    });
+
     if (logger) {
-      logger.info("This execution is part of a sequence", { sequence: String(this) });
+      logger.info("This execution is part of a sequence", {
+        sequence: String(this)
+      });
     }
+
     return { request: transformedRequest, apiGateway, sequence: this };
   }
 
-  public isSequence() {
+  /**
+   * boolean flag which indicates whether the current execution of the function
+   * is part of a _sequence_.
+   */
+  public get isSequence() {
     return this._isASequence;
   }
 
-  public isDone() {
+  public get isDone() {
     return this.remaining.length === 0;
   }
 
@@ -228,12 +288,48 @@ export function handler(event, context, callback) {
     return active.length > 0 ? active[0] : undefined;
   }
 
+  /**
+   * Provides a dictionary of of **results** from the functions prior to it.
+   * The dictionary is two levels deep and will look like this:
+   * 
+```javascript
+{
+  [fnName]: {
+    prop1: value,
+    prop2: value
+  },
+  [fn2Name]: {
+    prop1: value
+  }
+}
+```
+   */
+  public get allHistoricResults() {
+    const completed = this._steps.filter(s => s.status === "completed");
+    let result: IDictionary = {};
+    completed.forEach(s => {
+      const fn = s.arn;
+      result[fn] = s.results;
+    });
+
+    return result;
+  }
+
+  /**
+   * **dynamicProperties**
+   *
+   * if the _value_ of a parameter passed to a function leads with the `:`
+   * character this is an indicator that it is a "dynamic property" and
+   * it's true value should be looked up from the sequence results.
+   */
   public get dynamicProperties(): Array<{ key: string; from: string }> {
     return Object.keys(this.activeFn.params).reduce((prev, key) => {
       const currentValue = this.activeFn.params[key];
       const valueIsDynamic = String(currentValue).slice(0, 1) === ":";
 
-      return valueIsDynamic ? prev.concat({ key, from: currentValue.slice(1) }) : prev;
+      return valueIsDynamic
+        ? prev.concat({ key, from: currentValue.slice(1) })
+        : prev;
     }, []);
   }
 
@@ -275,5 +371,47 @@ export function handler(event, context, callback) {
   }
   public toJSON() {
     return this.toObject();
+  }
+
+  private resolveDynamicProperties(
+    conductorParams: IDictionary,
+    priorFnResults: IDictionary
+  ) {
+    /**
+     * Properties on `priorFnResults` which have been remapped by dyamic properties.
+     * Note that this only takes place when the conductor's dynamic property is for
+     * "last" function's result. If it is from prior results then it these will be considered
+     * additive properties and _remapped_ properties
+     */
+    let remappedProps: string[] = [];
+
+    Object.keys(conductorParams).forEach(key => {
+      const value = conductorParams[key];
+
+      if (typeof value === "string" && value.slice(0, 1) === ":") {
+        const lookup = value.slice(1);
+        const isFromLastFn = !lookup.includes(".");
+        if (isFromLastFn) {
+          remappedProps.push(lookup);
+          conductorParams[key] = priorFnResults[lookup];
+        } else {
+          const [fnLookup, fnProp] = lookup.split(".");
+          const relevantStep = this.steps.find(i => i.arn === fnLookup);
+
+          conductorParams[key] = relevantStep.results[fnProp];
+        }
+      }
+    });
+
+    return {
+      ...Object.keys(priorFnResults).reduce(
+        (agg, curr) =>
+          !remappedProps.includes(curr)
+            ? { ...agg, [curr]: priorFnResults[curr] }
+            : agg,
+        {}
+      ),
+      ...conductorParams
+    };
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "aws-orchestrate",
   "description": "This library is intended to help projects intending to build a \"micro-service architecture\" to achieve those ambitions with some handy orchestration classes and types.",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "scripts": {
@@ -21,16 +21,16 @@
   },
   "homepage": "https://github.com/inocan-group/aws-orchestrate#readme",
   "dependencies": {
-    "common-types": "^1.10.11"
+    "common-types": "^1.11.11"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.6",
     "@types/rimraf": "^2.0.2",
-    "@vuepress/plugin-back-to-top": "^1.0.0-alpha.0",
-    "@vuepress/plugin-last-updated": "^1.0.0-alpha.0",
-    "@vuepress/plugin-medium-zoom": "^1.0.0-alpha.0",
-    "@vuepress/plugin-pwa": "^1.0.0-alpha.0",
+    "@vuepress/plugin-back-to-top": "^1.0.2",
+    "@vuepress/plugin-last-updated": "^1.0.2",
+    "@vuepress/plugin-medium-zoom": "^1.0.2",
+    "@vuepress/plugin-pwa": "^1.0.2",
     "async-shelljs": "^0.1.2",
     "aws-log": "^0.6.6",
     "bili": "^4.7.3",
@@ -39,7 +39,7 @@
     "rimraf": "^2.6.3",
     "rollup-plugin-typescript2": "^0.20.1",
     "ts-node": "^8.0.3",
-    "typescript": "^3.4.3",
+    "typescript": "^3.5.2",
     "vuepress": "^0.14.11",
     "vuepress-plugin-autometa": "^0.1.10"
   }
