@@ -9,14 +9,15 @@ export declare class LambdaSequence {
     add<T extends IDictionary = IDictionary>(arn: string, params?: Partial<T>, type?: ILambdaFunctionType): this;
     next<T extends IDictionary = IDictionary>(additionalParams?: Partial<T>, logger?: import("aws-log").ILoggerApi): ILambdaSequenceNextTuple<T>;
     from<T extends IDictionary = IDictionary>(request: T | IAWSLambdaProxyIntegrationRequest, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
-    isSequence(): boolean;
-    isDone(): boolean;
+    readonly isSequence: boolean;
+    readonly isDone: boolean;
     readonly remaining: ILambdaSequenceStep<IDictionary<any>>[];
     readonly completed: ILambdaSequenceStep<IDictionary<any>>[];
     readonly length: number;
     readonly steps: ILambdaSequenceStep<IDictionary<any>>[];
     readonly nextFn: ILambdaSequenceStep<IDictionary<any>>;
     readonly activeFn: ILambdaSequenceStep<IDictionary<any>>;
+    readonly allHistoricResults: IDictionary<any>;
     readonly dynamicProperties: Array<{
         key: string;
         from: string;
@@ -24,4 +25,5 @@ export declare class LambdaSequence {
     toString(): string;
     toObject(): IDictionary<any>;
     toJSON(): IDictionary<any>;
+    private resolveDynamicProperties;
 }
