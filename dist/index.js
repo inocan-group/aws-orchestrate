@@ -26,6 +26,59 @@ function _createClass(Constructor, protoProps, staticProps) {
   return Constructor;
 }
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
+
+function _slicedToArray(arr, i) {
+  return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest();
+}
+
+function _arrayWithHoles(arr) {
+  if (Array.isArray(arr)) return arr;
+}
+
+function _iterableToArrayLimit(arr, i) {
+  var _arr = [];
+  var _n = true;
+  var _d = false;
+  var _e = undefined;
+
+  try {
+    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+      _arr.push(_s.value);
+
+      if (i && _arr.length === i) break;
+    }
+  } catch (err) {
+    _d = true;
+    _e = err;
+  } finally {
+    try {
+      if (!_n && _i["return"] != null) _i["return"]();
+    } finally {
+      if (_d) throw _e;
+    }
+  }
+
+  return _arr;
+}
+
+function _nonIterableRest() {
+  throw new TypeError("Invalid attempt to destructure non-iterable instance");
+}
+
 function size(obj) {
   var size = 0,
       key;
@@ -65,6 +118,8 @@ function () {
   }, {
     key: "next",
     value: function next() {
+      var _this = this;
+
       var additionalParams = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var logger = arguments.length > 1 ? arguments[1] : undefined;
 
@@ -72,7 +127,7 @@ function () {
         logger.getContext();
       }
 
-      if (this.isDone()) {
+      if (this.isDone) {
         if (logger) {
           logger.info("The next() function [ ".concat(this.activeFn.arn, " ] was called but we are now done with the sequence so exiting."));
         }
@@ -84,26 +139,29 @@ function () {
         logger.info("the next() function is ".concat(this.nextFn.arn), this.toJSON());
       }
 
-      var nextFunctionTuple = [this.nextFn.arn, Object.assign({}, this.nextFn.params, additionalParams, {
-        _sequence: this.steps
-      })];
-
       if (this.activeFn) {
-        var results = Object.assign({}, nextFunctionTuple[1]);
+        var results = additionalParams;
         delete results._sequence;
         this.activeFn.results = results;
         this.activeFn.status = "completed";
       }
 
-      this.nextFn.status = "active";
-      this.dynamicProperties.map(function (p) {
-        nextFunctionTuple[1][p.key] = nextFunctionTuple[1][p.from];
+      this._steps = this._steps.map(function (i) {
+        return i.arn === _this.nextFn.arn ? Object.assign({}, i, {
+          params: _this.resolveDynamicProperties(_this.nextFn.params, additionalParams)
+        }) : i;
       });
+      var nextFunctionTuple = [this.nextFn.arn, Object.assign({}, this.nextFn.params, {
+        _sequence: this.steps
+      })];
+      this.nextFn.status = "active";
       return nextFunctionTuple;
     }
   }, {
     key: "from",
     value: function from(request, logger) {
+      var _this2 = this;
+
       var apiGateway;
 
       if (commonTypes.isLambdaProxyRequest(request)) {
@@ -126,6 +184,11 @@ function () {
       this._steps = request._sequence;
       var transformedRequest = Object.assign({}, request, this.activeFn.params);
       delete transformedRequest._sequence;
+      this._steps = this._steps.map(function (s) {
+        var resolvedParams = s.arn === _this2.activeFn.arn ? transformedRequest : s.params;
+        s.params = resolvedParams;
+        return s;
+      });
 
       if (logger) {
         logger.info("This execution is part of a sequence", {
@@ -138,16 +201,6 @@ function () {
         apiGateway: apiGateway,
         sequence: this
       };
-    }
-  }, {
-    key: "isSequence",
-    value: function isSequence() {
-      return this._isASequence;
-    }
-  }, {
-    key: "isDone",
-    value: function isDone() {
-      return this.remaining.length === 0;
     }
   }, {
     key: "toString",
@@ -202,6 +255,50 @@ function () {
       return this.toObject();
     }
   }, {
+    key: "resolveDynamicProperties",
+    value: function resolveDynamicProperties(conductorParams, priorFnResults) {
+      var _this3 = this;
+
+      var remappedProps = [];
+      Object.keys(conductorParams).forEach(function (key) {
+        var value = conductorParams[key];
+
+        if (typeof value === "string" && value.slice(0, 1) === ":") {
+          var lookup = value.slice(1);
+          var isFromLastFn = !lookup.includes(".");
+
+          if (isFromLastFn) {
+            remappedProps.push(lookup);
+            conductorParams[key] = priorFnResults[lookup];
+          } else {
+            var _lookup$split = lookup.split("."),
+                _lookup$split2 = _slicedToArray(_lookup$split, 2),
+                fnLookup = _lookup$split2[0],
+                fnProp = _lookup$split2[1];
+
+            var relevantStep = _this3.steps.find(function (i) {
+              return i.arn === fnLookup;
+            });
+
+            conductorParams[key] = relevantStep.results[fnProp];
+          }
+        }
+      });
+      return Object.assign({}, Object.keys(priorFnResults).reduce(function (agg, curr) {
+        return !remappedProps.includes(curr) ? Object.assign({}, agg, _defineProperty({}, curr, priorFnResults[curr])) : agg;
+      }, {}), conductorParams);
+    }
+  }, {
+    key: "isSequence",
+    get: function get() {
+      return this._isASequence;
+    }
+  }, {
+    key: "isDone",
+    get: function get() {
+      return this.remaining.length === 0;
+    }
+  }, {
     key: "remaining",
     get: function get() {
       return this._steps.filter(function (s) {
@@ -240,12 +337,26 @@ function () {
       return active.length > 0 ? active[0] : undefined;
     }
   }, {
+    key: "allHistoricResults",
+    get: function get() {
+      var completed = this._steps.filter(function (s) {
+        return s.status === "completed";
+      });
+
+      var result = {};
+      completed.forEach(function (s) {
+        var fn = s.arn;
+        result[fn] = s.results;
+      });
+      return result;
+    }
+  }, {
     key: "dynamicProperties",
     get: function get() {
-      var _this = this;
+      var _this4 = this;
 
       return Object.keys(this.activeFn.params).reduce(function (prev, key) {
-        var currentValue = _this.activeFn.params[key];
+        var currentValue = _this4.activeFn.params[key];
         var valueIsDynamic = String(currentValue).slice(0, 1) === ":";
         return valueIsDynamic ? prev.concat({
           key: key,
