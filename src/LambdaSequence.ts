@@ -21,6 +21,8 @@ function size(obj: IDictionary) {
   }
   return size;
 }
+
+export type IPropertyOrDynamicReference<T> = { [P in keyof T]: T[P] | string };
 export class LambdaSequence {
   /**
    * **add** (static initializer)
@@ -29,7 +31,7 @@ export class LambdaSequence {
    */
   public static add<T extends IDictionary = IDictionary>(
     arn: string,
-    params: Partial<T> = {},
+    params: Partial<IPropertyOrDynamicReference<T>> = {},
     type: ILambdaFunctionType = "task"
   ) {
     const obj = new LambdaSequence();
@@ -100,7 +102,7 @@ export function handler(event, context, callback) {
    */
   public add<T extends IDictionary = IDictionary>(
     arn: string,
-    params: Partial<T> = {},
+    params: Partial<IPropertyOrDynamicReference<T>> = {},
     type: ILambdaFunctionType = "task"
   ) {
     this._steps.push({ arn, params, type, status: "assigned" });

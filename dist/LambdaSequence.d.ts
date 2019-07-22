@@ -1,12 +1,15 @@
 import { IAWSLambdaProxyIntegrationRequest, IDictionary } from "common-types";
 import { ILambdaFunctionType, ILambdaSequenceStep, ILambdaSequenceNextTuple, ILambaSequenceFromResponse } from "./@types";
+export declare type IPropertyOrDynamicReference<T> = {
+    [P in keyof T]: T[P] | string;
+};
 export declare class LambdaSequence {
-    static add<T extends IDictionary = IDictionary>(arn: string, params?: Partial<T>, type?: ILambdaFunctionType): LambdaSequence;
+    static add<T extends IDictionary = IDictionary>(arn: string, params?: Partial<IPropertyOrDynamicReference<T>>, type?: ILambdaFunctionType): LambdaSequence;
     static from<T extends IDictionary = IDictionary>(event: T | IAWSLambdaProxyIntegrationRequest, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
     static notASequence(): LambdaSequence;
     private _steps;
     private _isASequence;
-    add<T extends IDictionary = IDictionary>(arn: string, params?: Partial<T>, type?: ILambdaFunctionType): this;
+    add<T extends IDictionary = IDictionary>(arn: string, params?: Partial<IPropertyOrDynamicReference<T>>, type?: ILambdaFunctionType): this;
     next<T extends IDictionary = IDictionary>(additionalParams?: Partial<T>, logger?: import("aws-log").ILoggerApi): ILambdaSequenceNextTuple<T>;
     from<T extends IDictionary = IDictionary>(request: T | IAWSLambdaProxyIntegrationRequest, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
     readonly isSequence: boolean;
