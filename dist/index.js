@@ -2,7 +2,41 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
+function _interopNamespace(e) {
+  if (e && e.__esModule) { return e; } else {
+    var n = {};
+    if (e) {
+      Object.keys(e).forEach(function (k) {
+        var d = Object.getOwnPropertyDescriptor(e, k);
+        Object.defineProperty(n, k, d.get ? d : {
+          enumerable: true,
+          get: function () {
+            return e[k];
+          }
+        });
+      });
+    }
+    n['default'] = e;
+    return n;
+  }
+}
+
 var commonTypes = require('common-types');
+var awsLog = require('aws-log');
+
+function _typeof(obj) {
+  if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
+    _typeof = function (obj) {
+      return typeof obj;
+    };
+  } else {
+    _typeof = function (obj) {
+      return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+    };
+  }
+
+  return _typeof(obj);
+}
 
 function _classCallCheck(instance, Constructor) {
   if (!(instance instanceof Constructor)) {
@@ -41,12 +75,143 @@ function _defineProperty(obj, key, value) {
   return obj;
 }
 
+function _inherits(subClass, superClass) {
+  if (typeof superClass !== "function" && superClass !== null) {
+    throw new TypeError("Super expression must either be null or a function");
+  }
+
+  subClass.prototype = Object.create(superClass && superClass.prototype, {
+    constructor: {
+      value: subClass,
+      writable: true,
+      configurable: true
+    }
+  });
+  if (superClass) _setPrototypeOf(subClass, superClass);
+}
+
+function _getPrototypeOf(o) {
+  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
+    return o.__proto__ || Object.getPrototypeOf(o);
+  };
+  return _getPrototypeOf(o);
+}
+
+function _setPrototypeOf(o, p) {
+  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+    o.__proto__ = p;
+    return o;
+  };
+
+  return _setPrototypeOf(o, p);
+}
+
+function isNativeReflectConstruct() {
+  if (typeof Reflect === "undefined" || !Reflect.construct) return false;
+  if (Reflect.construct.sham) return false;
+  if (typeof Proxy === "function") return true;
+
+  try {
+    Date.prototype.toString.call(Reflect.construct(Date, [], function () {}));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function _construct(Parent, args, Class) {
+  if (isNativeReflectConstruct()) {
+    _construct = Reflect.construct;
+  } else {
+    _construct = function _construct(Parent, args, Class) {
+      var a = [null];
+      a.push.apply(a, args);
+      var Constructor = Function.bind.apply(Parent, a);
+      var instance = new Constructor();
+      if (Class) _setPrototypeOf(instance, Class.prototype);
+      return instance;
+    };
+  }
+
+  return _construct.apply(null, arguments);
+}
+
+function _isNativeFunction(fn) {
+  return Function.toString.call(fn).indexOf("[native code]") !== -1;
+}
+
+function _wrapNativeSuper(Class) {
+  var _cache = typeof Map === "function" ? new Map() : undefined;
+
+  _wrapNativeSuper = function _wrapNativeSuper(Class) {
+    if (Class === null || !_isNativeFunction(Class)) return Class;
+
+    if (typeof Class !== "function") {
+      throw new TypeError("Super expression must either be null or a function");
+    }
+
+    if (typeof _cache !== "undefined") {
+      if (_cache.has(Class)) return _cache.get(Class);
+
+      _cache.set(Class, Wrapper);
+    }
+
+    function Wrapper() {
+      return _construct(Class, arguments, _getPrototypeOf(this).constructor);
+    }
+
+    Wrapper.prototype = Object.create(Class.prototype, {
+      constructor: {
+        value: Wrapper,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+    return _setPrototypeOf(Wrapper, Class);
+  };
+
+  return _wrapNativeSuper(Class);
+}
+
+function _assertThisInitialized(self) {
+  if (self === void 0) {
+    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+  }
+
+  return self;
+}
+
+function _possibleConstructorReturn(self, call) {
+  if (call && (typeof call === "object" || typeof call === "function")) {
+    return call;
+  }
+
+  return _assertThisInitialized(self);
+}
+
 function _slicedToArray(arr, i) {
   return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest();
 }
 
+function _toConsumableArray(arr) {
+  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread();
+}
+
+function _arrayWithoutHoles(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
+
+    return arr2;
+  }
+}
+
 function _arrayWithHoles(arr) {
   if (Array.isArray(arr)) return arr;
+}
+
+function _iterableToArray(iter) {
+  if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
 }
 
 function _iterableToArrayLimit(arr, i) {
@@ -73,6 +238,10 @@ function _iterableToArrayLimit(arr, i) {
   }
 
   return _arr;
+}
+
+function _nonIterableSpread() {
+  throw new TypeError("Invalid attempt to spread non-iterable instance");
 }
 
 function _nonIterableRest() {
@@ -420,5 +589,374 @@ function () {
   return LambdaEventParser;
 }();
 
+var ErrorHandler =
+/*#__PURE__*/
+function () {
+  function ErrorHandler(code, identifiedBy, handling) {
+    _classCallCheck(this, ErrorHandler);
+
+    this.code = code;
+    this.identifiedBy = identifiedBy;
+    this.handling = handling;
+  }
+
+  _createClass(ErrorHandler, [{
+    key: "toString",
+    value: function toString() {
+      return {
+        code: this.code,
+        identifiedBy: this.identifiedBy,
+        handling: this.handling
+      };
+    }
+  }]);
+
+  return ErrorHandler;
+}();
+
+var ErrorMeta =
+/*#__PURE__*/
+function () {
+  function ErrorMeta() {
+    _classCallCheck(this, ErrorMeta);
+
+    this._errors = [];
+    this._defaultErrorCode = 500;
+  }
+
+  _createClass(ErrorMeta, [{
+    key: "add",
+    value: function add(code, identifiedBy, handling) {
+      this._errors.push(new ErrorHandler(code, identifiedBy, handling));
+    }
+  }, {
+    key: "setDefaultErrorCode",
+    value: function setDefaultErrorCode(code) {
+      this._defaultErrorCode = code;
+      return this;
+    }
+  }, {
+    key: "toString",
+    value: function toString() {
+      return JSON.stringify({
+        defaultCode: this._defaultErrorCode,
+        errors: this._errors
+      });
+    }
+  }, {
+    key: "list",
+    get: function get() {
+      return this._errors;
+    }
+  }, {
+    key: "defaultErrorCode",
+    get: function get() {
+      return this._defaultErrorCode;
+    }
+  }]);
+
+  return ErrorMeta;
+}();
+
+var UnhandledError =
+/*#__PURE__*/
+function (_Error) {
+  _inherits(UnhandledError, _Error);
+
+  _createClass(UnhandledError, null, [{
+    key: "apiGatewayError",
+    value: function apiGatewayError(errorCode, e, requestId, classification) {
+      var obj = new UnhandledError(errorCode, e, classification);
+      obj.requestId = requestId;
+      return JSON.stringify({
+        errorType: obj.name,
+        httpStatus: obj.httpStatus,
+        requestId: obj.requestId,
+        message: obj.message
+      });
+    }
+  }, {
+    key: "lambdaError",
+    value: function lambdaError(errorCode, e, classification) {
+      var obj = new UnhandledError(errorCode, e, classification);
+    }
+  }]);
+
+  function UnhandledError(errorCode, e, classification) {
+    var _this;
+
+    _classCallCheck(this, UnhandledError);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(UnhandledError).call(this, e.message));
+    _this.stack = e.stack;
+    classification = classification || "unhandled-error/".concat(e.name);
+    classification = classification.includes("/") ? classification : "unhandled-error/".concat(classification);
+
+    var _classification$split = classification.split("/"),
+        _classification$split2 = _slicedToArray(_classification$split, 2),
+        type = _classification$split2[0],
+        subType = _classification$split2[1];
+
+    _this.name = type;
+    _this.code = subType;
+    _this.httpStatus = errorCode;
+    return _this;
+  }
+
+  return UnhandledError;
+}(_wrapNativeSuper(Error));
+
+function findError(e, expectedErrors) {
+  var found = false;
+  expectedErrors.list.forEach(function (i) {
+    if (e.code === i.identifiedBy.code || e.name == i.identifiedBy.name || e.message.includes(i.identifiedBy.messageContains) || e instanceof i.identifiedBy.errorClass) {
+      found = i;
+    }
+  });
+  return found;
+}
+
+var HandledError =
+/*#__PURE__*/
+function (_Error) {
+  _inherits(HandledError, _Error);
+
+  _createClass(HandledError, null, [{
+    key: "apiGatewayError",
+    value: function apiGatewayError(errorCode, e, context) {
+      var obj = new HandledError(errorCode, e, context);
+      return JSON.stringify({
+        errorType: obj.name,
+        httpStatus: obj.httpStatus,
+        requestId: obj.requestId,
+        message: obj.message
+      });
+    }
+  }, {
+    key: "lambdaError",
+    value: function lambdaError(errorCode, e, context) {
+      var obj = new HandledError(errorCode, e, context);
+    }
+  }]);
+
+  function HandledError(errorCode, e, context) {
+    var _this;
+
+    _classCallCheck(this, HandledError);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(HandledError).call(this, e.message));
+    _this.stack = e.stack;
+    var type = e.name && e.name !== "Error" ? e.name : context.functionName;
+    var subType = e.code ? String(e.code) : "handled-error";
+    _this.classification = "".concat(type, "/").concat(subType);
+    _this.functionName = context.functionName;
+    _this.name = type;
+    _this.code = subType;
+    _this.httpStatus = errorCode;
+    return _this;
+  }
+
+  return HandledError;
+}(_wrapNativeSuper(Error));
+
+function _await(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+function _async(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+function getSecrets(event) {
+  return _async(function (modules, localLookup) {
+    if (localLookup && event && event[localLookup]) {
+      var localModules = Object.keys(event[localLookup]);
+
+      if (localModules.every(function (i) {
+        return modules.includes(i);
+      })) {
+        return event[localLookup];
+      }
+    }
+
+    return _await(new Promise(function (resolve) { resolve(_interopNamespace(require('aws-ssm'))); }), function (_temp) {
+      var SSM = _temp.SSM;
+      return _await(SSM.modules(modules));
+    });
+  });
+}
+
+function _await$1(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+function _invoke(body, then) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(then);
+  }
+
+  return then(result);
+}
+
+function _empty() {}
+
+function _invokeIgnored(body) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(_empty);
+  }
+}
+
+function _catch(body, recover) {
+  try {
+    var result = body();
+  } catch (e) {
+    return recover(e);
+  }
+
+  if (result && result.then) {
+    return result.then(void 0, recover);
+  }
+
+  return result;
+}
+
+function _async$1(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var wrapper = function wrapper(fn) {
+  return _async$1(function (event, context) {
+    var workflowStatus = "initializing";
+    var log = awsLog.logger().lambda(event, context);
+    var errorMeta = new ErrorMeta();
+    return _catch(function () {
+      context.callbackWaitsForEmptyEventLoop = false;
+
+      var _LambdaSequence$from = LambdaSequence.from(event),
+          request = _LambdaSequence$from.request,
+          sequence = _LambdaSequence$from.sequence,
+          apiGateway = _LambdaSequence$from.apiGateway;
+
+      log.info("The handler function \"".concat(context.functionName, "\" has started execution"), {
+        clientContext: context.clientContext,
+        request: request,
+        sequence: sequence,
+        apiGateway: apiGateway
+      });
+      var handlerContext = Object.assign({}, context, {
+        log: log,
+        sequence: sequence,
+        isSequence: sequence.isSequence,
+        isDone: sequence.isDone,
+        apiGateway: apiGateway,
+        getSecrets: getSecrets(request),
+        isApiGatewayRequest: apiGateway && apiGateway.headers ? true : false,
+        errorMeta: errorMeta
+      });
+      workflowStatus = "running-function";
+      return _await$1(fn(request, handlerContext), function (results) {
+        workflowStatus = "function-complete";
+        return _invoke(function () {
+          if (sequence.isSequence && !sequence.isDone) {
+            workflowStatus = "invoke-started";
+            return _await$1(awsLog.invoke.apply(void 0, _toConsumableArray(sequence.next(results))), function () {
+              workflowStatus = "invoke-complete";
+            });
+          }
+        }, function () {
+          if (handlerContext.isApiGatewayRequest) {
+            return JSON.stringify({
+              statusCode: 200,
+              data: results
+            });
+          } else {
+            return results;
+          }
+        });
+      });
+    }, function (e) {
+      var found = findError(e, errorMeta);
+      var isApiGatewayRequest = _typeof(event) === "object" && event.headers ? true : false;
+      return function () {
+        if (found) {
+          if (found.handling.callback) {
+            var resolved = found.handling.callback(e);
+
+            if (!resolved) {
+              if (isApiGatewayRequest) {
+                return HandledError.apiGatewayError(found.code, e, log.getContext());
+              } else {
+                throw new HandledError(found.code, e, log.getContext());
+              }
+            }
+          }
+
+          return _invokeIgnored(function () {
+            if (found.handling.forwardTo) {
+              return _await$1(awsLog.invoke(found.handling.forwardTo, e), function () {
+                log.info("Forwarded error to the function \"".concat(found.handling.forwardTo, "\""), {
+                  error: e,
+                  forwardTo: found.handling.forwardTo
+                });
+              });
+            }
+          });
+        } else {
+          log.warn("The error in ".concat(context.functionName, " has been returned to API Gateway using the default handler"), {
+            error: e
+          });
+
+          if (isApiGatewayRequest) {
+            return UnhandledError.apiGatewayError(errorMeta.defaultErrorCode, e, context.awsRequestId);
+          } else {
+            throw new UnhandledError(errorMeta.defaultErrorCode, e, context.awsRequestId);
+          }
+        }
+      }();
+    });
+  });
+};
+
 exports.LambdaEventParser = LambdaEventParser;
 exports.LambdaSequence = LambdaSequence;
+exports.wrapper = wrapper;
