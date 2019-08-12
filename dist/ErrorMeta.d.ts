@@ -17,9 +17,11 @@ export interface IExpectedErrorOptions<T extends IError = Error> {
 export declare class ErrorMeta {
     private _errors;
     private _defaultErrorCode;
-    add(code: number, identifiedBy: IErrorIdentification, handling: IErrorHandling): void;
+    private _arn;
+    add(code: number, identifiedBy: IErrorIdentification, handling?: IErrorHandling): void;
     readonly list: ErrorHandler[];
     setDefaultErrorCode(code: number): this;
+    setDefaultHandlerFunction(arn: string): this;
     readonly defaultErrorCode: number;
     toString(): string;
 }

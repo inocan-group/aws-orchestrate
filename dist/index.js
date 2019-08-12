@@ -636,6 +636,12 @@ function () {
       return this;
     }
   }, {
+    key: "setDefaultHandlerFunction",
+    value: function setDefaultHandlerFunction(arn) {
+      this._arn = arn;
+      return this;
+    }
+  }, {
     key: "toString",
     value: function toString() {
       return JSON.stringify({

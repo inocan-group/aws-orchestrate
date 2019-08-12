@@ -42,6 +42,7 @@ export interface IExpectedErrorOptions<T extends IError = Error> {
 export class ErrorMeta {
   private _errors: ErrorHandler[] = [];
   private _defaultErrorCode: number = 500;
+  private _arn: string;
 
   /**
    * Add another error type to the expected error types.
@@ -51,8 +52,11 @@ export class ErrorMeta {
     code: number,
     /** how will an error be matched */
     identifiedBy: IErrorIdentification,
-    /** how will an error be handled */
-    handling: IErrorHandling
+    /**
+     * how will an error be handled; it doesn't NEED to be handled and its a reasonable
+     * goal/outcome just to set the appropriate http error code
+     */
+    handling?: IErrorHandling
   ) {
     this._errors.push(new ErrorHandler(code, identifiedBy, handling));
   }
@@ -74,6 +78,19 @@ export class ErrorMeta {
    */
   setDefaultErrorCode(code: number) {
     this._defaultErrorCode = code;
+    return this;
+  }
+
+  /**
+   * **setDefaultHandlerFunction**
+   *
+   *
+   *
+   * @param arn the function's arn (this can be the abbreviated variety so long as
+   * proper ENV variables are set)
+   */
+  setDefaultHandlerFunction(arn: string) {
+    this._arn = arn;
     return this;
   }
 
