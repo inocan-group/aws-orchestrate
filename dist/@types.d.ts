@@ -3,6 +3,8 @@ import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
 import { ErrorMeta } from "./ErrorMeta";
 import { IGetSecrets } from "./wrapper/getSecrets";
+import { IFirebaseAdminConfig } from "abstracted-firebase";
+import { DB } from "abstracted-admin";
 export interface ILambdaSequenceStep<T = IDictionary> {
     arn: string;
     params: Partial<T>;
@@ -39,6 +41,7 @@ export interface IHandlerContext<T> extends IAWSLambaContext {
     isSequence: boolean;
     isDone: boolean;
     log: ILoggerApi;
+    database: (config?: IFirebaseAdminConfig) => Promise<DB>;
     getSecrets: IGetSecrets<T>;
     apiGateway: IAWSLambdaProxyIntegrationRequest;
     isApiGatewayRequest: boolean;

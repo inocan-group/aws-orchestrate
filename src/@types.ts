@@ -8,6 +8,8 @@ import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
 import { ErrorMeta } from "./ErrorMeta";
 import { getSecrets as secrets, IGetSecrets } from "./wrapper/getSecrets";
+import { IFirebaseAdminConfig } from "abstracted-firebase";
+import { DB } from "abstracted-admin";
 
 /**
  * **ILambdSequenceStep**
@@ -105,6 +107,12 @@ export interface IHandlerContext<T> extends IAWSLambaContext {
    * your pre-configured logging interface
    */
   log: ILoggerApi;
+  /**
+   * Provides a handy utility function of providing you access to a Firebase
+   * database connection. This is loaded asynchronously so there is no code
+   * penality for Firebase if you aren't using it.
+   */
+  database: (config?: IFirebaseAdminConfig) => Promise<DB>;
   /**
    * a utility function to help facilitate getting secrets
    * either from SSM or locally if available
