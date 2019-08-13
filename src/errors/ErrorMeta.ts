@@ -1,5 +1,6 @@
-import { ErrorHandler } from "./ErrorHandler";
-import { IErrorIdentification, IErrorHandling } from "./@types";
+import { ErrorHandler } from "../ErrorHandler";
+import { IErrorIdentification, IErrorHandling } from "../@types";
+import { DEFAULT_ERROR_CODE } from "../wrapper";
 
 export interface IError {
   message?: string;
@@ -41,7 +42,7 @@ export interface IExpectedErrorOptions<T extends IError = Error> {
  */
 export class ErrorMeta {
   private _errors: ErrorHandler[] = [];
-  private _defaultErrorCode: number = 500;
+  private _defaultErrorCode: number = DEFAULT_ERROR_CODE;
   private _arn: string;
 
   /**

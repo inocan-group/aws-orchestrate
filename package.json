@@ -6,7 +6,7 @@
   "module": "dist/index.esm.js",
   "scripts": {
     "test": "node_modules/.bin/ts-node scripts/test",
-    "docs": "node_modules/.bin/vuepress docs",
+    "docs": "node_modules/.bin/vuepress dev docs",
     "docs:build": "node_modules/.bin/vuepress build docs",
     "build": "node_modules/.bin/bili"
   },
@@ -23,10 +23,12 @@
   "dependencies": {
     "aws-log": "^0.8.2",
     "aws-ssm": "^0.2.7",
-    "common-types": "^1.11.15"
+    "common-types": "^1.11.15",
+    "mermaid": "^8.2.3"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
+    "@types/mermaid": "^8.0.2",
     "@types/mocha": "^5.2.7",
     "@types/rimraf": "^2.0.2",
     "@vuepress/plugin-back-to-top": "^1.0.3",
@@ -44,7 +46,7 @@
     "ts-node": "^8.3.0",
     "tslint": "^5.18.0",
     "typescript": "^3.5.3",
-    "vuepress": "1.0.3",
+    "vuepress": "^1.0.3",
     "vuepress-plugin-autometa": "^0.1.10"
   }
 }

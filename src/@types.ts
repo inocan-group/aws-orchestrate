@@ -1,15 +1,14 @@
 import {
   IDictionary,
   IAWSLambdaProxyIntegrationRequest,
-  IAWSLambaContext,
-  IAwsLambdaEvent
+  IAWSLambaContext
 } from "common-types";
 import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
-import { ErrorMeta } from "./ErrorMeta";
+import { ErrorMeta } from "./errors/ErrorMeta";
 import { getSecrets as secrets, IGetSecrets } from "./wrapper/getSecrets";
 import { IFirebaseAdminConfig } from "abstracted-firebase";
-import { DB } from "abstracted-admin";
+type DB = import("abstracted-admin").DB;
 
 /**
  * **ILambdSequenceStep**
@@ -80,12 +79,14 @@ export interface IErrorHandlingDefault {
   defaultHandling: true;
 }
 
-// export type IErrorHandling = IErrorHandlingDefault | IErrorHandlingNonDefault;
-
 /**
- * the API provided via `context` for handlers who are wrapped by
+ * The AWS `context` plus additional properties/functions that the `wrapper`
+ * function provides.
+ *
+ * Optionally you can also pass in a generic to state the type of the the
+ * "secrets" returned.
  */
-export interface IHandlerContext<T> extends IAWSLambaContext {
+export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
   /**
    * The sequence which this execution is part of
    */

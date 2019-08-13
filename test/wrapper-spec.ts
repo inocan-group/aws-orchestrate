@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { IHandlerContext, IHandlerFunction } from "../src/@types";
-import { wrapper } from "../src/index";
+import { wrapper, DEFAULT_ERROR_CODE } from "../src/index";
 import { IAWSLambdaProxyIntegrationRequest } from "common-types";
 import { HandledError } from "../src/errors/HandledError";
 import { UnhandledError } from "../src/errors/UnhandledError";
@@ -36,7 +36,6 @@ const handlerErrorFnWithDefaultChanged: IHandlerFunction<
 > = async (event, context) => {
   context.errorMeta.setDefaultErrorCode(400);
   throw new Error("this is an error god dammit");
-  return { event, context };
 };
 
 const handlerErrorFnWithKnownErrors: (
@@ -58,7 +57,7 @@ const handlerErrorFnWithKnownErrors: (
     e.name = "known";
     throw new HandledError(BOGUS_ERROR_CODE, e, context.log.getContext());
   } else {
-    const e = new Error("saw that one coming!");
+    const e = new Error("unhandled error!");
     e.name = "unknown";
     throw new UnhandledError(BOGUS_ERROR_CODE, e);
   }
@@ -127,7 +126,7 @@ describe("Handler Wrapper => ", () => {
     } catch (e) {
       expect(e.code).to.equal("Error");
       expect(e.name).to.equal("unhandled-error");
-      expect(e.httpStatus).to.equal(500);
+      expect(e.httpStatus).to.equal(DEFAULT_ERROR_CODE);
     }
   });
 
@@ -185,7 +184,6 @@ describe("Handler Wrapper => ", () => {
       e.code = "secret-code";
       e.name = "named and shamed";
       throw e;
-      return { event, context };
     };
 
     const wrapped = wrapper(fn);
