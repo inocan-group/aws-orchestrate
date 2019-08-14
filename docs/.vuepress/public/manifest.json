@@ -1,0 +1,23 @@
+{
+  "name": "aws-orchestrate",
+  "shortName": "aws-orchestrate",
+  "start_url": "/",
+  "display": "standalone",
+  "description": "Orchestration for AWS Serverless projects",
+  "icons": [
+    {
+      "src": "/inocan-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/inocan-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    }
+  ],
+  "background_color": "#ffffff",
+  "short_name": "aws-orchestrate",
+  "theme_color": "#28660C",
+  "orientation": "any"
+}

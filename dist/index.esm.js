@@ -591,6 +591,7 @@ function () {
   return ErrorHandler;
 }();
 
+var DEFAULT_ERROR_CODE = 500;
 var ErrorMeta =
 /*#__PURE__*/
 function () {
@@ -598,7 +599,7 @@ function () {
     _classCallCheck(this, ErrorMeta);
 
     this._errors = [];
-    this._defaultErrorCode = 500;
+    this._defaultErrorCode = DEFAULT_ERROR_CODE;
   }
 
   _createClass(ErrorMeta, [{
@@ -610,6 +611,12 @@ function () {
     key: "setDefaultErrorCode",
     value: function setDefaultErrorCode(code) {
       this._defaultErrorCode = code;
+      return this;
+    }
+  }, {
+    key: "setDefaultHandlerFunction",
+    value: function setDefaultHandlerFunction(arn) {
+      this._arn = arn;
       return this;
     }
   }, {
@@ -793,7 +800,60 @@ function _await$1(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
+var _database;
+
 function _invoke(body, then) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(then);
+  }
+
+  return then(result);
+}
+
+function _async$1(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var database = _async$1(function (config) {
+  return _invoke(function () {
+    if (!_database) {
+      return _await$1(import('abstracted-admin'), function (_temp) {
+        var DB = _temp.DB;
+        return _await$1(DB.connect(config), function (_DB$connect) {
+          _database = _DB$connect;
+        });
+      });
+    }
+  }, function () {
+    return _database;
+  });
+});
+
+function _await$2(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+function _invoke$1(body, then) {
   var result = body();
 
   if (result && result.then) {
@@ -827,7 +887,7 @@ function _catch(body, recover) {
   return result;
 }
 
-function _async$1(f) {
+function _async$2(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -842,7 +902,7 @@ function _async$1(f) {
 }
 
 var wrapper = function wrapper(fn) {
-  return _async$1(function (event, context) {
+  return _async$2(function (event, context) {
     var workflowStatus = "initializing";
     var log = logger().lambda(event, context);
     var errorMeta = new ErrorMeta();
@@ -862,6 +922,7 @@ var wrapper = function wrapper(fn) {
       });
       var handlerContext = Object.assign({}, context, {
         log: log,
+        database: database,
         sequence: sequence,
         isSequence: sequence.isSequence,
         isDone: sequence.isDone,
@@ -871,12 +932,12 @@ var wrapper = function wrapper(fn) {
         errorMeta: errorMeta
       });
       workflowStatus = "running-function";
-      return _await$1(fn(request, handlerContext), function (results) {
+      return _await$2(fn(request, handlerContext), function (results) {
         workflowStatus = "function-complete";
-        return _invoke(function () {
+        return _invoke$1(function () {
           if (sequence.isSequence && !sequence.isDone) {
             workflowStatus = "invoke-started";
-            return _await$1(invoke.apply(void 0, _toConsumableArray(sequence.next(results))), function () {
+            return _await$2(invoke.apply(void 0, _toConsumableArray(sequence.next(results))), function () {
               workflowStatus = "invoke-complete";
             });
           }
@@ -910,7 +971,7 @@ var wrapper = function wrapper(fn) {
 
           return _invokeIgnored(function () {
             if (found.handling.forwardTo) {
-              return _await$1(invoke(found.handling.forwardTo, e), function () {
+              return _await$2(invoke(found.handling.forwardTo, e), function () {
                 log.info("Forwarded error to the function \"".concat(found.handling.forwardTo, "\""), {
                   error: e,
                   forwardTo: found.handling.forwardTo

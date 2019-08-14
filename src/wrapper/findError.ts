@@ -1,5 +1,5 @@
 import { ErrorHandler } from "../ErrorHandler";
-import { ErrorMeta } from "../ErrorMeta";
+import { ErrorMeta } from "../errors/ErrorMeta";
 /**
  * **findError**
  *

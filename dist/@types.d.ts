@@ -1,8 +1,10 @@
 import { IDictionary, IAWSLambdaProxyIntegrationRequest, IAWSLambaContext } from "common-types";
 import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
-import { ErrorMeta } from "./ErrorMeta";
+import { ErrorMeta } from "./errors/ErrorMeta";
 import { IGetSecrets } from "./wrapper/getSecrets";
+import { IFirebaseAdminConfig } from "abstracted-firebase";
+declare type DB = import("abstracted-admin").DB;
 export interface ILambdaSequenceStep<T = IDictionary> {
     arn: string;
     params: Partial<T>;
@@ -34,11 +36,12 @@ export interface IErrorHandling {
 export interface IErrorHandlingDefault {
     defaultHandling: true;
 }
-export interface IHandlerContext<T> extends IAWSLambaContext {
+export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
     sequence: LambdaSequence;
     isSequence: boolean;
     isDone: boolean;
     log: ILoggerApi;
+    database: (config?: IFirebaseAdminConfig) => Promise<DB>;
     getSecrets: IGetSecrets<T>;
     apiGateway: IAWSLambdaProxyIntegrationRequest;
     isApiGatewayRequest: boolean;
@@ -48,3 +51,4 @@ export declare type IHandlerFunction<E, R> = (event: E, context: IHandlerContext
 export interface IErrorWithExtraProperties extends Error {
     [key: string]: any;
 }
+export {};

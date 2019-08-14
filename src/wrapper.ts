@@ -1,17 +1,17 @@
 import {
   IAWSLambaContext,
   IAwsLambdaEvent,
-  IAWSLambdaProxyIntegrationRequest,
-  IDictionary
+  IAWSLambdaProxyIntegrationRequest
 } from "common-types";
 import { logger, invoke } from "aws-log";
-import { ErrorMeta } from "./ErrorMeta";
+import { ErrorMeta } from "./errors/ErrorMeta";
 import { LambdaSequence } from "./LambdaSequence";
 import { UnhandledError } from "./errors/UnhandledError";
 import { findError } from "./wrapper/findError";
 import { IHandlerContext } from "./@types";
 import { HandledError } from "./errors/HandledError";
 import { getSecrets } from "./wrapper/getSecrets";
+import { database } from "./database-connect";
 
 /**
  * **handler**
@@ -53,6 +53,7 @@ export const wrapper = function<I, O>(
       const handlerContext: IHandlerContext<I> = {
         ...context,
         log,
+        database,
         sequence,
         isSequence: sequence.isSequence,
         isDone: sequence.isDone,
