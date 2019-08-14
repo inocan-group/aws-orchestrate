@@ -1,6 +1,6 @@
 // const appleTouch = require("../.vuepress/apple-touch.json");
 const title = "aws-orchestrate";
-const favicon = "/uploads/favicon-32x32.png";
+const favicon = "/favicon-32x32.png";
 
 let head = [
   ["link", { rel: "icon", href: favicon }],
@@ -73,16 +73,6 @@ module.exports = {
         buttonText: "Refresh"
       }
     },
-    autometa: {
-      name: "aws-orchestrate",
-      image: "/inocan-512x512.png",
-      og: true,
-      twitter: true,
-      site: {
-        name: "aws-orchestrate",
-        twitter: "inocangroup"
-      }
-    },
     mermaid: true,
     "@vuepress/back-to-top": true,
     "@vuepress/last-updated": true,
@@ -101,7 +91,20 @@ module.exports = {
     footer: "â’¸ 2018 Inocan Group, All Rights Reserved",
     serviceWorker: {
       updatePopup: true
-    }
-    // nav: ["/transaction", "/wrapper"]
+    },
+    nav: [
+      {
+        text: "wrapper",
+        link: "/wrapper"
+      },
+      {
+        text: "sequence",
+        link: "/lambda-sequence"
+      },
+      {
+        text: "transaction",
+        link: "/transaction"
+      }
+    ]
   }
 };

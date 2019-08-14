@@ -614,6 +614,7 @@ function () {
   return ErrorHandler;
 }();
 
+var DEFAULT_ERROR_CODE = 500;
 var ErrorMeta =
 /*#__PURE__*/
 function () {
@@ -923,7 +924,6 @@ function _async$2(f) {
   };
 }
 
-var DEFAULT_ERROR_CODE = 500;
 var wrapper = function wrapper(fn) {
   return _async$2(function (event, context) {
     var workflowStatus = "initializing";
@@ -1018,7 +1018,6 @@ var wrapper = function wrapper(fn) {
   });
 };
 
-exports.DEFAULT_ERROR_CODE = DEFAULT_ERROR_CODE;
 exports.LambdaEventParser = LambdaEventParser;
 exports.LambdaSequence = LambdaSequence;
 exports.wrapper = wrapper;

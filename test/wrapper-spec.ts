@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import { IHandlerContext, IHandlerFunction } from "../src/@types";
-import { wrapper, DEFAULT_ERROR_CODE } from "../src/index";
-import { IAWSLambdaProxyIntegrationRequest } from "common-types";
+import { wrapper } from "../src/index";
 import { HandledError } from "../src/errors/HandledError";
 import { UnhandledError } from "../src/errors/UnhandledError";
+import { DEFAULT_ERROR_CODE } from "../src/errors/ErrorMeta";
 
 interface IRequest {
   foo: string;

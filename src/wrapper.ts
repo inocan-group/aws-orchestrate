@@ -13,8 +13,6 @@ import { HandledError } from "./errors/HandledError";
 import { getSecrets } from "./wrapper/getSecrets";
 import { database } from "./database-connect";
 
-export const DEFAULT_ERROR_CODE = 500;
-
 /**
  * **handler**
  *

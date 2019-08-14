@@ -1,6 +1,6 @@
 import { ErrorHandler } from "../ErrorHandler";
 import { IErrorIdentification, IErrorHandling } from "../@types";
-import { DEFAULT_ERROR_CODE } from "../wrapper";
+export const DEFAULT_ERROR_CODE = 500;
 
 export interface IError {
   message?: string;
