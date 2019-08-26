@@ -38,6 +38,7 @@ export const wrapper = function<I, O>(
       | "completing" = "initializing";
     const log = logger().lambda(event, context);
     const errorMeta: ErrorMeta = new ErrorMeta();
+
     try {
       context.callbackWaitsForEmptyEventLoop = false;
       const { request, sequence, apiGateway } = LambdaSequence.from(event);
@@ -83,6 +84,9 @@ export const wrapper = function<I, O>(
         return results;
       }
     } catch (e) {
+      log.info(`Processing error in handler function: ${e.message}`, {
+        error: e
+      });
       const found = findError(e, errorMeta);
       const isApiGatewayRequest: boolean =
         typeof event === "object" &&
@@ -115,9 +119,7 @@ export const wrapper = function<I, O>(
         }
       } else {
         log.warn(
-          `The error in ${
-            context.functionName
-          } has been returned to API Gateway using the default handler`,
+          `The error in ${context.functionName} has been returned to API Gateway using the default handler`,
           { error: e }
         );
         if (isApiGatewayRequest) {
