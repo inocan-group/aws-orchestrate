@@ -976,6 +976,9 @@ var wrapper = function wrapper(fn) {
         });
       });
     }, function (e) {
+      log.info("Processing error in handler function: ".concat(e.message), {
+        error: e
+      });
       var found = findError(e, errorMeta);
       var isApiGatewayRequest = _typeof(event) === "object" && event.headers ? true : false;
       return function () {
