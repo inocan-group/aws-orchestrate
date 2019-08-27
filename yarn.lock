@@ -4126,10 +4126,10 @@ dns-txt@^2.0.2:
   dependencies:
     buffer-indexof "^1.0.0"
 
-do-devops@^0.1.8:
-  version "0.1.9"
-  resolved "https://registry.yarnpkg.com/do-devops/-/do-devops-0.1.9.tgz#fdd4e2b450412f8b4bc06b18a71b12bb27aedc0a"
-  integrity sha512-lBdz1QmYS89tn6eVs/4oMU7+3F7gYVoXuUe78YWFmrPpGBJxNosOBqW+XI7nHA6DMr+3f70AgIZiI32t/nj1Vw==
+do-devops@^0.1.10:
+  version "0.1.10"
+  resolved "https://registry.yarnpkg.com/do-devops/-/do-devops-0.1.10.tgz#3d40fee5439a629bbf79fae187430c2204158cd8"
+  integrity sha512-ZcioBTUlFF9w16OmKqfQWnMX0z+KSmoJ+3NsLv5NW3C57l9wfmL2mbh9cV9qV4omNktNu3DvbOyFujTXW/dwjw==
   dependencies:
     "@types/command-line-args" "^5.0.0"
     "@types/command-line-usage" "^5.0.1"
@@ -4138,7 +4138,7 @@ do-devops@^0.1.8:
     chalk "^2.4.2"
     command-line-args "^5.1.1"
     command-line-usage "^6.0.2"
-    common-types "^1.11.18"
+    common-types "^1.11.20"
     date-fns "^1.30.1"
     fast-glob "^3.0.4"
     globby "^10.0.1"

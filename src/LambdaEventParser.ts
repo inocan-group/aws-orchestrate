@@ -13,7 +13,7 @@ import {
  * payload with the "body" removed (as it would be redundant to the request).
  * 
  * Typical usage is:
- * 
+ *
 ```typescript
 const { request, apiGateway } = LambdaEventParser.parse(event);
 ```
@@ -33,7 +33,9 @@ export class LambdaEventParser {
   public static parse<T extends IDictionary = IDictionary>(
     event: T | IAWSLambdaProxyIntegrationRequest
   ) {
-    const request = isLambdaProxyRequest(event) ? (JSON.parse(event.body) as T) : event;
+    const request = isLambdaProxyRequest(event)
+      ? (JSON.parse(event.body) as T)
+      : event;
 
     if (isLambdaProxyRequest(event)) {
       delete event.body;
@@ -43,7 +45,9 @@ export class LambdaEventParser {
 
     return {
       request,
-      apiGateway: event as Omit<IAWSLambdaProxyIntegrationRequest, "body"> | undefined
+      apiGateway: event as
+        | Omit<IAWSLambdaProxyIntegrationRequest, "body">
+        | undefined
     };
   }
 }

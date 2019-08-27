@@ -909,12 +909,12 @@ var wrapper = function wrapper(fn) {
     return _catch(function () {
       context.callbackWaitsForEmptyEventLoop = false;
 
-      var _LambdaSequence$from = LambdaSequence.from(event, log),
+      var _LambdaSequence$from = LambdaSequence.from(event),
           request = _LambdaSequence$from.request,
           sequence = _LambdaSequence$from.sequence,
           apiGateway = _LambdaSequence$from.apiGateway;
 
-      log.info("The handler function \"".concat(context.functionName, "\" has started execution"), {
+      log.info("The handler function \"".concat(context.functionName, "\" has started execution.  ").concat(sequence.isSequence ? "This handler is part of a sequence [".concat(log.getCorrelationId, " ].") : "This handler was not triggered as part of a sequence."), {
         clientContext: context.clientContext,
         request: request,
         sequence: sequence,
@@ -942,14 +942,30 @@ var wrapper = function wrapper(fn) {
             });
           }
         }, function () {
-          if (handlerContext.isApiGatewayRequest) {
-            return JSON.stringify({
-              statusCode: 200,
-              data: results
-            });
-          } else {
-            return results;
-          }
+          return _invoke$1(function () {
+            if (results instanceof LambdaSequence || _typeof(results) === "object" && (results.sequence instanceof LambdaSequence || results._sequence instanceof LambdaSequence)) {
+              workflowStatus = "sequence-defined";
+
+              var _sequence = results instanceof LambdaSequence ? results : results._sequence || results.sequence;
+
+              var location = results instanceof LambdaSequence ? "root" : results._sequence ? "_sequence" : "sequence";
+              log.info("This function has started a sequence [ prop: ".concat(location, " ]! There are ").concat(_sequence.steps.length, " steps in this sequence."), {
+                sequence: _sequence
+              });
+              return _await$2(invoke.apply(void 0, _toConsumableArray(_sequence.next(results))), function () {
+                workflowStatus = "sequence-started";
+              });
+            }
+          }, function () {
+            if (handlerContext.isApiGatewayRequest) {
+              return JSON.stringify({
+                statusCode: 200,
+                data: results
+              });
+            } else {
+              return results;
+            }
+          });
         });
       });
     }, function (e) {
