@@ -50,7 +50,7 @@ export const wrapper = function<I, O>(
           context.functionName
         }" has started execution.  ${
           sequence.isSequence
-            ? `This handler is part of a sequence [${log.getCorrelationId} ].`
+            ? `This handler is part of a sequence [${log.getCorrelationId()} ].`
             : "This handler was not triggered as part of a sequence."
         }`,
         {
@@ -131,7 +131,8 @@ export const wrapper = function<I, O>(
       }
     } catch (e) {
       log.info(`Processing error in handler function: ${e.message}`, {
-        error: e
+        error: e,
+        workflowStatus
       });
       const found = findError(e, errorMeta);
       const isApiGatewayRequest: boolean =
@@ -165,8 +166,8 @@ export const wrapper = function<I, O>(
         }
       } else {
         log.warn(
-          `The error in ${context.functionName} has been returned to API Gateway using the default handler`,
-          { error: e }
+          `The error in "${context.functionName}" has been returned to API Gateway using the default handler`,
+          { error: e, workflowStatus }
         );
         if (isApiGatewayRequest) {
           return UnhandledError.apiGatewayError(

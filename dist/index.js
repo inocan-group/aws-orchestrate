@@ -937,7 +937,7 @@ var wrapper = function wrapper(fn) {
           sequence = _LambdaSequence$from.sequence,
           apiGateway = _LambdaSequence$from.apiGateway;
 
-      log.info("The handler function \"".concat(context.functionName, "\" has started execution.  ").concat(sequence.isSequence ? "This handler is part of a sequence [".concat(log.getCorrelationId, " ].") : "This handler was not triggered as part of a sequence."), {
+      log.info("The handler function \"".concat(context.functionName, "\" has started execution.  ").concat(sequence.isSequence ? "This handler is part of a sequence [".concat(log.getCorrelationId(), " ].") : "This handler was not triggered as part of a sequence."), {
         clientContext: context.clientContext,
         request: request,
         sequence: sequence,
@@ -1000,7 +1000,8 @@ var wrapper = function wrapper(fn) {
       });
     }, function (e) {
       log.info("Processing error in handler function: ".concat(e.message), {
-        error: e
+        error: e,
+        workflowStatus: workflowStatus
       });
       var found = findError(e, errorMeta);
       var isApiGatewayRequest = _typeof(event) === "object" && event.headers ? true : false;
@@ -1029,8 +1030,9 @@ var wrapper = function wrapper(fn) {
             }
           });
         } else {
-          log.warn("The error in ".concat(context.functionName, " has been returned to API Gateway using the default handler"), {
-            error: e
+          log.warn("The error in \"".concat(context.functionName, "\" has been returned to API Gateway using the default handler"), {
+            error: e,
+            workflowStatus: workflowStatus
           });
 
           if (isApiGatewayRequest) {
