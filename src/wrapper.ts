@@ -1,7 +1,8 @@
 import {
   IAWSLambaContext,
   IAwsLambdaEvent,
-  IAWSLambdaProxyIntegrationRequest
+  IAWSLambdaProxyIntegrationRequest,
+  IDictionary
 } from "common-types";
 import { logger, invoke } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
@@ -35,15 +36,23 @@ export const wrapper = function<I, O>(
       | "function-complete"
       | "invoke-complete"
       | "invoke-started"
+      | "sequence-defined"
+      | "sequence-started"
       | "completing" = "initializing";
 
     const log = logger().lambda(event, context);
     const errorMeta: ErrorMeta = new ErrorMeta();
     try {
       context.callbackWaitsForEmptyEventLoop = false;
-      const { request, sequence, apiGateway } = LambdaSequence.from(event, log);
+      const { request, sequence, apiGateway } = LambdaSequence.from(event);
       log.info(
-        `The handler function "${context.functionName}" has started execution`,
+        `The handler function "${
+          context.functionName
+        }" has started execution.  ${
+          sequence.isSequence
+            ? `This handler is part of a sequence [${log.getCorrelationId} ].`
+            : "This handler was not triggered as part of a sequence."
+        }`,
         {
           clientContext: context.clientContext,
           request,
@@ -70,11 +79,38 @@ export const wrapper = function<I, O>(
 
       workflowStatus = "function-complete";
 
-      // SEQUENCE
+      // SEQUENCE (continuation)
       if (sequence.isSequence && !sequence.isDone) {
         workflowStatus = "invoke-started";
         await invoke(...sequence.next(results));
         workflowStatus = "invoke-complete";
+      }
+
+      // SEQUENCE (orchestration starting)
+      if (
+        results instanceof LambdaSequence ||
+        (typeof results === "object" &&
+          ((results as IDictionary).sequence instanceof LambdaSequence ||
+            (results as IDictionary)._sequence instanceof LambdaSequence))
+      ) {
+        workflowStatus = "sequence-defined";
+        const sequence: LambdaSequence =
+          results instanceof LambdaSequence
+            ? results
+            : (results as IDictionary)._sequence ||
+              (results as IDictionary).sequence;
+        const location =
+          results instanceof LambdaSequence
+            ? "root"
+            : (results as IDictionary)._sequence
+            ? "_sequence"
+            : "sequence";
+        log.info(
+          `This function has started a sequence [ prop: ${location} ]! There are ${sequence.steps.length} steps in this sequence.`,
+          { sequence }
+        );
+        await invoke(...sequence.next(results));
+        workflowStatus = "sequence-started";
       }
 
       // RETURN

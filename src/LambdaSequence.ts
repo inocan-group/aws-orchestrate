@@ -201,8 +201,8 @@ export function handler(event, context, callback) {
       request = getBodyFromPossibleLambdaProxyRequest<T>(request);
     }
 
-    // there is no sequence property on the request
     if (!request._sequence) {
+      // there is no sequence property on the request
       if (logger) {
         logger.info("This execution is not part of a sequence");
       }
