@@ -523,7 +523,7 @@ function () {
     key: "from",
     value: function from(event, logger) {
       var obj = new LambdaSequence();
-      return obj.from(event);
+      return obj.from(event, logger);
     }
   }, {
     key: "notASequence",
@@ -909,7 +909,7 @@ var wrapper = function wrapper(fn) {
     return _catch(function () {
       context.callbackWaitsForEmptyEventLoop = false;
 
-      var _LambdaSequence$from = LambdaSequence.from(event),
+      var _LambdaSequence$from = LambdaSequence.from(event, log),
           request = _LambdaSequence$from.request,
           sequence = _LambdaSequence$from.sequence,
           apiGateway = _LambdaSequence$from.apiGateway;
