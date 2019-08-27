@@ -975,7 +975,14 @@ var wrapper = function wrapper(fn) {
               log.info("This function has started a sequence [ prop: ".concat(location, " ]! There are ").concat(_sequence.steps.length, " steps in this sequence."), {
                 sequence: _sequence
               });
-              return _await$2(awsLog.invoke.apply(void 0, _toConsumableArray(_sequence.next(results))), function () {
+
+              if (location === "_sequence") {
+                delete results._sequence;
+              } else if (location === "sequence") {
+                delete results.sequence;
+              }
+
+              return _await$2(awsLog.invoke.apply(void 0, _toConsumableArray(_sequence.next(location === "root" ? undefined : results))), function () {
                 workflowStatus = "sequence-started";
               });
             }

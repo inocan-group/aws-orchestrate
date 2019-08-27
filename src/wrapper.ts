@@ -109,7 +109,14 @@ export const wrapper = function<I, O>(
           `This function has started a sequence [ prop: ${location} ]! There are ${sequence.steps.length} steps in this sequence.`,
           { sequence }
         );
-        await invoke(...sequence.next(results));
+        if (location === "_sequence") {
+          delete (results as IDictionary)._sequence;
+        } else if (location === "sequence") {
+          delete (results as IDictionary).sequence;
+        }
+        await invoke(
+          ...sequence.next(location === "root" ? undefined : results)
+        );
         workflowStatus = "sequence-started";
       }
 
