@@ -67,7 +67,7 @@ export function handler(event, context, callback) {
   ) {
     const obj = new LambdaSequence();
 
-    return obj.from(event);
+    return obj.from(event, logger);
   }
 
   public static notASequence() {
@@ -134,9 +134,7 @@ export function handler(event, context, callback) {
     if (this.isDone) {
       if (logger) {
         logger.info(
-          `The next() function [ ${
-            this.activeFn.arn
-          } ] was called but we are now done with the sequence so exiting.`
+          `The next() function [ ${this.activeFn.arn} ] was called but we are now done with the sequence so exiting.`
         );
       }
       return;
@@ -196,11 +194,13 @@ export function handler(event, context, callback) {
     logger?: import("aws-log").ILoggerApi
   ): ILambaSequenceFromResponse<T> {
     let apiGateway: IAWSLambdaProxyIntegrationRequest | undefined;
+
     // separate possible LambdaProxy request from main request
     if (isLambdaProxyRequest(request)) {
       apiGateway = request;
       request = getBodyFromPossibleLambdaProxyRequest<T>(request);
     }
+
     // there is no sequence property on the request
     if (!request._sequence) {
       if (logger) {
@@ -213,7 +213,7 @@ export function handler(event, context, callback) {
     this._steps = request._sequence;
 
     // active function's output is sent into next's params
-    const transformedRequest = { ...request, ...this.activeFn.params };
+    const transformedRequest = { ...request, ...this.activeFn.params } as T;
 
     // remove the sequence data from the request as this payload will be
     // available in the returned LambdaSequence object

@@ -14,7 +14,7 @@ import { getSecrets } from "./wrapper/getSecrets";
 import { database } from "./database-connect";
 
 /**
- * **handler**
+ * **wrapper**
  *
  * A higher order function which wraps a serverless _handler_-function with the aim of providing
  * a better typing, logging, and orchestration experience.
@@ -36,12 +36,12 @@ export const wrapper = function<I, O>(
       | "invoke-complete"
       | "invoke-started"
       | "completing" = "initializing";
+
     const log = logger().lambda(event, context);
     const errorMeta: ErrorMeta = new ErrorMeta();
-
     try {
       context.callbackWaitsForEmptyEventLoop = false;
-      const { request, sequence, apiGateway } = LambdaSequence.from(event);
+      const { request, sequence, apiGateway } = LambdaSequence.from(event, log);
       log.info(
         `The handler function "${context.functionName}" has started execution`,
         {
@@ -64,7 +64,10 @@ export const wrapper = function<I, O>(
         errorMeta: errorMeta
       };
       workflowStatus = "running-function";
+
+      // CALL the HANDLER FUNCTION
       const results = await fn(request, handlerContext);
+
       workflowStatus = "function-complete";
 
       // SEQUENCE

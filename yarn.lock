@@ -1296,6 +1296,16 @@
   resolved "https://registry.yarnpkg.com/@types/chai/-/chai-4.2.0.tgz#2478260021408dec32c123a7cad3414beb811a07"
   integrity sha512-zw8UvoBEImn392tLjxoavuonblX/4Yb9ha4KBU10FirCfwgzhKO0dvyJSF9ByxV1xK1r2AgnAi/tvQaLgxQqxA==
 
+"@types/command-line-args@^5.0.0":
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/@types/command-line-args/-/command-line-args-5.0.0.tgz#484e704d20dbb8754a8f091eee45cdd22bcff28c"
+  integrity sha512-4eOPXyn5DmP64MCMF8ePDvdlvlzt2a+F8ZaVjqmh2yFCpGjc1kI3kGnCFYX9SCsGTjQcWIyVZ86IHCEyjy/MNg==
+
+"@types/command-line-usage@^5.0.1":
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/@types/command-line-usage/-/command-line-usage-5.0.1.tgz#99424950da567ba67b6b65caee57ff03c4e751ec"
+  integrity sha512-/xUgezxxYePeXhg5S04hUjxG9JZi+rJTs1+4NwpYPfSaS7BeDa6tVJkH6lN9Cb6rl8d24Fi2uX0s0Ngg2JT6gg==
+
 "@types/estree@0.0.39":
   version "0.0.39"
   resolved "https://registry.yarnpkg.com/@types/estree/-/estree-0.0.39.tgz#e177e699ee1b8c22d23174caaa7422644389509f"
@@ -2176,10 +2186,10 @@ autoprefixer@^9.5.1:
     postcss "^7.0.17"
     postcss-value-parser "^4.0.0"
 
-aws-log@^0.8.4:
-  version "0.8.4"
-  resolved "https://registry.yarnpkg.com/aws-log/-/aws-log-0.8.4.tgz#6bbee42d5234f9e5a4754bb39a376878f5ea80ee"
-  integrity sha512-RVigJ6SWxG4pNAumWz74OYzQRSW5nKQanMz++rpWpazW0kwCzlq50mG+DvLcg2RrAojQWno8FpRrmQuDv3pEug==
+aws-log@^0.8.5:
+  version "0.8.5"
+  resolved "https://registry.yarnpkg.com/aws-log/-/aws-log-0.8.5.tgz#1e030f2ab43aacebed80ce4a1d11e4b1efa7164f"
+  integrity sha512-ohp6fIqVEWuzMrMIaz/jP5Nk7EhRVzlj0V/5Rztb5Vf36TajGAEejtMuasQKq2PEV0oOxJKLQXhb9ZtP8Nzv4w==
   dependencies:
     common-types "^1.11.18"
     stack-trace "^0.0.10"
@@ -2205,10 +2215,10 @@ aws-sign2@~0.7.0:
   resolved "https://registry.yarnpkg.com/aws-sign2/-/aws-sign2-0.7.0.tgz#b46e890934a9591f2d2f6f86d7e6a9f1b3fe76a8"
   integrity sha1-tG6JCTSpWR8tL2+G1+ap8bP+dqg=
 
-aws-ssm@^0.3.5, aws-ssm@^0.3.6:
-  version "0.3.6"
-  resolved "https://registry.yarnpkg.com/aws-ssm/-/aws-ssm-0.3.6.tgz#77e9a174a0fe323b90f4361de08b95b0d2fcf0c6"
-  integrity sha512-FyCDKjkrupTnzoSTdokCh+oBGF8nA3y7CmmPVl1zVz44WoSyflC1RAw7To74SMUXwxz39TG/IgBBRUcKv8aXUg==
+aws-ssm@^0.3.7:
+  version "0.3.7"
+  resolved "https://registry.yarnpkg.com/aws-ssm/-/aws-ssm-0.3.7.tgz#833401cc46c353dc93d79679e1d04897f396833b"
+  integrity sha512-gb4I+45Yga0ycfyVtxAsaanTRGNJQQS27VjQQeKWRKHkpEuVYImrMUGQ9IBI74eN0wPPfqW+qrWScCYmeY20lw==
   dependencies:
     common-types "^1.11.18"
 
@@ -3076,10 +3086,10 @@ common-tags@^1.8.0:
   resolved "https://registry.yarnpkg.com/common-tags/-/common-tags-1.8.0.tgz#8e3153e542d4a39e9b10554434afaaf98956a937"
   integrity sha512-6P6g0uetGpW/sdyUy/iQQCbFF0kWVMSIVSyYz7Zgjcgh8mgw8PQzDNZeyZ5DQ2gM7LBoZPHmnjz8rUthkBG5tw==
 
-common-types@^1.11.14, common-types@^1.11.16, common-types@^1.11.18, common-types@^1.9.7:
-  version "1.11.18"
-  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.11.18.tgz#e9ee69441077dfffdd0efe403130c9d38b4ab06f"
-  integrity sha512-j2RHUo1WCYhGWxjovV/FyrSL1MeSaSmf8rIrj9LZ+CJsdqmULiVSJ6VjDq2rCpMppMZrVfsXNsfEyH5NvT3CIQ==
+common-types@^1.11.14, common-types@^1.11.18, common-types@^1.11.20, common-types@^1.9.7:
+  version "1.11.20"
+  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.11.20.tgz#a556af518cf2ec307f41e99b672b7e8d28e41834"
+  integrity sha512-OgOneyz+nzkZV2OidVBc3X7G1vAId65RgrK2RWP3mw+YFCHTCQHvyPdOxP6mjUrr1stWUcugLPFOE3WpSDX9UQ==
   dependencies:
     "@types/json-schema" "^7.0.3"
 
@@ -3175,11 +3185,6 @@ consola@^2.6.0:
   version "2.10.1"
   resolved "https://registry.yarnpkg.com/consola/-/consola-2.10.1.tgz#4693edba714677c878d520e4c7e4f69306b4b927"
   integrity sha512-4sxpH6SGFYLADfUip4vuY65f/gEogrzJoniVhNUYkJHtng0l8ZjnDCqxxrSVRHOHwKxsy8Vm5ONZh1wOR3/l/w==
-
-console-badge@^1.1.0:
-  version "1.3.0"
-  resolved "https://registry.yarnpkg.com/console-badge/-/console-badge-1.3.0.tgz#16fc7506a12ea428806d269e22dcf6b35d1f40f1"
-  integrity sha512-Y9JMpBdLuZp8ANqBFvXxoi92RJU9cfp4XL7R3Izo6/4VJzGXiZ2/h+stwkNXGyrRuHWEPIHU+66cjAb9VfM4wQ==
 
 console-browserify@^1.1.0:
   version "1.1.0"
@@ -4122,17 +4127,18 @@ dns-txt@^2.0.2:
     buffer-indexof "^1.0.0"
 
 do-devops@^0.1.8:
-  version "0.1.8"
-  resolved "https://registry.yarnpkg.com/do-devops/-/do-devops-0.1.8.tgz#5a32238f27b1b7bdbc27e123c36ef133e575707d"
-  integrity sha512-1iG7hohTtUbmXoks+sgZBT4ho6KpKsDr0A5LSi8y9wMDcs346JlgnchgWZo/O/wJOwH66jY3BfYAftx8oVYpMA==
+  version "0.1.9"
+  resolved "https://registry.yarnpkg.com/do-devops/-/do-devops-0.1.9.tgz#fdd4e2b450412f8b4bc06b18a71b12bb27aedc0a"
+  integrity sha512-lBdz1QmYS89tn6eVs/4oMU7+3F7gYVoXuUe78YWFmrPpGBJxNosOBqW+XI7nHA6DMr+3f70AgIZiI32t/nj1Vw==
   dependencies:
+    "@types/command-line-args" "^5.0.0"
+    "@types/command-line-usage" "^5.0.1"
     aws-sdk "^2.512.0"
-    aws-ssm "^0.3.5"
+    aws-ssm "^0.3.7"
     chalk "^2.4.2"
     command-line-args "^5.1.1"
     command-line-usage "^6.0.2"
-    common-types "^1.11.16"
-    console-badge "^1.1.0"
+    common-types "^1.11.18"
     date-fns "^1.30.1"
     fast-glob "^3.0.4"
     globby "^10.0.1"
