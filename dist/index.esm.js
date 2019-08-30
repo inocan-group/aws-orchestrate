@@ -652,12 +652,16 @@ function (_Error) {
     value: function apiGatewayError(errorCode, e, requestId, classification) {
       var obj = new UnhandledError(errorCode, e, classification);
       obj.requestId = requestId;
-      return JSON.stringify({
+      return {
+        statusCode: obj.httpStatus,
         errorType: obj.name,
-        httpStatus: obj.httpStatus,
-        requestId: obj.requestId,
-        message: obj.message
-      });
+        errorMessage: obj.message,
+        stackTrace: obj.stack,
+        body: JSON.stringify({
+          requestId: obj.requestId,
+          classification: classification
+        })
+      };
     }
   }, {
     key: "lambdaError",
@@ -965,11 +969,21 @@ var wrapper = function wrapper(fn) {
             }
           }, function () {
             if (handlerContext.isApiGatewayRequest) {
-              return JSON.stringify({
+              var response = {
                 statusCode: 200,
-                data: results
+                body: JSON.stringify(results)
+              };
+              log.debug("Returning results to API Gateway", {
+                statusCode: 200,
+                results: results
+              });
+              return JSON.stringify({
+                response: response
               });
             } else {
+              log.debug("Returning results to non-API Gateway caller", {
+                results: results
+              });
               return results;
             }
           });
@@ -1013,7 +1027,7 @@ var wrapper = function wrapper(fn) {
           });
 
           if (isApiGatewayRequest) {
-            return UnhandledError.apiGatewayError(errorMeta.defaultErrorCode, e, context.awsRequestId);
+            throw UnhandledError.apiGatewayError(errorMeta.defaultErrorCode, e, context.awsRequestId);
           } else {
             throw new UnhandledError(errorMeta.defaultErrorCode, e, context.awsRequestId);
           }

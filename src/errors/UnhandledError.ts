@@ -11,12 +11,16 @@ export class UnhandledError extends Error {
   ) {
     const obj = new UnhandledError(errorCode, e, classification);
     obj.requestId = requestId;
-    return JSON.stringify({
+    return {
+      statusCode: obj.httpStatus,
       errorType: obj.name,
-      httpStatus: obj.httpStatus,
-      requestId: obj.requestId,
-      message: obj.message
-    });
+      errorMessage: obj.message,
+      stackTrace: obj.stack,
+      body: JSON.stringify({
+        requestId: obj.requestId,
+        classification
+      })
+    };
   }
 
   /**

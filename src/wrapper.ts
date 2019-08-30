@@ -122,13 +122,20 @@ export const wrapper = function<I, O>(
 
       // RETURN
       if (handlerContext.isApiGatewayRequest) {
-        return JSON.stringify({
+        const response = {
           statusCode: 200,
-          data: results
+          body: JSON.stringify(results)
+        };
+        log.debug(`Returning results to API Gateway`, {
+          statusCode: 200,
+          results
         });
+        return JSON.stringify({ response });
       } else {
+        log.debug(`Returning results to non-API Gateway caller`, { results });
         return results;
       }
+      // END of RETURN BLOCK
     } catch (e) {
       log.info(`Processing error in handler function: ${e.message}`, {
         error: e,
@@ -170,7 +177,9 @@ export const wrapper = function<I, O>(
           { error: e, workflowStatus }
         );
         if (isApiGatewayRequest) {
-          return UnhandledError.apiGatewayError(
+          // API Gateway structured error
+          // TODO: can this be thrown instead so we don't need to use "any"?
+          throw UnhandledError.apiGatewayError(
             errorMeta.defaultErrorCode,
             e,
             context.awsRequestId
