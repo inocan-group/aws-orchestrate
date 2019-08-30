@@ -130,7 +130,7 @@ export const wrapper = function<I, O>(
           statusCode: 200,
           results
         });
-        return JSON.stringify({ response });
+        return JSON.stringify(response);
       } else {
         log.debug(`Returning results to non-API Gateway caller`, { results });
         return results;
