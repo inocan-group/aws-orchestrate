@@ -1000,9 +1000,7 @@ var wrapper = function wrapper(fn) {
                 statusCode: 200,
                 results: results
               });
-              return JSON.stringify({
-                response: response
-              });
+              return JSON.stringify(response);
             } else {
               log.debug("Returning results to non-API Gateway caller", {
                 results: results
