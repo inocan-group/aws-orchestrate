@@ -1,10 +1,11 @@
-import { IDictionary, IAWSLambdaProxyIntegrationRequest, IAWSLambaContext } from "common-types";
+import { IDictionary, IAWSLambdaProxyIntegrationRequest, IAWSLambaContext, Omit, IServerlessFunction } from "common-types";
 import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
 import { IGetSecrets } from "./wrapper/getSecrets";
 import { IFirebaseAdminConfig } from "abstracted-firebase";
 declare type DB = import("abstracted-admin").DB;
+export declare type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 export interface ILambdaSequenceStep<T = IDictionary> {
     arn: string;
     params: Partial<T>;
