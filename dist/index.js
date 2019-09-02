@@ -316,11 +316,11 @@ function () {
       }
 
       this._steps = this._steps.map(function (i) {
-        return i.arn === _this.nextFn.arn ? Object.assign({}, i, {
+        return i.arn === _this.nextFn.arn ? Object.assign(Object.assign({}, i), {
           params: _this.resolveDynamicProperties(_this.nextFn.params, additionalParams)
         }) : i;
       });
-      var nextFunctionTuple = [this.nextFn.arn, Object.assign({}, this.nextFn.params, {
+      var nextFunctionTuple = [this.nextFn.arn, Object.assign(Object.assign({}, this.nextFn.params), {
         _sequence: this.steps
       })];
       this.nextFn.status = "active";
@@ -351,7 +351,7 @@ function () {
       }
 
       this._steps = request._sequence;
-      var transformedRequest = Object.assign({}, request, this.activeFn.params);
+      var transformedRequest = Object.assign(Object.assign({}, request), this.activeFn.params);
       delete transformedRequest._sequence;
       this._steps = this._steps.map(function (s) {
         var resolvedParams = s.arn === _this2.activeFn.arn ? transformedRequest : s.params;
@@ -453,9 +453,9 @@ function () {
           }
         }
       });
-      return Object.assign({}, Object.keys(priorFnResults).reduce(function (agg, curr) {
-        return !remappedProps.includes(curr) ? Object.assign({}, agg, _defineProperty({}, curr, priorFnResults[curr])) : agg;
-      }, {}), conductorParams);
+      return Object.assign(Object.assign({}, Object.keys(priorFnResults).reduce(function (agg, curr) {
+        return !remappedProps.includes(curr) ? Object.assign(Object.assign({}, agg), _defineProperty({}, curr, priorFnResults[curr])) : agg;
+      }, {})), conductorParams);
     }
   }, {
     key: "isSequence",
@@ -670,6 +670,27 @@ var UnhandledError =
 function (_Error) {
   _inherits(UnhandledError, _Error);
 
+  function UnhandledError(errorCode, e, classification) {
+    var _this;
+
+    _classCallCheck(this, UnhandledError);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(UnhandledError).call(this, e.message));
+    _this.stack = e.stack;
+    classification = classification || "unhandled-error/".concat(e.name);
+    classification = classification.includes("/") ? classification : "unhandled-error/".concat(classification);
+
+    var _classification$split = classification.split("/"),
+        _classification$split2 = _slicedToArray(_classification$split, 2),
+        type = _classification$split2[0],
+        subType = _classification$split2[1];
+
+    _this.name = type;
+    _this.code = subType;
+    _this.httpStatus = errorCode;
+    return _this;
+  }
+
   _createClass(UnhandledError, null, [{
     key: "apiGatewayError",
     value: function apiGatewayError(errorCode, e, requestId, classification) {
@@ -693,27 +714,6 @@ function (_Error) {
     }
   }]);
 
-  function UnhandledError(errorCode, e, classification) {
-    var _this;
-
-    _classCallCheck(this, UnhandledError);
-
-    _this = _possibleConstructorReturn(this, _getPrototypeOf(UnhandledError).call(this, e.message));
-    _this.stack = e.stack;
-    classification = classification || "unhandled-error/".concat(e.name);
-    classification = classification.includes("/") ? classification : "unhandled-error/".concat(classification);
-
-    var _classification$split = classification.split("/"),
-        _classification$split2 = _slicedToArray(_classification$split, 2),
-        type = _classification$split2[0],
-        subType = _classification$split2[1];
-
-    _this.name = type;
-    _this.code = subType;
-    _this.httpStatus = errorCode;
-    return _this;
-  }
-
   return UnhandledError;
 }(_wrapNativeSuper(Error));
 
@@ -732,6 +732,23 @@ var HandledError =
 function (_Error) {
   _inherits(HandledError, _Error);
 
+  function HandledError(errorCode, e, context) {
+    var _this;
+
+    _classCallCheck(this, HandledError);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(HandledError).call(this, e.message));
+    _this.stack = e.stack;
+    var type = e.name && e.name !== "Error" ? e.name : context.functionName;
+    var subType = e.code ? String(e.code) : "handled-error";
+    _this.classification = "".concat(type, "/").concat(subType);
+    _this.functionName = context.functionName;
+    _this.name = type;
+    _this.code = subType;
+    _this.httpStatus = errorCode;
+    return _this;
+  }
+
   _createClass(HandledError, null, [{
     key: "apiGatewayError",
     value: function apiGatewayError(errorCode, e, context) {
@@ -749,23 +766,6 @@ function (_Error) {
       var obj = new HandledError(errorCode, e, context);
     }
   }]);
-
-  function HandledError(errorCode, e, context) {
-    var _this;
-
-    _classCallCheck(this, HandledError);
-
-    _this = _possibleConstructorReturn(this, _getPrototypeOf(HandledError).call(this, e.message));
-    _this.stack = e.stack;
-    var type = e.name && e.name !== "Error" ? e.name : context.functionName;
-    var subType = e.code ? String(e.code) : "handled-error";
-    _this.classification = "".concat(type, "/").concat(subType);
-    _this.functionName = context.functionName;
-    _this.name = type;
-    _this.code = subType;
-    _this.httpStatus = errorCode;
-    return _this;
-  }
 
   return HandledError;
 }(_wrapNativeSuper(Error));
@@ -947,7 +947,7 @@ var wrapper = function wrapper(fn) {
         sequence: sequence,
         apiGateway: apiGateway
       });
-      var handlerContext = Object.assign({}, context, {
+      var handlerContext = Object.assign(Object.assign({}, context), {
         log: log,
         database: database,
         sequence: sequence,
