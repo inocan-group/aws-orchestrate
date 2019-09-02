@@ -124,13 +124,16 @@ export const wrapper = function<I, O>(
       if (handlerContext.isApiGatewayRequest) {
         const response = {
           statusCode: 200,
+          headers: {
+            "Content-Type": "application/json"
+          },
           body: JSON.stringify(results)
         };
         log.debug(`Returning results to API Gateway`, {
           statusCode: 200,
           results
         });
-        return JSON.stringify(response);
+        return response as any;
       } else {
         log.debug(`Returning results to non-API Gateway caller`, { results });
         return results;

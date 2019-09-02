@@ -971,13 +971,16 @@ var wrapper = function wrapper(fn) {
             if (handlerContext.isApiGatewayRequest) {
               var response = {
                 statusCode: 200,
+                headers: {
+                  "Content-Type": "application/json"
+                },
                 body: JSON.stringify(results)
               };
               log.debug("Returning results to API Gateway", {
                 statusCode: 200,
                 results: results
               });
-              return JSON.stringify(response);
+              return response;
             } else {
               log.debug("Returning results to non-API Gateway caller", {
                 results: results
