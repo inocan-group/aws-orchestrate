@@ -1,7 +1,7 @@
 {
   "name": "aws-orchestrate",
   "description": "This library is intended to help projects intending to build a \"micro-service architecture\" to achieve those ambitions with some handy orchestration classes and types.",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "typings": "dist/index.d.ts",
@@ -27,9 +27,9 @@
   "homepage": "https://github.com/inocan-group/aws-orchestrate#readme",
   "dependencies": {
     "aws-log": "^0.8.5",
-    "aws-ssm": "^0.3.8",
-    "common-types": "^1.11.21",
-    "mermaid": "^8.2.5"
+    "aws-ssm": "^0.3.9",
+    "common-types": "^1.11.23",
+    "mermaid": "^8.2.6"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
@@ -48,11 +48,11 @@
     "do-devops": "^0.2.2",
     "firemock": "^0.30.0",
     "mocha": "^6.2.0",
-    "rimraf": "^2.6.3",
+    "rimraf": "^3.0.0",
     "rollup-plugin-typescript2": "^0.23.0",
     "ts-node": "^8.3.0",
     "tslint": "^5.19.0",
-    "typescript": "^3.5.3",
+    "typescript": "^3.6.2",
     "vuepress": "^1.0.3",
     "vuepress-plugin-autometa": "^0.1.12"
   }

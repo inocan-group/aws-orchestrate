@@ -13,6 +13,13 @@ import { IHandlerContext } from "./@types";
 import { HandledError } from "./errors/HandledError";
 import { getSecrets } from "./wrapper/getSecrets";
 import { database } from "./database-connect";
+import {
+  setHeaders,
+  setContentType,
+  getHeaders,
+  getContentType,
+  CORS_HEADERS
+} from "./wrapper/headers";
 
 /**
  * **wrapper**
@@ -63,6 +70,8 @@ export const wrapper = function<I, O>(
       const handlerContext: IHandlerContext<I> = {
         ...context,
         log,
+        setHeaders,
+        setContentType,
         database,
         sequence,
         isSequence: sequence.isSequence,
@@ -122,11 +131,14 @@ export const wrapper = function<I, O>(
 
       // RETURN
       if (handlerContext.isApiGatewayRequest) {
+        const headers = {
+          ...CORS_HEADERS,
+          ...getHeaders(),
+          "Content-Type": getContentType()
+        };
         const response = {
           statusCode: 200,
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers,
           body: JSON.stringify(results)
         };
         log.debug(`Returning results to API Gateway`, {

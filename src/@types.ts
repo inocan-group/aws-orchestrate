@@ -11,6 +11,7 @@ import { ErrorMeta } from "./errors/ErrorMeta";
 import { getSecrets as secrets, IGetSecrets } from "./wrapper/getSecrets";
 import { IFirebaseAdminConfig } from "abstracted-firebase";
 type DB = import("abstracted-admin").DB;
+import { setContentType, setHeaders } from "./wrapper/headers";
 
 export type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 
@@ -138,6 +139,17 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * _unhandled_ or _unexpected_ errors.
    */
   errorMeta: ErrorMeta;
+  /**
+   * The **header** for any API Gateway originated function is `appliacation/json` but this
+   * can be changed to something else if needed.
+   */
+  setContentType: typeof setContentType;
+  /**
+   * Requests that originate from API Gateway will automatically be provided CORS headers as
+   * well as a default `Content-Type` of `application/json`. This method allows you to add
+   * additional name/value pairs to the headers passed back if this is required.
+   */
+  setHeaders: typeof setHeaders;
 }
 
 /**

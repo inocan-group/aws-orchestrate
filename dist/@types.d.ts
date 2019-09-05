@@ -5,6 +5,7 @@ import { ErrorMeta } from "./errors/ErrorMeta";
 import { IGetSecrets } from "./wrapper/getSecrets";
 import { IFirebaseAdminConfig } from "abstracted-firebase";
 declare type DB = import("abstracted-admin").DB;
+import { setContentType, setHeaders } from "./wrapper/headers";
 export declare type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 export interface ILambdaSequenceStep<T = IDictionary> {
     arn: string;
@@ -47,6 +48,8 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
     apiGateway: IAWSLambdaProxyIntegrationRequest;
     isApiGatewayRequest: boolean;
     errorMeta: ErrorMeta;
+    setContentType: typeof setContentType;
+    setHeaders: typeof setHeaders;
 }
 export declare type IHandlerFunction<E, R> = (event: E, context: IHandlerContext<E>) => Promise<R>;
 export interface IErrorWithExtraProperties extends Error {
