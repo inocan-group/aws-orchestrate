@@ -868,6 +868,33 @@ var database = _async$1(function (config) {
   });
 });
 
+var CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Credentials": true
+};
+var contentType = "application/json";
+var fnHeaders = {};
+function getContentType() {
+  return contentType;
+}
+function setContentType(type) {
+  if (!type.includes("/")) {
+    throw new Error("The value sent to setContentType (\"".concat(type, "\") is not valid; it must be a valid MIME type."));
+  }
+
+  contentType = type;
+}
+function getHeaders() {
+  return fnHeaders;
+}
+function setHeaders(headers) {
+  if (_typeof(headers) !== "object") {
+    throw new Error("The value sent to setHeaders is not the required type. Was \"".concat(_typeof(headers), "\"; expected \"object\"."));
+  }
+
+  fnHeaders = headers;
+}
+
 function _await$2(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
@@ -949,6 +976,8 @@ var wrapper = function wrapper(fn) {
       });
       var handlerContext = Object.assign(Object.assign({}, context), {
         log: log,
+        setHeaders: setHeaders,
+        setContentType: setContentType,
         database: database,
         sequence: sequence,
         isSequence: sequence.isSequence,
@@ -992,11 +1021,12 @@ var wrapper = function wrapper(fn) {
             }
           }, function () {
             if (handlerContext.isApiGatewayRequest) {
+              var headers = Object.assign(Object.assign(Object.assign({}, CORS_HEADERS), getHeaders()), {
+                "Content-Type": getContentType()
+              });
               var response = {
                 statusCode: 200,
-                headers: {
-                  "Content-Type": "application/json"
-                },
+                headers: headers,
                 body: JSON.stringify(results)
               };
               log.debug("Returning results to API Gateway", {
