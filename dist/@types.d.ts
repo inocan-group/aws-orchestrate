@@ -50,6 +50,7 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
     errorMeta: ErrorMeta;
     setContentType: typeof setContentType;
     setHeaders: typeof setHeaders;
+    startSequence: (sequence: LambdaSequence) => void;
 }
 export declare type IHandlerFunction<E, R> = (event: E, context: IHandlerContext<E>) => Promise<R>;
 export interface IErrorWithExtraProperties extends Error {
