@@ -1,8 +1,7 @@
 import {
   IAWSLambaContext,
   IAwsLambdaEvent,
-  IAWSLambdaProxyIntegrationRequest,
-  IDictionary
+  IAWSLambdaProxyIntegrationRequest
 } from "common-types";
 import { logger, invoke } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
@@ -13,6 +12,10 @@ import { IHandlerContext } from "./@types";
 import { HandledError } from "./errors/HandledError";
 import { getSecrets } from "./wrapper/getSecrets";
 import { database } from "./database-connect";
+import {
+  startSequence as start,
+  invokeNewSequence
+} from "./wrapper/startSequence";
 import {
   setHeaders,
   setContentType,
@@ -67,6 +70,7 @@ export const wrapper = function<I, O>(
           apiGateway
         }
       );
+      const startSequence = start(log, context);
       const handlerContext: IHandlerContext<I> = {
         ...context,
         log,
@@ -74,6 +78,7 @@ export const wrapper = function<I, O>(
         setContentType,
         database,
         sequence,
+        startSequence,
         isSequence: sequence.isSequence,
         isDone: sequence.isDone,
         apiGateway,
@@ -96,38 +101,7 @@ export const wrapper = function<I, O>(
       }
 
       // SEQUENCE (orchestration starting)
-      if (
-        results instanceof LambdaSequence ||
-        (typeof results === "object" &&
-          ((results as IDictionary).sequence instanceof LambdaSequence ||
-            (results as IDictionary)._sequence instanceof LambdaSequence))
-      ) {
-        workflowStatus = "sequence-defined";
-        const sequence: LambdaSequence =
-          results instanceof LambdaSequence
-            ? results
-            : (results as IDictionary)._sequence ||
-              (results as IDictionary).sequence;
-        const location =
-          results instanceof LambdaSequence
-            ? "root"
-            : (results as IDictionary)._sequence
-            ? "_sequence"
-            : "sequence";
-        log.info(
-          `This function has started a sequence [ prop: ${location} ]! There are ${sequence.steps.length} steps in this sequence.`,
-          { sequence }
-        );
-        if (location === "_sequence") {
-          delete (results as IDictionary)._sequence;
-        } else if (location === "sequence") {
-          delete (results as IDictionary).sequence;
-        }
-        await invoke(
-          ...sequence.next(location === "root" ? undefined : results)
-        );
-        workflowStatus = "sequence-started";
-      }
+      await invokeNewSequence(results, log);
 
       // RETURN
       if (handlerContext.isApiGatewayRequest) {

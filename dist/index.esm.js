@@ -1,5 +1,5 @@
 import { isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest } from 'common-types';
-import { logger, invoke } from 'aws-log';
+import { invoke, logger } from 'aws-log';
 
 function _typeof(obj) {
   if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
@@ -845,6 +845,56 @@ var database = _async$1(function (config) {
   });
 });
 
+function _await$2(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+function _async$2(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var invokeNewSequence = _async$2(function () {
+  var results = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  var log = arguments.length > 1 ? arguments[1] : undefined;
+
+  {
+    return;
+  }
+
+  results = results || {};
+  return _await$2(invoke.apply(void 0, _toConsumableArray(sequence.next(_typeof(results) === "object" ? results : {
+    data: results
+  }))), function () {
+    log.info("The new sequence has been kicked off");
+  });
+});
+var sequence;
+function startSequence(log, context) {
+  return function (sequence) {
+    log.info("This function [ ".concat(context.functionName, " ] will kick off a new sequence with ").concat(sequence.steps.length, " steps."), {
+      sequence: sequence
+    });
+  };
+}
+
 var CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Credentials": true
@@ -872,7 +922,7 @@ function setHeaders(headers) {
   fnHeaders = headers;
 }
 
-function _await$2(value, then, direct) {
+function _await$3(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -918,7 +968,7 @@ function _catch(body, recover) {
   return result;
 }
 
-function _async$2(f) {
+function _async$3(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -933,7 +983,7 @@ function _async$2(f) {
 }
 
 var wrapper = function wrapper(fn) {
-  return _async$2(function (event, context) {
+  return _async$3(function (event, context) {
     var workflowStatus = "initializing";
     var log = logger().lambda(event, context);
     var errorMeta = new ErrorMeta();
@@ -951,12 +1001,14 @@ var wrapper = function wrapper(fn) {
         sequence: sequence,
         apiGateway: apiGateway
       });
+      var startSequence$1 = startSequence(log, context);
       var handlerContext = Object.assign(Object.assign({}, context), {
         log: log,
         setHeaders: setHeaders,
         setContentType: setContentType,
         database: database,
         sequence: sequence,
+        startSequence: startSequence$1,
         isSequence: sequence.isSequence,
         isDone: sequence.isDone,
         apiGateway: apiGateway,
@@ -965,38 +1017,17 @@ var wrapper = function wrapper(fn) {
         errorMeta: errorMeta
       });
       workflowStatus = "running-function";
-      return _await$2(fn(request, handlerContext), function (results) {
+      return _await$3(fn(request, handlerContext), function (results) {
         workflowStatus = "function-complete";
         return _invoke$1(function () {
           if (sequence.isSequence && !sequence.isDone) {
             workflowStatus = "invoke-started";
-            return _await$2(invoke.apply(void 0, _toConsumableArray(sequence.next(results))), function () {
+            return _await$3(invoke.apply(void 0, _toConsumableArray(sequence.next(results))), function () {
               workflowStatus = "invoke-complete";
             });
           }
         }, function () {
-          return _invoke$1(function () {
-            if (results instanceof LambdaSequence || _typeof(results) === "object" && (results.sequence instanceof LambdaSequence || results._sequence instanceof LambdaSequence)) {
-              workflowStatus = "sequence-defined";
-
-              var _sequence = results instanceof LambdaSequence ? results : results._sequence || results.sequence;
-
-              var location = results instanceof LambdaSequence ? "root" : results._sequence ? "_sequence" : "sequence";
-              log.info("This function has started a sequence [ prop: ".concat(location, " ]! There are ").concat(_sequence.steps.length, " steps in this sequence."), {
-                sequence: _sequence
-              });
-
-              if (location === "_sequence") {
-                delete results._sequence;
-              } else if (location === "sequence") {
-                delete results.sequence;
-              }
-
-              return _await$2(invoke.apply(void 0, _toConsumableArray(_sequence.next(location === "root" ? undefined : results))), function () {
-                workflowStatus = "sequence-started";
-              });
-            }
-          }, function () {
+          return _await$3(invokeNewSequence(results, log), function () {
             if (handlerContext.isApiGatewayRequest) {
               var headers = Object.assign(Object.assign(Object.assign({}, CORS_HEADERS), getHeaders()), {
                 "Content-Type": getContentType()
@@ -1043,7 +1074,7 @@ var wrapper = function wrapper(fn) {
 
           return _invokeIgnored(function () {
             if (found.handling.forwardTo) {
-              return _await$2(invoke(found.handling.forwardTo, e), function () {
+              return _await$3(invoke(found.handling.forwardTo, e), function () {
                 log.info("Forwarded error to the function \"".concat(found.handling.forwardTo, "\""), {
                   error: e,
                   forwardTo: found.handling.forwardTo

@@ -150,6 +150,10 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * additional name/value pairs to the headers passed back if this is required.
    */
   setHeaders: typeof setHeaders;
+  /**
+   * Allows the handler author to invoke a new `LambdaSequence`.
+   */
+  startSequence: (sequence: LambdaSequence) => void;
 }
 
 /**
