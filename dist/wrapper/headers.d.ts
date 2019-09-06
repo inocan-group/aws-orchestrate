@@ -1,4 +1,8 @@
 import { IDictionary } from "common-types";
+/**
+ * Ensures that frontend clients who call Lambda's
+ * will be given a CORs friendly response
+ */
 export declare const CORS_HEADERS: {
     "Access-Control-Allow-Origin": string;
     "Access-Control-Allow-Credentials": boolean;

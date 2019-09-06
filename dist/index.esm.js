@@ -245,9 +245,36 @@ function () {
     this._steps = [];
     this._isASequence = true;
   }
+  /**
+   * **add** (static initializer)
+   *
+   * Instantiates a `LambdaSequence` object and then adds a task to the sequence
+   */
+
 
   _createClass(LambdaSequence, [{
     key: "add",
+
+    /**
+     * **add**
+     *
+     * adds another task to the sequence
+     *
+     * @param arn the function name; it can be a full AWS arn or a shortened version with just the function name (assuming appropriate ENV variables are set)
+     * @param params any parameters for the downstream function in the sequence which are known at build time
+     * @param type not critical but provides useful context about the function of the function being added to the sequence
+     *
+     * **Note:** to use the shortened **arn** you will need to ensure the function has
+     * the following defined as ENV variables:
+     *
+     * - `AWS_STAGE`
+     * - `AWS_ACCOUNT_ID`
+     * - `AWS_REGION`
+     * - `AWS_MOVE_SERVICES`
+     *
+     * These should relatively static and therefore should be placed in your `env.yml` file if
+     * you're using the Serverless framework.
+     */
     value: function add(arn) {
       var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       var type = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "task";
@@ -261,6 +288,22 @@ function () {
 
       return this;
     }
+    /**
+     * **next**
+     *
+     * Executes the _next_ function in the sequence. It will pass parameters which are a
+     * merge of those set during the original setup (aka, with the `add()` method) and
+     * additional values set here as the optional `additionalParams` value.
+     *
+     * If this were not clear from the prior paragraph, it is expected that if a given function
+     * produces meaningful output that it would both _return_ the output (for non-orchestrated
+     * executions) and also add it to the `additionalParams` value in `next()` (for orchestrated
+     * executions)
+     *
+     * Finally, while this function doesn't _require_ you state the generic type, if you do then
+     * you will get more precise typing for the expected input of the next function
+     */
+
   }, {
     key: "next",
     value: function next() {
@@ -284,31 +327,46 @@ function () {
       if (logger) {
         logger.info("the next() function is ".concat(this.nextFn.arn), this.toJSON());
       }
+      /**
+       * if there is an active function, set it to completed
+       * and assign _results_
+       */
+
 
       if (this.activeFn) {
         var results = additionalParams;
         delete results._sequence;
         this.activeFn.results = results;
         this.activeFn.status = "completed";
-      }
+      } // resolve dynamic props in next function
+
 
       this._steps = this._steps.map(function (i) {
         return i.arn === _this.nextFn.arn ? Object.assign(Object.assign({}, i), {
           params: _this.resolveDynamicProperties(_this.nextFn.params, additionalParams)
         }) : i;
       });
-      var nextFunctionTuple = [this.nextFn.arn, Object.assign(Object.assign({}, this.nextFn.params), {
+      var nextFunctionTuple = [// the arn
+      this.nextFn.arn, // the params passed forward
+      Object.assign(Object.assign({}, this.nextFn.params), {
         _sequence: this.steps
-      })];
+      })]; // set the next function to active
+
       this.nextFn.status = "active";
       return nextFunctionTuple;
     }
+    /**
+     * **from**
+     *
+     * unboxes request, sequence, and apiGateway data structures
+     */
+
   }, {
     key: "from",
     value: function from(request, logger) {
       var _this2 = this;
 
-      var apiGateway;
+      var apiGateway; // separate possible LambdaProxy request from main request
 
       if (isLambdaProxyRequest(request)) {
         apiGateway = request;
@@ -316,6 +374,7 @@ function () {
       }
 
       if (!request._sequence) {
+        // there is no sequence property on the request
         if (logger) {
           logger.info("This execution is not part of a sequence");
         }
@@ -325,11 +384,20 @@ function () {
           apiGateway: apiGateway,
           sequence: LambdaSequence.notASequence()
         };
-      }
+      } // looks like a valid sequence
 
-      this._steps = request._sequence;
-      var transformedRequest = Object.assign(Object.assign({}, request), this.activeFn.params);
+
+      this._steps = request._sequence; // active function's output is sent into next's params
+
+      var transformedRequest = Object.assign(Object.assign({}, request), this.activeFn.params); // remove the sequence data from the request as this payload will be
+      // available in the returned LambdaSequence object
+
       delete transformedRequest._sequence;
+      /**
+       * swap out the conductor's generic understanding of params
+       * with the actual request params (aka, dynamic props resolved)
+       */
+
       this._steps = this._steps.map(function (s) {
         var resolvedParams = s.arn === _this2.activeFn.arn ? transformedRequest : s.params;
         s.params = resolvedParams;
@@ -348,6 +416,11 @@ function () {
         sequence: this
       };
     }
+    /**
+     * boolean flag which indicates whether the current execution of the function
+     * is part of a _sequence_.
+     */
+
   }, {
     key: "toString",
     value: function toString() {
@@ -405,6 +478,12 @@ function () {
     value: function resolveDynamicProperties(conductorParams, priorFnResults) {
       var _this3 = this;
 
+      /**
+       * Properties on `priorFnResults` which have been remapped by dyamic properties.
+       * Note that this only takes place when the conductor's dynamic property is for
+       * "last" function's result. If it is from prior results then it these will be considered
+       * additive properties and _remapped_ properties
+       */
       var remappedProps = [];
       Object.keys(conductorParams).forEach(function (key) {
         var value = conductorParams[key];
@@ -444,6 +523,12 @@ function () {
     get: function get() {
       return this.remaining.length === 0;
     }
+    /**
+     * the tasks in the sequence that still remain in the
+     * "assigned" category. This excludes those which are
+     * completed _and_ any which are _active_.
+     */
+
   }, {
     key: "remaining",
     get: function get() {
@@ -451,6 +536,8 @@ function () {
         return s.status === "assigned";
       });
     }
+    /** the tasks which have been completed */
+
   }, {
     key: "completed",
     get: function get() {
@@ -458,11 +545,20 @@ function () {
         return s.status === "completed";
       });
     }
+    /** the total number of _steps_ in the sequence */
+
   }, {
     key: "length",
     get: function get() {
       return this._steps.length;
     }
+    /**
+     * **steps**
+     *
+     * returns the list of steps which have been accumulated
+     * so far
+     */
+
   }, {
     key: "steps",
     get: function get() {
@@ -482,6 +578,23 @@ function () {
 
       return active.length > 0 ? active[0] : undefined;
     }
+    /**
+     * Provides a dictionary of of **results** from the functions prior to it.
+     * The dictionary is two levels deep and will look like this:
+     *
+    ```javascript
+    {
+    [fnName]: {
+      prop1: value,
+      prop2: value
+    },
+    [fn2Name]: {
+      prop1: value
+    }
+    }
+    ```
+     */
+
   }, {
     key: "allHistoricResults",
     get: function get() {
@@ -496,6 +609,14 @@ function () {
       });
       return result;
     }
+    /**
+     * **dynamicProperties**
+     *
+     * if the _value_ of a parameter passed to a function leads with the `:`
+     * character this is an indicator that it is a "dynamic property" and
+     * it's true value should be looked up from the sequence results.
+     */
+
   }, {
     key: "dynamicProperties",
     get: function get() {
@@ -519,6 +640,29 @@ function () {
       obj.add(arn, params, type);
       return obj;
     }
+    /**
+     * **from**
+     *
+     * Allows you to take the event payload which your handler gets from Lambda
+     * and return a hash/dictionary with the following properties:
+     *
+     * - the `request` (core event without "sequence" meta or LamdaProxy info
+     * from API Gateway)
+     * - the `sequence` as an instantiated class of **LambdaSequence**
+     * - the `apiGateway` will have the information from the Lambda Proxy request
+     * (only if request came from API Gateway)
+     *
+     * Example Code:
+     *
+    ```typescript
+    export function handler(event, context, callback) {
+    const { request, sequence, apiGateway } = LambdaSequence.from(event);
+    // ... do some stuf ...
+    await sequence.next();
+    }
+    ```
+     */
+
   }, {
     key: "from",
     value: function from(event, logger) {
@@ -538,6 +682,23 @@ function () {
   return LambdaSequence;
 }();
 
+/**
+ * **LambdaEventParser**
+ *
+ * Ensures that the _typed_ `request` is separated from a possible Proxy Integration
+ * Request that would have originated from API Gateway; also returns the `apiGateway`
+ * payload with the "body" removed (as it would be redundant to the request).
+ *
+ * Typical usage is:
+ *
+```typescript
+const { request, apiGateway } = LambdaEventParser.parse(event);
+```
+ *
+ * this signature is intended to mimic the `LambdaSequence.from(event)` API but
+ * without the parsing of a `sequence` property being extracted.
+ */
+
 var LambdaEventParser =
 /*#__PURE__*/
 function () {
@@ -547,6 +708,15 @@ function () {
 
   _createClass(LambdaEventParser, null, [{
     key: "parse",
+
+    /**
+     * **parse**
+     *
+     * A static method which returns an object with both `request` and `apiGateway`
+     * properties. The `request` is typed to **T** and the `apiGateway` will be a
+     * `IAWSLambdaProxyIntegrationRequest` object with the "body" removed _if_
+     * the event came from **API Gateway** otherwise it will be undefined.
+     */
     value: function parse(event) {
       var request = isLambdaProxyRequest(event) ? JSON.parse(event.body) : event;
 
@@ -566,6 +736,10 @@ function () {
   return LambdaEventParser;
 }();
 
+/**
+ * Allows the definition of a serverless function's
+ * expected error code
+ */
 var ErrorHandler =
 /*#__PURE__*/
 function () {
@@ -592,6 +766,19 @@ function () {
 }();
 
 var DEFAULT_ERROR_CODE = 500;
+/**
+ * Is a container for a serverless function that
+ * describes:
+ *
+ * 1. What errors are _expected_
+ * 2. **Meta** for all errors -- expected and unexpected -- on:
+ *    - the return's exit code (which is typically a reduced set from the errors themselves)
+ *    - how to handle them (do something in the _current fn_ or pass to a _handling function_)
+ *
+ * By default, all errors are given a 500 exit code and log the error at the "error" severity
+ * level but perform no additional work.
+ */
+
 var ErrorMeta =
 /*#__PURE__*/
 function () {
@@ -601,24 +788,66 @@ function () {
     this._errors = [];
     this._defaultErrorCode = DEFAULT_ERROR_CODE;
   }
+  /**
+   * Add another error type to the expected error types.
+   */
+
 
   _createClass(ErrorMeta, [{
     key: "add",
-    value: function add(code, identifiedBy, handling) {
+    value: function add(
+    /** the return code that will be returned for this error */
+    code,
+    /** how will an error be matched */
+    identifiedBy,
+    /**
+     * how will an error be handled; it doesn't NEED to be handled and its a reasonable
+     * goal/outcome just to set the appropriate http error code
+     */
+    handling) {
       this._errors.push(new ErrorHandler(code, identifiedBy, handling));
     }
+    /**
+     * Returns the list of errors being managed.
+     */
+
   }, {
     key: "setDefaultErrorCode",
+
+    /**
+     * Allows you to set a default code for unhandled errors; the default is
+     * `500`. This method follows the _fluent_ conventions and returns and instance
+     * of itself as a return value.
+     *
+     * Note: if an unhandled error has the property of `httpStatus` set and is a number
+     * then it will be respected over the default.
+     */
     value: function setDefaultErrorCode(code) {
       this._defaultErrorCode = code;
       return this;
     }
+    /**
+     * **setDefaultHandlerFunction**
+     *
+     *
+     *
+     * @param arn the function's arn (this can be the abbreviated variety so long as
+     * proper ENV variables are set)
+     */
+
   }, {
     key: "setDefaultHandlerFunction",
     value: function setDefaultHandlerFunction(arn) {
       this._arn = arn;
       return this;
     }
+    /**
+     * The default code for unhandled errors.
+     *
+     * Note: if an unhandled error has the property of `httpStatus` set and is a number
+     * then it will be respected over the default.
+     */
+
   }, {
     key: "toString",
     value: function toString() {
@@ -647,6 +876,14 @@ var UnhandledError =
 function (_Error) {
   _inherits(UnhandledError, _Error);
 
+  /**
+   * **Constructor**
+   *
+   * @param errorCode the numeric HTTP error code
+   * @param e the error which wasn't handled
+   * @param classification the type/subtype of the error; if only `subtype` stated then
+   * type will be defaulted to `unhandled-error`
+   */
   function UnhandledError(errorCode, e, classification) {
     var _this;
 
@@ -667,6 +904,11 @@ function (_Error) {
     _this.httpStatus = errorCode;
     return _this;
   }
+  /**
+   * Create a serialized/string representation of the error
+   * for returning to **API Gateway**
+   */
+
 
   _createClass(UnhandledError, null, [{
     key: "apiGatewayError",
@@ -684,6 +926,11 @@ function (_Error) {
         })
       };
     }
+    /**
+     * creates an error to be thrown by a **Lambda** function which
+     * was initiatiated by a
+     */
+
   }, {
     key: "lambdaError",
     value: function lambdaError(errorCode, e, classification) {
@@ -694,6 +941,13 @@ function (_Error) {
   return UnhandledError;
 }(_wrapNativeSuper(Error));
 
+/**
+ * **findError**
+ *
+ * Look for the error encountered within the "known errors" that
+ * the function defined and return it's `ErrorHandler` if found.
+ * If _not_ found then return `false`.
+ */
 function findError(e, expectedErrors) {
   var found = false;
   expectedErrors.list.forEach(function (i) {
@@ -709,6 +963,14 @@ var HandledError =
 function (_Error) {
   _inherits(HandledError, _Error);
 
+  /**
+   * **Constructor**
+   *
+   * @param errorCode the numeric HTTP error code
+   * @param e the error which wasn't handled
+   * @param classification the type/subtype of the error; if only `subtype` stated then
+   * type will be defaulted to `handled-error`
+   */
   function HandledError(errorCode, e, context) {
     var _this;
 
@@ -725,6 +987,11 @@ function (_Error) {
     _this.httpStatus = errorCode;
     return _this;
   }
+  /**
+   * Create a serialized/string representation of the error
+   * for returning to **API Gateway**
+   */
+
 
   _createClass(HandledError, null, [{
     key: "apiGatewayError",
@@ -737,6 +1004,11 @@ function (_Error) {
         message: obj.message
       });
     }
+    /**
+     * creates an error to be thrown by a **Lambda** function which
+     * was initiatiated by a
+     */
+
   }, {
     key: "lambdaError",
     value: function lambdaError(errorCode, e, context) {
@@ -747,6 +1019,15 @@ function (_Error) {
   return HandledError;
 }(_wrapNativeSuper(Error));
 
+/**
+ * **getSecrets**
+ *
+ * gets the needed module secrets; using locally available information if available, otherwise
+ * going out SSM to get.
+ *
+ * @param modules the modules which are have secrets that are needed for the functions execution.
+ * @param localLookup the property to look for the secrets in the incoming event/request
+ */
 function _await(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
@@ -805,6 +1086,18 @@ function _await$1(value, then, direct) {
 }
 
 var _database;
+/**
+ * **database**
+ *
+ * Provides a convenient means to connect to the database which lives
+ * outside the _handler_ function's main thread. This allows the connection
+ * to the database to sometimes be preserved between function executions.
+ *
+ * This is loaded asynchronously and the containing code must explicitly
+ * load the `abstracted-admin` library (as this library only lists it as
+ * a devDep)
+ */
+
 
 function _invoke(body, then) {
   var result = body();
@@ -895,6 +1188,10 @@ function startSequence(log, context) {
   };
 }
 
+/**
+ * Ensures that frontend clients who call Lambda's
+ * will be given a CORs friendly response
+ */
 var CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Credentials": true
@@ -921,6 +1218,16 @@ function setHeaders(headers) {
 
   fnHeaders = headers;
 }
+
+/**
+ * **wrapper**
+ *
+ * A higher order function which wraps a serverless _handler_-function with the aim of providing
+ * a better typing, logging, and orchestration experience.
+ *
+ * @param event will be either the body of the request or the hash passed in by API Gateway
+ * @param context the contextual props and functions which AWS provides
+ */
 
 function _await$3(value, then, direct) {
   if (direct) {
@@ -1016,9 +1323,11 @@ var wrapper = function wrapper(fn) {
         isApiGatewayRequest: apiGateway && apiGateway.headers ? true : false,
         errorMeta: errorMeta
       });
-      workflowStatus = "running-function";
+      workflowStatus = "running-function"; // CALL the HANDLER FUNCTION
+
       return _await$3(fn(request, handlerContext), function (results) {
-        workflowStatus = "function-complete";
+        workflowStatus = "function-complete"; // SEQUENCE (continuation)
+
         return _invoke$1(function () {
           if (sequence.isSequence && !sequence.isDone) {
             workflowStatus = "invoke-started";
@@ -1027,6 +1336,7 @@ var wrapper = function wrapper(fn) {
             });
           }
         }, function () {
+          // SEQUENCE (orchestration starting)
           return _await$3(invokeNewSequence(results, log), function () {
             if (handlerContext.isApiGatewayRequest) {
               var headers = Object.assign(Object.assign(Object.assign({}, CORS_HEADERS), getHeaders()), {
@@ -1048,7 +1358,8 @@ var wrapper = function wrapper(fn) {
               });
               return results;
             }
-          });
+          }); // RETURN
+          // END of RETURN BLOCK
         });
       });
     }, function (e) {
@@ -1089,6 +1400,8 @@ var wrapper = function wrapper(fn) {
           });
 
           if (isApiGatewayRequest) {
+            // API Gateway structured error
+            // TODO: can this be thrown instead so we don't need to use "any"?
             throw UnhandledError.apiGatewayError(errorMeta.defaultErrorCode, e, context.awsRequestId);
           } else {
             throw new UnhandledError(errorMeta.defaultErrorCode, e, context.awsRequestId);

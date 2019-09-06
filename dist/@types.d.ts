@@ -7,6 +7,13 @@ import { IFirebaseAdminConfig } from "abstracted-firebase";
 declare type DB = import("abstracted-admin").DB;
 import { setContentType, setHeaders } from "./wrapper/headers";
 export declare type IWrapperFunction = Omit<IServerlessFunction, "handler">;
+/**
+ * **ILambdSequenceStep**
+ *
+ * A _step_ in a `LambdaSequence`. This includes the function name (`arn`), parameters passed
+ * into the step (`params`), workflow status (assigned/active/completed), as well the `results` of
+ * execution if the status is in the `completed` status.
+ */
 export interface ILambdaSequenceStep<T = IDictionary> {
     arn: string;
     params: Partial<T>;
@@ -23,7 +30,20 @@ export interface ILambaSequenceFromResponse<T> {
     apiGateway?: IAWSLambdaProxyIntegrationRequest;
     sequence: LambdaSequence;
 }
+/**
+ * **ILambdaSequenceNextTuple**
+ *
+ * Returns both the function name (aka, "arn") of the next
+ * function along with any parameters which should be passed
+ * to it. Within these parameters it also includes the
+ * `_sequence` property to pass along the sequence meta-data
+ */
 export declare type ILambdaSequenceNextTuple<T> = [string, Sequence<T>];
+/**
+ * Configure how an error should be identified; typically you would only
+ * use one condition but if multiple are used they are considered an `AND`
+ * logical condition
+ */
 export interface IErrorIdentification {
     errorClass?: new (...args: any) => Error;
     code?: string;
@@ -32,26 +52,99 @@ export interface IErrorIdentification {
 }
 export declare type arn = string;
 export interface IErrorHandling {
+    /** forward to another lambda function */
     forwardTo?: arn;
+    /**
+     * send it to a callback function; if the callback
+     * returns `true` then no error will be thrown with
+     * the understanding that the error has been handled
+     * in some way.
+     */
     callback?: (e: Error) => boolean;
 }
 export interface IErrorHandlingDefault {
     defaultHandling: true;
 }
+/**
+ * The AWS `context` plus additional properties/functions that the `wrapper`
+ * function provides.
+ *
+ * Optionally you can also pass in a generic to state the type of the the
+ * "secrets" returned.
+ */
 export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
+    /**
+     * The sequence which this execution is part of
+     */
     sequence: LambdaSequence;
+    /**
+     * Check whether the given function execution is part of a
+     * sequence
+     */
     isSequence: boolean;
+    /**
+     * Indicates whether the current sequence is "done" (aka, the current
+     * function execution is the _last_ function in the sequence)
+     *
+     * Note: if the function is NOT running as part of a sequence this will
+     * always be `false`
+     */
     isDone: boolean;
+    /**
+     * your pre-configured logging interface
+     */
     log: ILoggerApi;
+    /**
+     * Provides a handy utility function of providing you access to a Firebase
+     * database connection. This is loaded asynchronously so there is no code
+     * penality for Firebase if you aren't using it.
+     */
     database: (config?: IFirebaseAdminConfig) => Promise<DB>;
+    /**
+     * a utility function to help facilitate getting secrets
+     * either from SSM or locally if available
+     */
     getSecrets: IGetSecrets<T>;
+    /**
+     * The API Gateway "proxy integration" request data; this is left blank if the call was not
+     * made from API Gateway (or the function is not using proxy integration)
+     */
     apiGateway: IAWSLambdaProxyIntegrationRequest;
+    /**
+     * A boolean flag which indicates whether the current execution was started by an API Gateway
+     * event.
+     */
     isApiGatewayRequest: boolean;
+    /**
+     * Allows you to describe all the errors you expect as well as how to handle them as well
+     * _unhandled_ or _unexpected_ errors.
+     */
     errorMeta: ErrorMeta;
+    /**
+     * The **header** for any API Gateway originated function is `appliacation/json` but this
+     * can be changed to something else if needed.
+     */
     setContentType: typeof setContentType;
+    /**
+     * Requests that originate from API Gateway will automatically be provided CORS headers as
+     * well as a default `Content-Type` of `application/json`. This method allows you to add
+     * additional name/value pairs to the headers passed back if this is required.
+     */
     setHeaders: typeof setHeaders;
+    /**
+     * Allows the handler author to invoke a new `LambdaSequence`.
+     */
     startSequence: (sequence: LambdaSequence) => void;
 }
+/**
+ * **IOrchestrationHandlerFunction**
+ *
+ * A type definition for an AWS Lambda "Handler Function" which is being wrapped
+ * by the `handler` function from `aws-orchestrate`. Because this wrapping allows
+ * us to be "better citizens" from a Typescript standpoint this type definition
+ * requires that you state explicitly the **Request**<`E`> and **Response**<`R`> types
+ * as generics passed in.
+ */
 export declare type IHandlerFunction<E, R> = (event: E, context: IHandlerContext<E>) => Promise<R>;
 export interface IErrorWithExtraProperties extends Error {
     [key: string]: any;
