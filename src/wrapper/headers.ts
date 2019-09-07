@@ -11,6 +11,7 @@ export const CORS_HEADERS = {
 
 let contentType = "application/json";
 let fnHeaders: IDictionary<string> = {};
+let correlationId: string;
 
 export function getContentType() {
   return contentType;
@@ -27,6 +28,23 @@ export function setContentType(type: string) {
 
 export function getHeaders() {
   return fnHeaders;
+}
+
+/**
+ * set the `correlationId` so it is always passed
+ * as a header variable on responses and invocations
+ */
+export function setCorrelationId(cid: string) {
+  correlationId = cid;
+}
+
+export function getAllHeaders() {
+  return {
+    ...CORS_HEADERS,
+    ...getHeaders(),
+    "Content-Type": getContentType(),
+    "x-correlation-id": correlationId
+  };
 }
 
 export function setHeaders(headers: IDictionary<string>) {

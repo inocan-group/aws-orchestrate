@@ -135,10 +135,10 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    */
   isApiGatewayRequest: boolean;
   /**
-   * Allows you to describe all the errors you expect as well as how to handle them as well
-   * _unhandled_ or _unexpected_ errors.
+   * Allows you to manage how to handle errors which are encountered; both _expected_
+   * and _unexpected_ are captured and each can be handled in whichever way you prefer.
    */
-  errorMeta: ErrorMeta;
+  errorMgmt: ErrorMeta;
   /**
    * The **header** for any API Gateway originated function is `appliacation/json` but this
    * can be changed to something else if needed.
@@ -173,3 +173,37 @@ export type IHandlerFunction<E, R> = (
 export interface IErrorWithExtraProperties extends Error {
   [key: string]: any;
 }
+
+export type IErrorHandlerFunction = (err: Error) => boolean;
+export interface IErrorClass extends Error {}
+
+export interface IDefaultHandlingBase {
+  type: "error-forwarding" | "handler-fn" | "default-error" | "default";
+  code: number;
+  prop: string;
+}
+
+export interface IDefaultHandlingForwarding extends IDefaultHandlingBase {
+  type: "error-forwarding";
+  arn: string;
+}
+
+export interface IDefaultHandlingError extends IDefaultHandlingBase {
+  type: "default-error";
+  error: IErrorClass;
+}
+
+export interface IDefaultHandlingCallback extends IDefaultHandlingBase {
+  type: "handler-fn";
+  defaultHandlerFn: IErrorHandlerFunction;
+}
+
+export interface IDefaultHandlingDefault extends IDefaultHandlingBase {
+  type: "default";
+}
+
+export type IDefaultHandling =
+  | IDefaultHandlingForwarding
+  | IDefaultHandlingError
+  | IDefaultHandlingCallback
+  | IDefaultHandlingDefault;

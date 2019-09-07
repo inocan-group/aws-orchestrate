@@ -1,5 +1,5 @@
 import { ErrorHandler } from "../ErrorHandler";
-import { IErrorIdentification, IErrorHandling } from "../@types";
+import { IErrorIdentification, IErrorHandling, IErrorHandlerFunction, IDefaultHandling } from "../@types";
 export declare const DEFAULT_ERROR_CODE = 500;
 export interface IError {
     message?: string;
@@ -40,10 +40,12 @@ export declare class ErrorMeta {
     private _errors;
     private _defaultErrorCode;
     private _arn;
+    private _defaultHandlerFn;
+    private _defaultError;
     /**
-     * Add another error type to the expected error types.
+     * Add an error handler for a known/expected error
      */
-    add(
+    addHandler(
     /** the return code that will be returned for this error */
     code: number, 
     /** how will an error be matched */
@@ -66,15 +68,33 @@ export declare class ErrorMeta {
      * then it will be respected over the default.
      */
     setDefaultErrorCode(code: number): this;
+    setDefaultHandler(fn: IErrorHandlerFunction): ErrorMeta;
+    setDefaultHandler(err: Error): ErrorMeta;
     /**
-     * **setDefaultHandlerFunction**
+     * **setDefaultHandler**
      *
+     * @param err if you want to shift the error to a particular static error then you
+     * can just pass it in:
      *
+     * ```typescript
+     * context.errors.setDefaultHandler(new Error('my message'))
+     * ```
+     *
+     * At the time of the error it will evaluate if your default error already has a _message_
+     * and if it _does not_ then it will inject the runtime's error message into the error class
+     * you provided.
+     *
+     * In all cases, it will replace the runtime error's stack with what was passed in.
+     */
+    setDefaultHandler(fn: (err: Error) => boolean): ErrorMeta;
+    /**
+     * **setDefaultHandler**
      *
      * @param arn the function's arn (this can be the abbreviated variety so long as
      * proper ENV variables are set)
      */
-    setDefaultHandlerFunction(arn: string): this;
+    setDefaultHandler(arn: string): ErrorMeta;
+    readonly defaultHandling: IDefaultHandling;
     /**
      * The default code for unhandled errors.
      *

@@ -812,13 +812,13 @@ function () {
     this._defaultErrorCode = DEFAULT_ERROR_CODE;
   }
   /**
-   * Add another error type to the expected error types.
+   * Add an error handler for a known/expected error
    */
 
 
   _createClass(ErrorMeta, [{
-    key: "add",
-    value: function add(
+    key: "addHandler",
+    value: function addHandler(
     /** the return code that will be returned for this error */
     code,
     /** how will an error be matched */
@@ -849,28 +849,37 @@ function () {
       this._defaultErrorCode = code;
       return this;
     }
-    /**
-     * **setDefaultHandlerFunction**
-     *
-     *
-     *
-     * @param arn the function's arn (this can be the abbreviated variety so long as
-     * proper ENV variables are set)
-     */
-
   }, {
-    key: "setDefaultHandlerFunction",
-    value: function setDefaultHandlerFunction(arn) {
-      this._arn = arn;
+    key: "setDefaultHandler",
+    value: function setDefaultHandler(param) {
+      switch (_typeof(param)) {
+        case "string":
+          this._arn = param;
+          this._defaultHandlerFn = undefined;
+          this._defaultError = undefined;
+          break;
+
+        case "function":
+          this._defaultHandlerFn = param;
+          this._arn = undefined;
+          this._defaultError = undefined;
+          break;
+
+        default:
+          if (param instanceof Error) {
+            this._defaultError = param;
+            this._arn = undefined;
+            this._defaultHandlerFn = undefined;
+          } else {
+            console.log({
+              message: "The passed in setDefaultHandler param was of an unknown type ".concat(_typeof(param), "; the action has been ignored")
+            });
+          }
+
+      }
+
       return this;
     }
-    /**
-     * The default code for unhandled errors.
-     *
-     * Note: if an unhandled error has the property of `httpStatus` set and is a number
-     * then it will be respected over the default.
-     */
-
   }, {
     key: "toString",
     value: function toString() {
@@ -884,6 +893,43 @@ function () {
     get: function get() {
       return this._errors;
     }
+  }, {
+    key: "defaultHandling",
+    get: function get() {
+      if (this._arn) {
+        return {
+          type: "error-forwarding",
+          code: this.defaultErrorCode,
+          arn: this._arn,
+          prop: "_arn"
+        };
+      }
+
+      if (this._defaultHandlerFn) {
+        return {
+          type: "handler-fn",
+          code: this.defaultErrorCode,
+          defaultHandlerFn: this._defaultHandlerFn,
+          prop: "_defaultHandlerFn"
+        };
+      }
+
+      if (this._defaultError) {
+        return {
+          type: "default-error",
+          code: this.defaultErrorCode,
+          error: this._defaultError,
+          prop: "_defaultError"
+        };
+      }
+    }
+    /**
+     * The default code for unhandled errors.
+     *
+     * Note: if an unhandled error has the property of `httpStatus` set and is a number
+     * then it will be respected over the default.
+     */
+
   }, {
     key: "defaultErrorCode",
     get: function get() {
@@ -1221,6 +1267,7 @@ var CORS_HEADERS = {
 };
 var contentType = "application/json";
 var fnHeaders = {};
+var correlationId;
 function getContentType() {
   return contentType;
 }
@@ -1234,12 +1281,42 @@ function setContentType(type) {
 function getHeaders() {
   return fnHeaders;
 }
+/**
+ * set the `correlationId` so it is always passed
+ * as a header variable on responses and invocations
+ */
+
+function setCorrelationId(cid) {
+  correlationId = cid;
+}
+function getAllHeaders() {
+  return Object.assign(Object.assign(Object.assign({}, CORS_HEADERS), getHeaders()), {
+    "Content-Type": getContentType(),
+    "x-correlation-id": correlationId
+  });
+}
 function setHeaders(headers) {
   if (_typeof(headers) !== "object") {
     throw new Error("The value sent to setHeaders is not the required type. Was \"".concat(_typeof(headers), "\"; expected \"object\"."));
   }
 
   fnHeaders = headers;
+}
+
+/**
+ * converts an `Error` (or subclass) into a error hash
+ * which **API Gateway** can process.
+ */
+
+function convertToApiGatewayError(e) {
+  var defaultCode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_ERROR_CODE;
+  return {
+    headers: getAllHeaders(),
+    errorCode: e.errorCode || defaultCode,
+    errorType: e.name || e.code || "Error",
+    errorMessage: e.message,
+    stackTrace: e.stack
+  };
 }
 
 /**
@@ -1284,6 +1361,220 @@ function _invokeIgnored(body) {
   }
 }
 
+function _settle(pact, state, value) {
+  if (!pact.s) {
+    if (value instanceof _Pact) {
+      if (value.s) {
+        if (state & 1) {
+          state = value.s;
+        }
+
+        value = value.v;
+      } else {
+        value.o = _settle.bind(null, pact, state);
+        return;
+      }
+    }
+
+    if (value && value.then) {
+      value.then(_settle.bind(null, pact, state), _settle.bind(null, pact, 2));
+      return;
+    }
+
+    pact.s = state;
+    pact.v = value;
+    var observer = pact.o;
+
+    if (observer) {
+      observer(pact);
+    }
+  }
+}
+
+var _Pact =
+/*#__PURE__*/
+function () {
+  function _Pact() {}
+
+  _Pact.prototype.then = function (onFulfilled, onRejected) {
+    var result = new _Pact();
+    var state = this.s;
+
+    if (state) {
+      var callback = state & 1 ? onFulfilled : onRejected;
+
+      if (callback) {
+        try {
+          _settle(result, 1, callback(this.v));
+        } catch (e) {
+          _settle(result, 2, e);
+        }
+
+        return result;
+      } else {
+        return this;
+      }
+    }
+
+    this.o = function (_this) {
+      try {
+        var value = _this.v;
+
+        if (_this.s & 1) {
+          _settle(result, 1, onFulfilled ? onFulfilled(value) : value);
+        } else if (onRejected) {
+          _settle(result, 1, onRejected(value));
+        } else {
+          _settle(result, 2, value);
+        }
+      } catch (e) {
+        _settle(result, 2, e);
+      }
+    };
+
+    return result;
+  };
+
+  return _Pact;
+}();
+
+function _switch(discriminant, cases) {
+  var dispatchIndex = -1;
+  var awaitBody;
+
+  outer: {
+    for (var i = 0; i < cases.length; i++) {
+      var test = cases[i][0];
+
+      if (test) {
+        var testValue = test();
+
+        if (testValue && testValue.then) {
+          break outer;
+        }
+
+        if (testValue === discriminant) {
+          dispatchIndex = i;
+          break;
+        }
+      } else {
+        // Found the default case, set it as the pending dispatch case
+        dispatchIndex = i;
+      }
+    }
+
+    if (dispatchIndex !== -1) {
+      do {
+        var body = cases[dispatchIndex][1];
+
+        while (!body) {
+          dispatchIndex++;
+          body = cases[dispatchIndex][1];
+        }
+
+        var result = body();
+
+        if (result && result.then) {
+          awaitBody = true;
+          break outer;
+        }
+
+        var fallthroughCheck = cases[dispatchIndex][2];
+        dispatchIndex++;
+      } while (fallthroughCheck && !fallthroughCheck());
+
+      return result;
+    }
+  }
+
+  var pact = new _Pact();
+
+  var reject = _settle.bind(null, pact, 2);
+
+  (awaitBody ? result.then(_resumeAfterBody) : testValue.then(_resumeAfterTest)).then(void 0, reject);
+  return pact;
+
+  function _resumeAfterTest(value) {
+    for (;;) {
+      if (value === discriminant) {
+        dispatchIndex = i;
+        break;
+      }
+
+      if (++i === cases.length) {
+        if (dispatchIndex !== -1) {
+          break;
+        } else {
+          _settle(pact, 1, result);
+
+          return;
+        }
+      }
+
+      test = cases[i][0];
+
+      if (test) {
+        value = test();
+
+        if (value && value.then) {
+          value.then(_resumeAfterTest).then(void 0, reject);
+          return;
+        }
+      } else {
+        dispatchIndex = i;
+      }
+    }
+
+    do {
+      var body = cases[dispatchIndex][1];
+
+      while (!body) {
+        dispatchIndex++;
+        body = cases[dispatchIndex][1];
+      }
+
+      var result = body();
+
+      if (result && result.then) {
+        result.then(_resumeAfterBody).then(void 0, reject);
+        return;
+      }
+
+      var fallthroughCheck = cases[dispatchIndex][2];
+      dispatchIndex++;
+    } while (fallthroughCheck && !fallthroughCheck());
+
+    _settle(pact, 1, result);
+  }
+
+  function _resumeAfterBody(result) {
+    for (;;) {
+      var fallthroughCheck = cases[dispatchIndex][2];
+
+      if (!fallthroughCheck || fallthroughCheck()) {
+        break;
+      }
+
+      dispatchIndex++;
+      var body = cases[dispatchIndex][1];
+
+      while (!body) {
+        dispatchIndex++;
+        body = cases[dispatchIndex][1];
+      }
+
+      result = body();
+
+      if (result && result.then) {
+        result.then(_resumeAfterBody).then(void 0, reject);
+        return;
+      }
+    }
+
+    _settle(pact, 1, result);
+  }
+}
+
 function _catch(body, recover) {
   try {
     var result = body();
@@ -1314,17 +1605,18 @@ function _async$3(f) {
 
 var wrapper = function wrapper(fn) {
   return _async$3(function (event, context) {
+    var result;
     var workflowStatus = "initializing";
+    context.callbackWaitsForEmptyEventLoop = false;
     var log = awsLog.logger().lambda(event, context);
     var errorMeta = new ErrorMeta();
     return _catch(function () {
-      context.callbackWaitsForEmptyEventLoop = false;
-
       var _LambdaSequence$from = LambdaSequence.from(event),
           request = _LambdaSequence$from.request,
           sequence = _LambdaSequence$from.sequence,
           apiGateway = _LambdaSequence$from.apiGateway;
 
+      setCorrelationId(log.getCorrelationId());
       log.info("The handler function \"".concat(context.functionName, "\" has started execution.  ").concat(sequence.isSequence ? "This handler is part of a sequence [".concat(log.getCorrelationId(), " ].") : "This handler was not triggered as part of a sequence."), {
         clientContext: context.clientContext,
         request: request,
@@ -1344,45 +1636,46 @@ var wrapper = function wrapper(fn) {
         apiGateway: apiGateway,
         getSecrets: getSecrets(request),
         isApiGatewayRequest: apiGateway && apiGateway.headers ? true : false,
-        errorMeta: errorMeta
+        errorMgmt: errorMeta
       });
       workflowStatus = "running-function"; // CALL the HANDLER FUNCTION
 
-      return _await$3(fn(request, handlerContext), function (results) {
+      return _await$3(fn(request, handlerContext), function (_fn) {
+        result = _fn;
         workflowStatus = "function-complete"; // SEQUENCE (continuation)
 
         return _invoke$1(function () {
           if (sequence.isSequence && !sequence.isDone) {
             workflowStatus = "invoke-started";
-            return _await$3(awsLog.invoke.apply(void 0, _toConsumableArray(sequence.next(results))), function () {
+            return _await$3(awsLog.invoke.apply(void 0, _toConsumableArray(sequence.next(result))), function () {
               workflowStatus = "invoke-complete";
             });
           }
         }, function () {
           // SEQUENCE (orchestration starting)
-          return _await$3(invokeNewSequence(results, log), function () {
+          return _await$3(invokeNewSequence(result, log), function () {
+            // RETURN
+            var headers = getAllHeaders();
+
             if (handlerContext.isApiGatewayRequest) {
-              var headers = Object.assign(Object.assign(Object.assign({}, CORS_HEADERS), getHeaders()), {
-                "Content-Type": getContentType()
-              });
               var response = {
-                statusCode: 200,
+                statusCode: commonTypes.HttpStatusCodes.Success,
                 headers: headers,
-                body: JSON.stringify(results)
+                body: JSON.stringify(result)
               };
               log.debug("Returning results to API Gateway", {
                 statusCode: 200,
-                results: results
+                headers: headers,
+                result: result
               });
               return response;
             } else {
               log.debug("Returning results to non-API Gateway caller", {
-                results: results
+                result: result
               });
-              return results;
+              return result;
             }
-          }); // RETURN
-          // END of RETURN BLOCK
+          }); // END of RETURN BLOCK
         });
       });
     }, function (e) {
@@ -1399,7 +1692,7 @@ var wrapper = function wrapper(fn) {
 
             if (!resolved) {
               if (isApiGatewayRequest) {
-                return HandledError.apiGatewayError(found.code, e, log.getContext());
+                return convertToApiGatewayError(new HandledError(found.code, e, log.getContext()));
               } else {
                 throw new HandledError(found.code, e, log.getContext());
               }
@@ -1417,18 +1710,93 @@ var wrapper = function wrapper(fn) {
             }
           });
         } else {
-          log.warn("The error in \"".concat(context.functionName, "\" has been returned to API Gateway using the default handler"), {
-            error: e,
-            workflowStatus: workflowStatus
+          // UNFOUND ERROR
+          log.debug("An unfound error is being processed by the default handling mechanism", {
+            defaultHandling: errorMeta.defaultHandling,
+            errorMessage: e.message,
+            stack: e.stack
           });
+          var handling = errorMeta.defaultHandling;
+          return _switch(handling.type, [[function () {
+            return "handler-fn";
+          }, function () {
+            //#region handle-fn
 
-          if (isApiGatewayRequest) {
-            // API Gateway structured error
-            // TODO: can this be thrown instead so we don't need to use "any"?
-            throw UnhandledError.apiGatewayError(errorMeta.defaultErrorCode, e, context.awsRequestId);
-          } else {
-            throw new UnhandledError(errorMeta.defaultErrorCode, e, context.awsRequestId);
-          }
+            /**
+             * results are broadly three things:
+             *
+             * 1. handler throws an error
+             * 2. handler returns `true` which means that result should be considered successful
+             * 3. handler returns _falsy_ which means that the default error should be thrown
+             */
+            try {
+              var passed = handling.defaultHandlerFn(e);
+
+              if (passed === true) {
+                log.debug("The error was fully handled by the handling function/callback; resulting in a successful condition.");
+
+                if (isApiGatewayRequest) {
+                  return {
+                    statusCode: result ? commonTypes.HttpStatusCodes.Success : commonTypes.HttpStatusCodes.NoContent,
+                    headers: getAllHeaders(),
+                    body: result ? JSON.stringify(result) : ""
+                  };
+                } else {
+                  return result;
+                }
+              } else {
+                log.debug("The error was passed to the callback/handler function but it did NOT resolve the error condition.");
+              }
+            } catch (e2) {
+              // handler threw an error
+              log.debug("the handler function threw an error: ".concat(e2.message), {
+                messsage: e2.message,
+                stack: e2.stack
+              });
+
+              if (isApiGatewayRequest) {
+                return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
+              }
+            }
+          }], [function () {
+            return "error-forwarding";
+          }, function () {
+            //#region error-forwarding
+            log.debug("The error will be forwarded to another function for handling", {
+              arn: handling.arn
+            });
+            return _await$3(awsLog.invoke(handling.arn, e), function () {
+            });
+          }], [function () {
+            return "default-error";
+          }, function () {
+            //#region default-error
+            handling.error.message = handling.error.message || e.message;
+            handling.error.stack = e.stack;
+
+            if (isApiGatewayRequest) {
+              return convertToApiGatewayError(handling.error);
+            } else {
+              throw handling.error;
+            }
+          }], [function () {
+            return "default";
+          }, function () {
+            //#region default
+            log.debug("Error handled by default unknown policy");
+
+            if (isApiGatewayRequest) {
+              return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
+            } else {
+              throw new UnhandledError(errorMeta.defaultErrorCode, e);
+            }
+          }], [void 0, function () {
+            log.debug("Unknown handling technique for unhandled error", {
+              type: handling.type,
+              errorMessage: e.message
+            });
+            throw new UnhandledError(errorMeta.defaultErrorCode, e);
+          }]]);
         }
       }();
     });

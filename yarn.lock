@@ -1363,15 +1363,9 @@
   integrity sha512-NYrtPht0wGzhwe9+/idPaBB+TqkY9AhTvOLMkThm0IoEfLaiVQZwBwyJ5puCkO3AUCWrmcoePjp2mbFocKy4SQ==
 
 "@types/node@*", "@types/node@^12.7.2":
-<<<<<<< Updated upstream
-  version "12.7.3"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.7.3.tgz#27b3f40addaf2f580459fdb405222685542f907a"
-  integrity sha512-3SiLAIBkDWDg6vFo0+5YJyHPWU9uwu40Qe+v+0MH8wRKYBimHvvAOyk3EzMrD/TrIlLYfXrqDqrg913PynrMJQ==
-=======
   version "12.7.4"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-12.7.4.tgz#64db61e0359eb5a8d99b55e05c729f130a678b04"
   integrity sha512-W0+n1Y+gK/8G2P/piTkBBN38Qc5Q1ZSO6B5H3QmPCUewaiXOo2GCAWZ4ElZCcNhjJuBSUSLGFUJnmlCn5+nxOQ==
->>>>>>> Stashed changes
 
 "@types/node@^10.1.0":
   version "10.14.17"
@@ -2214,15 +2208,9 @@ aws-log@^0.8.5:
     traverse "^0.6.6"
 
 aws-sdk@^2.512.0:
-<<<<<<< Updated upstream
-  version "2.521.0"
-  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.521.0.tgz#b7b41084fdc9e8b134520f054c06e3908df9321a"
-  integrity sha512-YRViGahZoHq0lEsy0Cq7bqaLzP8OTzjg35Hz08Rv88ltk+b5UWVpDgIWls7mXCBNTBTYjbfbeGXzNaHJBLKlpA==
-=======
   version "2.524.0"
   resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.524.0.tgz#0acbd6a066cfb5b357b254b6ed273cca98ca6d5f"
   integrity sha512-nCnKEExs1OqwNG6sIrRy+Lj8Zt2M6BTa6YlEMQ1gIpdwznaAN9XyTnm+MDc3iYsSl58MOBwiKpY8d6CONuxuDw==
->>>>>>> Stashed changes
   dependencies:
     buffer "4.9.1"
     events "1.1.1"
@@ -2239,17 +2227,10 @@ aws-sign2@~0.7.0:
   resolved "https://registry.yarnpkg.com/aws-sign2/-/aws-sign2-0.7.0.tgz#b46e890934a9591f2d2f6f86d7e6a9f1b3fe76a8"
   integrity sha1-tG6JCTSpWR8tL2+G1+ap8bP+dqg=
 
-<<<<<<< Updated upstream
-aws-ssm@^0.3.8:
-  version "0.3.8"
-  resolved "https://registry.yarnpkg.com/aws-ssm/-/aws-ssm-0.3.8.tgz#e8476216e7139cdaa8c9761db8f44bb969287dee"
-  integrity sha512-KnLvRNqEPPp6pegxHocdPuABjRUCjG3Z2bMApm6s9qoJslBCwMBEOKjH2vpvc8H/dVzMMnV0b/Cx4q1ReqZwRQ==
-=======
 aws-ssm@^0.3.8, aws-ssm@^0.3.9:
   version "0.3.9"
   resolved "https://registry.yarnpkg.com/aws-ssm/-/aws-ssm-0.3.9.tgz#31752a906e67e9f81ecab77295d08d6266b7e8a5"
   integrity sha512-j/frEt6r4vovVCB1Ht0SrM1g4eGN/kpHIAzPWP1uKmQRlUBZSQSHZ3S3k45RHDPBLXRO35YfQ2cyq6j/oH0W3Q==
->>>>>>> Stashed changes
   dependencies:
     common-types "^1.11.23"
 
@@ -3117,17 +3098,24 @@ common-tags@^1.8.0:
   resolved "https://registry.yarnpkg.com/common-tags/-/common-tags-1.8.0.tgz#8e3153e542d4a39e9b10554434afaaf98956a937"
   integrity sha512-6P6g0uetGpW/sdyUy/iQQCbFF0kWVMSIVSyYz7Zgjcgh8mgw8PQzDNZeyZ5DQ2gM7LBoZPHmnjz8rUthkBG5tw==
 
-<<<<<<< Updated upstream
-common-types@^1.11.14, common-types@^1.11.15, common-types@^1.11.18, common-types@^1.11.20, common-types@^1.11.21, common-types@^1.9.7:
-  version "1.11.21"
-  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.11.21.tgz#1c30a407deba7b77e0a989d4fb9558583ec02156"
-  integrity sha512-l4c+q9duvt9F7KNHjx3fwfARnI3VoTNm+MJU8V9bWrHwMhJo3ucT31xV/BO7Lk7hbhIlDHCsv0IkxceRXNTtBg==
-=======
 common-types@^1.11.14, common-types@^1.11.18, common-types@^1.11.20, common-types@^1.11.23, common-types@^1.9.7:
   version "1.11.23"
   resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.11.23.tgz#f72b7a3aa9c7b0640767c0ebfb4297e799fd53cc"
   integrity sha512-8w78D6lg4lsnnEn/ltYJNJIR/EwcHyNm0YTcmstVt17YL3cweB/VwuJnL1yeTfCGz3MZdRsH95gFLeanttB2BQ==
->>>>>>> Stashed changes
+  dependencies:
+    "@types/json-schema" "^7.0.3"
+
+common-types@^1.11.15:
+  version "1.11.21"
+  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.11.21.tgz#1c30a407deba7b77e0a989d4fb9558583ec02156"
+  integrity sha512-l4c+q9duvt9F7KNHjx3fwfARnI3VoTNm+MJU8V9bWrHwMhJo3ucT31xV/BO7Lk7hbhIlDHCsv0IkxceRXNTtBg==
+  dependencies:
+    "@types/json-schema" "^7.0.3"
+
+common-types@^1.12.0:
+  version "1.12.0"
+  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.12.0.tgz#91d350c264c20bf8d216ddb238b605f7481b57c0"
+  integrity sha512-33HJVJ9/HKOkogSMpB0b3ABgFSLfkpSmIVJdkLJOsAG9XpGmZ4PdbIiqi8ygDrRcuXzAp0kweZ5rIXRpjl2AIA==
   dependencies:
     "@types/json-schema" "^7.0.3"
 
@@ -4408,15 +4396,9 @@ ee-first@1.1.1:
   integrity sha1-WQxhFWsK4vTwJVcyoViyZrxWsh0=
 
 electron-to-chromium@^1.3.247:
-<<<<<<< Updated upstream
-  version "1.3.250"
-  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.3.250.tgz#1f383c16aeb75e7bddbd6a0491237eca81b2cb1f"
-  integrity sha512-2OAU91iUw83QvzuWJPfT+FMj+O+DC1EyTx1QBFcc9WZzOQSfZEAWINpdLWElxkgfiqTvQRDOKg0DkMZd9QoNug==
-=======
   version "1.3.252"
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.3.252.tgz#5b6261965b564a0f4df0f1c86246487897017f52"
   integrity sha512-NWJ5TztDnjExFISZHFwpoJjMbLUifsNBnx7u2JI0gCw6SbKyQYYWWtBHasO/jPtHym69F4EZuTpRNGN11MT/jg==
->>>>>>> Stashed changes
 
 elliptic@^6.0.0:
   version "6.5.1"
@@ -5414,15 +5396,9 @@ google-auth-library@^5.0.0:
     lru-cache "^5.0.0"
 
 google-gax@^1.1.2:
-<<<<<<< Updated upstream
-  version "1.5.1"
-  resolved "https://registry.yarnpkg.com/google-gax/-/google-gax-1.5.1.tgz#982c3d55d71280d7e6811aaefe7032a687fb6067"
-  integrity sha512-LSQ/VG2DZJGuKnDj1EjODxCImS30JBF9hGyhgGAYApsKuFTfS6Hd956+gx1ZTlQp6FbUnbL6Ajr569ydoxbMyg==
-=======
   version "1.5.2"
   resolved "https://registry.yarnpkg.com/google-gax/-/google-gax-1.5.2.tgz#996cf70778667cc22befbeae4b8a9d76fce0fabb"
   integrity sha512-NceyDzlw4mQz6qH3bDIuRtfDAZKehM96QpnPPJ3Hur7FA/gPzpzboUYwhfP6q5obSP4LuSSDhI/76Fu51/ljtg==
->>>>>>> Stashed changes
   dependencies:
     "@grpc/grpc-js" "^0.5.2"
     "@grpc/proto-loader" "^0.5.1"
@@ -7139,11 +7115,7 @@ merge2@^1.2.3:
   resolved "https://registry.yarnpkg.com/merge2/-/merge2-1.2.4.tgz#c9269589e6885a60cf80605d9522d4b67ca646e3"
   integrity sha512-FYE8xI+6pjFOhokZu0We3S5NKCirLbCzSh2Usf3qEyr4X8U+0jNg9P8RZ4qz+V2UoECLVwSyzU3LxXBaLGtD3A==
 
-<<<<<<< Updated upstream
-mermaid@^8.2.5:
-=======
 mermaid@^8.2.6:
->>>>>>> Stashed changes
   version "8.2.6"
   resolved "https://registry.yarnpkg.com/mermaid/-/mermaid-8.2.6.tgz#e73f396461a435c39a998819171c2114f59e46e1"
   integrity sha512-A8y4zW2aXPj8Yw+BkrCkV6fvzhsFWVESV1IkzRjqQ6T/+tzhkz946+bdebCmHqicEJGTncu/U6h8dgjo5pWo6Q==
@@ -7721,14 +7693,11 @@ object-copy@^0.1.0:
     define-property "^0.2.5"
     kind-of "^3.0.3"
 
-<<<<<<< Updated upstream
-=======
 object-inspect@^1.6.0:
   version "1.6.0"
   resolved "https://registry.yarnpkg.com/object-inspect/-/object-inspect-1.6.0.tgz#c70b6cbf72f274aab4c34c0c82f5167bf82cf15b"
   integrity sha512-GJzfBZ6DgDAmnuaM3104jR4s1Myxr3Y3zfIyN4z3UdqN69oSRacNK8UhnobDdC+7J2AHCjGwxQubNJfE70SXXQ==
 
->>>>>>> Stashed changes
 object-is@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/object-is/-/object-is-1.0.1.tgz#0aa60ec9989a0b3ed795cf4d06f62cf1ad6539b6"
@@ -9663,15 +9632,9 @@ send@0.17.1:
     statuses "~1.5.0"
 
 serialize-javascript@^1.3.0, serialize-javascript@^1.6.1, serialize-javascript@^1.7.0:
-<<<<<<< Updated upstream
-  version "1.9.0"
-  resolved "https://registry.yarnpkg.com/serialize-javascript/-/serialize-javascript-1.9.0.tgz#5b77019d7c3b85fe91b33ae424c53dcbfb6618bd"
-  integrity sha512-UkGlcYMtw4d9w7YfCtJFgdRTps8N4L0A48R+SmcGL57ki1+yHwJXnalk5bjgrw+ljv6SfzjzPjhohod2qllg/Q==
-=======
   version "1.9.1"
   resolved "https://registry.yarnpkg.com/serialize-javascript/-/serialize-javascript-1.9.1.tgz#cfc200aef77b600c47da9bb8149c943e798c2fdb"
   integrity sha512-0Vb/54WJ6k5v8sSWN09S0ora+Hnr+cX40r9F170nT+mSkaxltoE/7R3OrIdBSUv1OoiobH1QoWQbCnAO+e8J1A==
->>>>>>> Stashed changes
 
 serialized-query@^0.8.1:
   version "0.8.1"
@@ -10762,11 +10725,7 @@ typedarray@^0.0.6, typedarray@~0.0.5:
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
   integrity sha1-hnrHTjhkGHsdPUfZlqeOxciDB3c=
 
-<<<<<<< Updated upstream
-typescript@^3.5.3:
-=======
 typescript@^3.6.2:
->>>>>>> Stashed changes
   version "3.6.2"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.6.2.tgz#105b0f1934119dde543ac8eb71af3a91009efe54"
   integrity sha512-lmQ4L+J6mnu3xweP8+rOrUwzmN+MRAj7TgtJtDaXE5PMyX2kCrklhg3rvOsOIfNeAWMQWO2F1GPc1kMD2vLAfw==

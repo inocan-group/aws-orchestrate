@@ -1,7 +1,10 @@
 import {
   IAWSLambaContext,
   IAwsLambdaEvent,
-  IAWSLambdaProxyIntegrationRequest
+  IAWSLambdaProxyIntegrationRequest,
+  IApiGatewayErrorResponse,
+  HttpStatusCodes,
+  IApiGatewayResponse
 } from "common-types";
 import { logger, invoke } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
@@ -19,10 +22,10 @@ import {
 import {
   setHeaders,
   setContentType,
-  getHeaders,
-  getContentType,
-  CORS_HEADERS
+  setCorrelationId,
+  getAllHeaders
 } from "./wrapper/headers";
+import { convertToApiGatewayError } from "./errors";
 
 /**
  * **wrapper**
@@ -39,7 +42,8 @@ export const wrapper = function<I, O>(
   return async function(
     event: IAwsLambdaEvent<I>,
     context: IAWSLambaContext
-  ): Promise<O | string> {
+  ): Promise<O | IApiGatewayResponse | IApiGatewayErrorResponse> {
+    let result: O;
     let workflowStatus:
       | "initializing"
       | "running-function"
@@ -50,11 +54,12 @@ export const wrapper = function<I, O>(
       | "sequence-started"
       | "completing" = "initializing";
 
+    context.callbackWaitsForEmptyEventLoop = false;
     const log = logger().lambda(event, context);
     const errorMeta: ErrorMeta = new ErrorMeta();
     try {
-      context.callbackWaitsForEmptyEventLoop = false;
       const { request, sequence, apiGateway } = LambdaSequence.from(event);
+      setCorrelationId(log.getCorrelationId());
       log.info(
         `The handler function "${
           context.functionName
@@ -84,45 +89,41 @@ export const wrapper = function<I, O>(
         apiGateway,
         getSecrets: getSecrets(request),
         isApiGatewayRequest: apiGateway && apiGateway.headers ? true : false,
-        errorMeta: errorMeta
+        errorMgmt: errorMeta
       };
       workflowStatus = "running-function";
-
       // CALL the HANDLER FUNCTION
-      const results = await fn(request, handlerContext);
+      result = await fn(request, handlerContext);
 
       workflowStatus = "function-complete";
 
       // SEQUENCE (continuation)
       if (sequence.isSequence && !sequence.isDone) {
         workflowStatus = "invoke-started";
-        await invoke(...sequence.next(results));
+        await invoke(...sequence.next(result));
         workflowStatus = "invoke-complete";
       }
 
       // SEQUENCE (orchestration starting)
-      await invokeNewSequence(results, log);
+      await invokeNewSequence(result, log);
 
       // RETURN
+      const headers = getAllHeaders();
       if (handlerContext.isApiGatewayRequest) {
-        const headers = {
-          ...CORS_HEADERS,
-          ...getHeaders(),
-          "Content-Type": getContentType()
-        };
-        const response = {
-          statusCode: 200,
+        const response: IApiGatewayResponse = {
+          statusCode: HttpStatusCodes.Success,
           headers,
-          body: JSON.stringify(results)
+          body: JSON.stringify(result)
         };
         log.debug(`Returning results to API Gateway`, {
           statusCode: 200,
-          results
+          headers,
+          result
         });
-        return response as any;
+        return response;
       } else {
-        log.debug(`Returning results to non-API Gateway caller`, { results });
-        return results;
+        log.debug(`Returning results to non-API Gateway caller`, { result });
+        return result;
       }
       // END of RETURN BLOCK
     } catch (e) {
@@ -142,10 +143,8 @@ export const wrapper = function<I, O>(
           const resolved = found.handling.callback(e);
           if (!resolved) {
             if (isApiGatewayRequest) {
-              return HandledError.apiGatewayError(
-                found.code,
-                e,
-                log.getContext()
+              return convertToApiGatewayError(
+                new HandledError(found.code, e, log.getContext())
               );
             } else {
               throw new HandledError(found.code, e, log.getContext());
@@ -161,24 +160,104 @@ export const wrapper = function<I, O>(
           );
         }
       } else {
-        log.warn(
-          `The error in "${context.functionName}" has been returned to API Gateway using the default handler`,
-          { error: e, workflowStatus }
+        // UNFOUND ERROR
+        log.debug(
+          `An unfound error is being processed by the default handling mechanism`,
+          {
+            defaultHandling: errorMeta.defaultHandling,
+            errorMessage: e.message,
+            stack: e.stack
+          }
         );
-        if (isApiGatewayRequest) {
-          // API Gateway structured error
-          // TODO: can this be thrown instead so we don't need to use "any"?
-          throw UnhandledError.apiGatewayError(
-            errorMeta.defaultErrorCode,
-            e,
-            context.awsRequestId
-          );
-        } else {
-          throw new UnhandledError(
-            errorMeta.defaultErrorCode,
-            e,
-            context.awsRequestId
-          );
+        const handling = errorMeta.defaultHandling;
+        switch (handling.type) {
+          case "handler-fn":
+            //#region handle-fn
+            /**
+             * results are broadly three things:
+             *
+             * 1. handler throws an error
+             * 2. handler returns `true` which means that result should be considered successful
+             * 3. handler returns _falsy_ which means that the default error should be thrown
+             */
+            try {
+              const passed = handling.defaultHandlerFn(e);
+              if (passed === true) {
+                log.debug(
+                  `The error was fully handled by the handling function/callback; resulting in a successful condition.`
+                );
+                if (isApiGatewayRequest) {
+                  return {
+                    statusCode: result
+                      ? HttpStatusCodes.Success
+                      : HttpStatusCodes.NoContent,
+                    headers: getAllHeaders(),
+                    body: result ? JSON.stringify(result) : ""
+                  };
+                } else {
+                  return result;
+                }
+              } else {
+                log.debug(
+                  `The error was passed to the callback/handler function but it did NOT resolve the error condition.`
+                );
+              }
+            } catch (e2) {
+              // handler threw an error
+              log.debug(`the handler function threw an error: ${e2.message}`, {
+                messsage: e2.message,
+                stack: e2.stack
+              });
+              if (isApiGatewayRequest) {
+                return convertToApiGatewayError(
+                  new UnhandledError(errorMeta.defaultErrorCode, e)
+                );
+              }
+            }
+            break;
+          //#endregion
+
+          case "error-forwarding":
+            //#region error-forwarding
+            log.debug(
+              "The error will be forwarded to another function for handling",
+              { arn: handling.arn }
+            );
+            await invoke(handling.arn, e);
+            break;
+          //#endregion
+
+          case "default-error":
+            //#region default-error
+            handling.error.message = handling.error.message || e.message;
+            handling.error.stack = e.stack;
+            if (isApiGatewayRequest) {
+              return convertToApiGatewayError(handling.error);
+            } else {
+              throw handling.error;
+            }
+            break;
+          //#endregion
+
+          case "default":
+            //#region default
+            log.debug(`Error handled by default unknown policy`);
+            if (isApiGatewayRequest) {
+              return convertToApiGatewayError(
+                new UnhandledError(errorMeta.defaultErrorCode, e)
+              );
+            } else {
+              throw new UnhandledError(errorMeta.defaultErrorCode, e);
+            }
+            break;
+          //#endregion
+
+          default:
+            log.debug("Unknown handling technique for unhandled error", {
+              type: (handling as any).type,
+              errorMessage: e.message
+            });
+            throw new UnhandledError(errorMeta.defaultErrorCode, e);
         }
       }
     }

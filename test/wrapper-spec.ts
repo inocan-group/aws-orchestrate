@@ -34,7 +34,7 @@ const handlerErrorFnWithDefaultChanged: IHandlerFunction<
   IRequest,
   IResponse
 > = async (event, context) => {
-  context.errorMeta.setDefaultErrorCode(400);
+  context.errorMgmt.setDefaultErrorCode(400);
   throw new Error("this is an error god dammit");
 };
 
@@ -45,7 +45,7 @@ const handlerErrorFnWithKnownErrors: (
   cbResult,
   isHandled = false
 ) => async (event, context) => {
-  context.errorMeta.add(
+  context.errorMgmt.addHandler(
     404,
     { errorClass: HandledError },
     { callback: e => cbResult }
@@ -61,7 +61,6 @@ const handlerErrorFnWithKnownErrors: (
     e.name = "unknown";
     throw new UnhandledError(BOGUS_ERROR_CODE, e);
   }
-  return { event, context };
 };
 
 const event1: IRequest = {
@@ -175,7 +174,7 @@ describe("Handler Wrapper => ", () => {
       event,
       context
     ) => {
-      context.errorMeta.add(
+      context.errorMgmt.addHandler(
         401,
         { messageContains: "help me" },
         { callback: () => false }
