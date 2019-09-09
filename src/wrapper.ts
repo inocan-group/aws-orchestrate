@@ -17,6 +17,7 @@ import {
   invokeNewSequence,
   findError,
   getSecrets,
+  getSecret,
   database,
   setFnHeaders,
   setContentType,
@@ -24,7 +25,9 @@ import {
   setCorrelationId,
   saveSecretHeaders,
   loggedMessages,
-  getNewSequence
+  getNewSequence,
+  maskLoggingForSecrets,
+  getLocalSecrets
 } from "./wrapper-fn/index";
 import { convertToApiGatewayError } from "./errors";
 import { sequenceStatus } from "./sequences";
@@ -73,6 +76,7 @@ export const wrapper = function<I, O>(
         event
       );
       saveSecretHeaders(headers);
+      maskLoggingForSecrets(getLocalSecrets(), log);
       msg.start(request, headers, context, sequence, apiGateway);
 
       //#region PREP
@@ -89,6 +93,7 @@ export const wrapper = function<I, O>(
         isSequence: sequence.isSequence,
         isDone: sequence.isDone,
         apiGateway,
+        getSecret,
         getSecrets,
         isApiGatewayRequest: apiGateway && apiGateway.resource ? true : false,
         errorMgmt: errorMeta

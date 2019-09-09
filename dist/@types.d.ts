@@ -2,7 +2,7 @@ import { IDictionary, IAWSLambdaProxyIntegrationRequest, IAWSLambaContext, Omit,
 import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
-import { getSecrets } from "./wrapper-fn/secrets";
+import { getSecrets, getSecret } from "./wrapper-fn/secrets";
 import { IFirebaseAdminConfig } from "abstracted-firebase";
 declare type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
@@ -176,6 +176,17 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
      * ```
      */
     getSecrets: typeof getSecrets;
+    /**
+     * **getSecret**
+     *
+     * gets a single secret; ideally using local secrets but will go to AWS's
+     * **SSM** if needed.
+     *
+     * ```typescript
+     * const serviceAccount = await context.getSecret('firebase/SERVICE_ACCOUNT')
+     * ```
+     */
+    getSecret: typeof getSecret;
     /**
      * The API Gateway "proxy integration" request data; this is left blank if the call was not
      * made from API Gateway (or the function is not using proxy integration)

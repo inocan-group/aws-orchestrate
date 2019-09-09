@@ -2,6 +2,8 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
 function _interopNamespace(e) {
   if (e && e.__esModule) { return e; } else {
     var n = {};
@@ -23,6 +25,8 @@ function _interopNamespace(e) {
 
 var commonTypes = require('common-types');
 var awsLog = require('aws-log');
+var get = _interopDefault(require('lodash.get'));
+var set = _interopDefault(require('lodash.set'));
 
 function _typeof(obj) {
   if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
@@ -266,18 +270,8 @@ function findError(e, expectedErrors) {
 }
 
 /**
- * **getSecrets**
- *
- * Gets the needed secrets for this function -- using locally available information
- * if available (_params_ and/or _cached_ values from prior calls) -- otherwise
- * goes out **SSM** to get it.
- *
- * In addition, all secrets requested (within the given function as well as
- * _prior_ function's secrets in a sequence) will be auto-forwarded to subsequent
- * functions in the currently executing sequence. Secrets _will not_ be passed back
- * in the function's response.
- *
- * @param modules the modules which are have secrets that are needed0
+ * Allows getting a single secret out of either _locally_ stored secrets -- or
+ * if not found -- going to **SSM** and pulling the module containing this secret.
  */
 function _await(value, then, direct) {
   if (direct) {
@@ -291,8 +285,18 @@ function _await(value, then, direct) {
   return then ? value.then(then) : value;
 }
 /**
- * Goes through a set of secrets -- organized by `[module].[name] = secret` --
- * and masks the values so that they don't leak into the log files.
+ * **getSecrets**
+ *
+ * Gets the needed secrets for this function -- using locally available information
+ * if available (_params_ and/or _cached_ values from prior calls) -- otherwise
+ * goes out **SSM** to get it.
+ *
+ * In addition, all secrets requested (within the given function as well as
+ * _prior_ function's secrets in a sequence) will be auto-forwarded to subsequent
+ * functions in the currently executing sequence. Secrets _will not_ be passed back
+ * in the function's response.
+ *
+ * @param modules the modules which are have secrets that are needed
  */
 
 
@@ -352,6 +356,49 @@ var getSecrets = _async(function (modules) {
     });
   });
 });
+/**
+ * Goes through a set of secrets -- organized by `[module].[name] = secret` --
+ * and masks the values so that they don't leak into the log files.
+ */
+
+var getSecret = _async(function (moduleAndName) {
+  var log = awsLog.logger().reloadContext();
+  var localSecrets = getLocalSecrets();
+
+  if (!moduleAndName.includes("/")) {
+    throw new Error("When using getSecret() you must state both the module and the NAME of the secret where the two are delimted by a \"/\" character.");
+  }
+
+  var _moduleAndName$split = moduleAndName.split("/"),
+      _moduleAndName$split2 = _slicedToArray(_moduleAndName$split, 2),
+      module = _moduleAndName$split2[0],
+      name = _moduleAndName$split2[1];
+
+  if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
+    log.debug("getSecret(\"".concat(moduleAndName, "\") found secret locally"), {
+      module: module,
+      name: name
+    });
+    return get(localSecrets, "".concat(module, ".").concat(name));
+  } else {
+    log.debug("getSecret(\"".concat(moduleAndName, "\") did not find locally so asking SSM for module \"").concat(module, "\""), {
+      module: module,
+      name: name,
+      localModules: Object.keys(localSecrets)
+    });
+    return _await(getSecrets([module]), function () {
+      if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
+        log.debug("after SSM call for module \"".concat(module, "\" the secret was found"), {
+          module: module,
+          name: name
+        });
+        return get(localSecrets, "".concat(module, ".").concat(name));
+      } else {
+        throw new Error("Even after asking SSM for module \"".concat(module, "\" the secret \"").concat(name, "\" was not found!"));
+      }
+    });
+  }
+});
 var localSecrets = {};
 /**
  * Saves secrets locally so they can be used rather than
@@ -364,8 +411,8 @@ function saveSecretsLocally(secrets) {
 }
 /**
  * Gets the locally stored secrets. The format of the keys in this hash
- * should be `module/SECRET` which cooresponds to the `aws-ssm` opinion
- * on SSM naming.
+ * should be `{ module1: { NAME: value, NAME2: value} }` which cooresponds
+ * to the `aws-ssm` opinion on SSM naming.
  */
 
 function getLocalSecrets() {
@@ -566,16 +613,38 @@ function getContentType() {
  * By passing in all the headers you received in a given
  * invocation this function will pull out all the headers
  * which start with `O-S-` (as this is the convention for
- * secrets passed by `aws-orchestrate`).
+ * secrets passed by `aws-orchestrate`). Each line item in
+ * a header represents a secret name/value pairing. For instance,
+ * A typical header might be keyed with `O-S-firemodel/SERVICE_ACCOUNT`.
  *
- * This _hash_ is returned but also stored locally for future
- * calls to `getPassedInSecrets()`
+ * Each header name/value will be parsed and then stored in following format:
+ *
+ * ```typescript
+ * {
+ *    [module1]: {
+ *      secret1: value,
+ *      secret2: value
+ *    },
+ *    [module2]: {
+ *      secret3: value
+ *    }
+ * }
+ * ```
+ *
+ * This format is consistent with the opinionated format established by
+ * the `aws-ssm` library. This data structure can be retrieved at any
+ * point by a call to `getLocalSecrets()`.
  */
 
 function saveSecretHeaders(headers) {
   var localSecrets = Object.keys(headers).reduce(function (headerSecrets, key) {
     if (key.slice(0, 4) === "O-S-") {
-      headerSecrets[key.slice(4)] = headers[key];
+      var _key$slice$split = key.slice(4).split("/"),
+          _key$slice$split2 = _slicedToArray(_key$slice$split, 2),
+          module = _key$slice$split2[0],
+          name = _key$slice$split2[1];
+
+      set(headerSecrets, "".concat(module, ".").concat(name), headers[key]);
     }
 
     return headerSecrets;
@@ -1911,6 +1980,7 @@ var wrapper = function wrapper(fn) {
           headers = _LambdaSequence$from.headers;
 
       saveSecretHeaders(headers);
+      maskLoggingForSecrets(getLocalSecrets(), log);
       msg.start(request, headers, context, sequence, apiGateway); //#region PREP
 
       var registerSequence$1 = registerSequence(log, context);
@@ -1925,6 +1995,7 @@ var wrapper = function wrapper(fn) {
         isSequence: sequence.isSequence,
         isDone: sequence.isDone,
         apiGateway: apiGateway,
+        getSecret: getSecret,
         getSecrets: getSecrets,
         isApiGatewayRequest: apiGateway && apiGateway.resource ? true : false,
         errorMgmt: errorMeta

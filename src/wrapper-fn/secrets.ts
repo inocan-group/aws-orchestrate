@@ -1,5 +1,6 @@
 import { IDictionary } from "common-types";
 import { logger, ILoggerApi } from "aws-log";
+import get from "lodash.get";
 
 let localSecrets: IDictionary = {};
 
@@ -21,11 +22,50 @@ export function addSecretToLocalCache(name: string, value: any) {
 
 /**
  * Gets the locally stored secrets. The format of the keys in this hash
- * should be `module/SECRET` which cooresponds to the `aws-ssm` opinion
- * on SSM naming.
+ * should be `{ module1: { NAME: value, NAME2: value} }` which cooresponds
+ * to the `aws-ssm` opinion on SSM naming.
  */
 export function getLocalSecrets() {
   return localSecrets;
+}
+
+/**
+ * Allows getting a single secret out of either _locally_ stored secrets -- or
+ * if not found -- going to **SSM** and pulling the module containing this secret.
+ */
+export async function getSecret(moduleAndName: string) {
+  const log = logger().reloadContext();
+  const localSecrets = getLocalSecrets();
+  if (!moduleAndName.includes("/")) {
+    throw new Error(
+      `When using getSecret() you must state both the module and the NAME of the secret where the two are delimted by a "/" character.`
+    );
+  }
+  const [module, name] = moduleAndName.split("/");
+  if (get(localSecrets, `${module}.${name}`, false)) {
+    log.debug(`getSecret("${moduleAndName}") found secret locally`, {
+      module,
+      name
+    });
+    return get(localSecrets, `${module}.${name}`);
+  } else {
+    log.debug(
+      `getSecret("${moduleAndName}") did not find locally so asking SSM for module "${module}"`,
+      { module, name, localModules: Object.keys(localSecrets) }
+    );
+    await getSecrets([module]);
+    if (get(localSecrets, `${module}.${name}`, false)) {
+      log.debug(`after SSM call for module "${module}" the secret was found`, {
+        module,
+        name
+      });
+      return get(localSecrets, `${module}.${name}`);
+    } else {
+      throw new Error(
+        `Even after asking SSM for module "${module}" the secret "${name}" was not found!`
+      );
+    }
+  }
 }
 
 /**
@@ -40,7 +80,7 @@ export function getLocalSecrets() {
  * functions in the currently executing sequence. Secrets _will not_ be passed back
  * in the function's response.
  *
- * @param modules the modules which are have secrets that are needed0
+ * @param modules the modules which are have secrets that are needed
  */
 export async function getSecrets(
   modules: string[]

@@ -1,12 +1,9 @@
-import {
-  IDictionary,
-  IHttpResponseHeaders,
-  IHttpRequestHeaders
-} from "common-types";
+import { IDictionary, IHttpResponseHeaders } from "common-types";
 import { IWrapperResponseHeaders } from "../@types";
 import { sequenceStatus, serializeSequence } from "../sequences";
 import { getCorrelationId } from "./correlationId";
 import { saveSecretsLocally, getLocalSecrets } from "./secrets";
+import set from "lodash.set";
 
 /**
  * Ensures that frontend clients who call Lambda's
@@ -28,16 +25,34 @@ export function getContentType() {
  * By passing in all the headers you received in a given
  * invocation this function will pull out all the headers
  * which start with `O-S-` (as this is the convention for
- * secrets passed by `aws-orchestrate`).
+ * secrets passed by `aws-orchestrate`). Each line item in
+ * a header represents a secret name/value pairing. For instance,
+ * A typical header might be keyed with `O-S-firemodel/SERVICE_ACCOUNT`.
  *
- * This _hash_ is returned but also stored locally for future
- * calls to `getPassedInSecrets()`
+ * Each header name/value will be parsed and then stored in following format:
+ *
+ * ```typescript
+ * {
+ *    [module1]: {
+ *      secret1: value,
+ *      secret2: value
+ *    },
+ *    [module2]: {
+ *      secret3: value
+ *    }
+ * }
+ * ```
+ *
+ * This format is consistent with the opinionated format established by
+ * the `aws-ssm` library. This data structure can be retrieved at any
+ * point by a call to `getLocalSecrets()`.
  */
 export function saveSecretHeaders(headers: IDictionary) {
   const localSecrets = Object.keys(headers).reduce(
     (headerSecrets: IDictionary, key: keyof typeof headers & string) => {
       if (key.slice(0, 4) === `O-S-`) {
-        headerSecrets[key.slice(4)] = headers[key];
+        const [module, name] = key.slice(4).split("/");
+        set(headerSecrets, `${module}.${name}`, headers[key]);
       }
       return headerSecrets;
     },
