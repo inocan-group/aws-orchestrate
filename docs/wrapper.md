@@ -142,15 +142,29 @@ const { log } = context;
 log.info('this is my message', { foo, bar })
 ```
 
-This logger should be used over `console.log` in 100% of cases. Not only does it ensure your logs are properly structured in JSON format (important for log monitoring solutions) but it also ensures that any "secrets" are masked before they go into the logs.
+This logger should be used over `console.log` in 100% of cases. Not only does it ensure your logs are properly structured in JSON format (important for log monitoring solutions) but it also:
+
+- Ensures that any "secrets" are masked before they accidentally bleed into the logs. You _can_ manually mask values but all "secrets" brough in via the getSecrets() API surface are automatically masked for you.
+- Contextual information from the Lambda environment is automatically added to your log messages to give a richer information ecosystem to your logs
+- You can specify, on a per "stage" basis, which log levels are written to **stdout**. This flexibility includes "sampling" certain log levels so you can maintain rich information in production without overwhelming storage limits.
 
 For more on this logging framework, check their own docs: [`aws-log`](https://github.com/inocan-group/aws-log).
 
 ## Secret Management
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+It is all too common that "secrets" are stored in ENV variables and/or other sub-optimal solutions. This often leads to unintentional leaks, whether it be a larger audience viewing the variables than would be ideal or as we've seen too many times the accidental commit of ENV variables to a repo.
 
-##
+This sub-optimal secret management is in large part due to the friction (and/or cost) of a more robust solution but fortunately AWS has a very cost effectly solution in [SSM Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-about-examples.html). With the `wrapper` function you get this cost-effective solution delivered to you in a very low-friction manner.
+
+First off you can access secrets in your handler functions with the use of the `getSecrets()` API surface. It allows you to state which "modules" of secrets you need. For instance, imagine that you want secrets relating to **Firebase** and **Sendgrid**:
+
+```typescript
+const fn: IHandlerFunction<IRequest, IResponse> = async (request,context ) {
+  const secrets = await context.getSecrets('firebase', 'sendGrid');
+}
+```
+
+With this one line of code you are able to get all secrets associated with `firebase` and `sendGrid`. Further, these secrets are isolated to the "stage" that you are at. This ensures that your _development_ functions will go against your _development_ Firebase database rather than staging, production, etc.
 
 ## Error Handling
 
