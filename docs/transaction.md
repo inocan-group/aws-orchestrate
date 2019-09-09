@@ -2,7 +2,7 @@
 
 ## Introduction
 
-When a frontend calls an HTTP endpoint the normal expectation is that the HTTP status code would relate to the _functional_ outcome which was requested. This expectation, however, can be lost when you are running a micro-services backend because the HTTP event triggers a function which fans out asynchronously to complete the functional goal.
+When a frontend calls an HTTP endpoint the normal expectation is that the HTTP status code would relate to the _functional_ outcome which was requested. This expectation, however, can be lost when you are running a micro-services backend because the HTTP event triggers a function which runs a sequence of functions to achieve it's aims.
 
 You "could" keep the initial function active during the duration of functional fan-out but this would be resource inefficient so instead this helper function provides a means to allow the serverless functions to work entirely asynchronously but still provide the frontend with a "functional response" that is consistent with normal REST-based API's.
 
@@ -44,4 +44,38 @@ try {
 } catch (e) {
   // handle error
 }
+```
+
+## Backend Configuration
+
+### SequenceTracker
+
+To enable the frontend in getting more traditional _functional_ status the `SequenceTracker` function **must** be deployed within your Serverless project. Doing this is straight forward and involves importing the function from `aws-orchestrate` and then just exporting it as one of your own handler functions.
+
+If you are using the `typescript-microservice` yeoman template then you can not only get the function definition but the inline configuration for this function by adding the following file to your project:
+
+**`src/handlers/SequenceTracker.ts`**
+
+```typescript
+import { SequenceTracker, SequenceTrackerConfig } from 'aws-orchestrate';
+
+export handler = SequenceTracker;
+export config = SequenceTrackerConfig;
+```
+
+### ArchiveTracker
+
+The `ArchiveTracker` -- like the `SequenceTracker` -- is a Serverless function provided as an export in this library. Unlike the SequenceTracker, ArchiveTracker is not _strictly_ required but it is generally a good idea to include in your project as well. It's function is to clear out old/stale status messages from the Firebase database.
+
+As these messages are really only intended to have short term value (aka, as the `LambdaSequence` is executing) they can be comfortably removed after a day in the database. If you take the configuration provided in the `ArchiveTrackerConfig` export, it will run the `ArchiveTracker` every day at 1am. You, of course, can decide to change the frequency or timing to meet the needs of your project.
+
+Again assuming you are using the `typescript-microservices` yeoman template as a foundation for your Serverless project the file in your project would look something like:
+
+**`src/handlers/ArchiveTracker.ts`**
+
+```typescript
+import { ArchiveTracker, ArchiveTrackerConfig } from 'aws-orchestrate';
+
+export handler = ArchiveTracker;
+export config = ArchiveTrackerConfig;
 ```

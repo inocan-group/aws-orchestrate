@@ -1,5 +1,5 @@
 import { IAWSLambdaProxyIntegrationRequest, IDictionary } from "common-types";
-import { ILambdaFunctionType, ILambdaSequenceStep, ILambdaSequenceNextTuple, ILambaSequenceFromResponse } from "./@types";
+import { ILambdaFunctionType, ILambdaSequenceStep, ILambdaSequenceNextTuple, ILambaSequenceFromResponse, IOrchestratedMessageBody } from "./@types";
 export declare type IPropertyOrDynamicReference<T> = {
     [P in keyof T]: T[P] | string;
 };
@@ -21,16 +21,21 @@ export declare class LambdaSequence {
      * - the `sequence` as an instantiated class of **LambdaSequence**
      * - the `apiGateway` will have the information from the Lambda Proxy request
      * (only if request came from API Gateway)
+     * - the `headers` will be filled with a dictionary of name/value pairs regardless
+     * of whether the request came from API Gateway (equivalent to `apiGateway.headers`)
+     * or from another function which was invoked as part of s `LambdaSequence`
      *
      * Example Code:
      *
   ```typescript
   export function handler(event, context, callback) {
     const { request, sequence, apiGateway } = LambdaSequence.from(event);
-    // ... do some stuf ...
-    await sequence.next();
+    // ... do some stuff ...
+    await sequence.next()
   }
   ```
+     * **Note:** if you are using the `wrapper` function then the primary use of this
+     * function will have already been done for you by the _wrapper_.
      */
     static from<T extends IDictionary = IDictionary>(event: T | IAWSLambdaProxyIntegrationRequest, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
     static notASequence(): LambdaSequence;
@@ -76,9 +81,9 @@ export declare class LambdaSequence {
     /**
      * **from**
      *
-     * unboxes request, sequence, and apiGateway data structures
+     * unboxes `request`, `sequence`, `apiGateway`, and `headers` data structures
      */
-    from<T extends IDictionary = IDictionary>(request: T | IAWSLambdaProxyIntegrationRequest, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
+    from<T extends IDictionary = IDictionary>(event: T | IAWSLambdaProxyIntegrationRequest | IOrchestratedMessageBody<T>, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
     /**
      * boolean flag which indicates whether the current execution of the function
      * is part of a _sequence_.
@@ -121,6 +126,17 @@ export declare class LambdaSequence {
   ```
      */
     readonly allHistoricResults: IDictionary<any>;
+    /**
+     * Ingests a set of steps into the current sequence; resolving
+     * dynamic properties into real values at the same time.
+     *
+     * **Note:** if this sequence _already_ has steps it will throw
+     * an error.
+     *
+     * **Note:** you can pass in either a serialized string or the actual
+     * array of steps.
+     */
+    ingestSteps(request: any, steps: string | ILambdaSequenceStep[]): void;
     /**
      * **dynamicProperties**
      *

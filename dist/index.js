@@ -2,6 +2,8 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
 function _interopNamespace(e) {
   if (e && e.__esModule) { return e; } else {
     var n = {};
@@ -23,6 +25,8 @@ function _interopNamespace(e) {
 
 var commonTypes = require('common-types');
 var awsLog = require('aws-log');
+var get = _interopDefault(require('lodash.get'));
+var set = _interopDefault(require('lodash.set'));
 
 function _typeof(obj) {
   if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
@@ -248,6 +252,548 @@ function _nonIterableRest() {
   throw new TypeError("Invalid attempt to destructure non-iterable instance");
 }
 
+/**
+ * **findError**
+ *
+ * Look for the error encountered within the "known errors" that
+ * the function defined and return it's `ErrorHandler` if found.
+ * If _not_ found then return `false`.
+ */
+function findError(e, expectedErrors) {
+  var found = false;
+  expectedErrors.list.forEach(function (i) {
+    if (e.code === i.identifiedBy.code || e.name == i.identifiedBy.name || e.message.includes(i.identifiedBy.messageContains) || e instanceof i.identifiedBy.errorClass) {
+      found = i;
+    }
+  });
+  return found;
+}
+
+/**
+ * Allows getting a single secret out of either _locally_ stored secrets -- or
+ * if not found -- going to **SSM** and pulling the module containing this secret.
+ */
+function _await(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+/**
+ * **getSecrets**
+ *
+ * Gets the needed secrets for this function -- using locally available information
+ * if available (_params_ and/or _cached_ values from prior calls) -- otherwise
+ * goes out **SSM** to get it.
+ *
+ * In addition, all secrets requested (within the given function as well as
+ * _prior_ function's secrets in a sequence) will be auto-forwarded to subsequent
+ * functions in the currently executing sequence. Secrets _will not_ be passed back
+ * in the function's response.
+ *
+ * @param modules the modules which are have secrets that are needed
+ */
+
+
+function _async(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var getSecrets = _async(function (modules) {
+  var log = awsLog.logger().reloadContext();
+  var localSecrets = getLocalSecrets();
+
+  if (modules.every(function (i) {
+    return Object.keys(localSecrets).includes(i);
+  })) {
+    // everything found in local secrets
+    log.debug("Call to getSecrets() resulted in 100% hit rate for modules locally", {
+      modules: modules
+    });
+    return modules.reduce(function (secrets, mod) {
+      secrets[mod] = localSecrets[mod];
+      return secrets;
+    }, {});
+  } // at least SOME modules are NOT stored locally, the latency of getting some
+  // versus getting them all is negligible so we'll get them all from SSM
+
+
+  log.debug("Some modules requested were not found locally, requesting from SSM.", {
+    modules: modules
+  });
+  return _await(new Promise(function (resolve) { resolve(_interopNamespace(require('aws-ssm'))); }), function (_temp) {
+    var SSM = _temp.SSM;
+    return _await(SSM.modules(modules), function (newSecrets) {
+      modules.forEach(function (m) {
+        if (!newSecrets[m]) {
+          throw new Error("Failure to retrieve the SSM module \"".concat(m, "\""));
+        }
+
+        if (Object.keys(newSecrets[m]).length === 0) {
+          log.warn("Attempt to retrieve module \"".concat(m, "\" returned but had no "));
+        }
+      });
+      log.debug("new SSM modules retrieved");
+      var secrets = Object.assign(Object.assign({}, localSecrets), newSecrets);
+      saveSecretsLocally(secrets);
+      maskLoggingForSecrets(newSecrets, log);
+      return secrets;
+    });
+  });
+});
+/**
+ * Goes through a set of secrets -- organized by `[module].[name] = secret` --
+ * and masks the values so that they don't leak into the log files.
+ */
+
+var getSecret = _async(function (moduleAndName) {
+  var log = awsLog.logger().reloadContext();
+  var localSecrets = getLocalSecrets();
+
+  if (!moduleAndName.includes("/")) {
+    throw new Error("When using getSecret() you must state both the module and the NAME of the secret where the two are delimted by a \"/\" character.");
+  }
+
+  var _moduleAndName$split = moduleAndName.split("/"),
+      _moduleAndName$split2 = _slicedToArray(_moduleAndName$split, 2),
+      module = _moduleAndName$split2[0],
+      name = _moduleAndName$split2[1];
+
+  if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
+    log.debug("getSecret(\"".concat(moduleAndName, "\") found secret locally"), {
+      module: module,
+      name: name
+    });
+    return get(localSecrets, "".concat(module, ".").concat(name));
+  } else {
+    log.debug("getSecret(\"".concat(moduleAndName, "\") did not find locally so asking SSM for module \"").concat(module, "\""), {
+      module: module,
+      name: name,
+      localModules: Object.keys(localSecrets)
+    });
+    return _await(getSecrets([module]), function () {
+      if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
+        log.debug("after SSM call for module \"".concat(module, "\" the secret was found"), {
+          module: module,
+          name: name
+        });
+        return get(localSecrets, "".concat(module, ".").concat(name));
+      } else {
+        throw new Error("Even after asking SSM for module \"".concat(module, "\" the secret \"").concat(name, "\" was not found!"));
+      }
+    });
+  }
+});
+var localSecrets = {};
+/**
+ * Saves secrets locally so they can be used rather than
+ * going out to SSM. These secrets will then also be "passed
+ * forward" to any functions which are invoked.
+ */
+
+function saveSecretsLocally(secrets) {
+  localSecrets = secrets;
+}
+/**
+ * Gets the locally stored secrets. The format of the keys in this hash
+ * should be `{ module1: { NAME: value, NAME2: value} }` which cooresponds
+ * to the `aws-ssm` opinion on SSM naming.
+ */
+
+function getLocalSecrets() {
+  return localSecrets;
+}
+function maskLoggingForSecrets(modules, log) {
+  var secretPaths = [];
+  Object.keys(modules).forEach(function (mod) {
+    Object.keys(mod).forEach(function (s) {
+      if (_typeof(s) === "object") {
+        log.addToMaskedValues(modules[mod][s]);
+        secretPaths.push("".concat(mod, "/").concat(s));
+      }
+    });
+  });
+  log.debug("All secret values [ ".concat(secretPaths.length, " ] have been masked in logging"), {
+    secretPaths: secretPaths
+  });
+}
+
+/**
+ * A collection of log messages that the wrapper function will emit
+ */
+
+var loggedMessages = function loggedMessages(log) {
+  return {
+    /** a handler function just started executing */
+    start: function start(request, headers, context, sequence, apiGateway) {
+      log.info("The handler function \"".concat(context.functionName, "\" has started execution.  ").concat(sequence.isSequence ? "This handler is part of a sequence [".concat(log.getCorrelationId(), " ].") : "This handler was not triggered as part of a sequence."), {
+        request: request,
+        sequence: sequence.toObject(),
+        headers: headers,
+        apiGateway: apiGateway
+      });
+    },
+    newSequenceRegistered: function newSequenceRegistered() {
+      var sequence = getNewSequence();
+      log.debug("This function has registered a new sequence with ".concat(sequence.steps.length, " steps to be kicked off as part of this function's execution."), {
+        sequence: sequence.toObject()
+      });
+    },
+    sequenceStarting: function sequenceStarting() {
+      log.debug("The new sequence this function registered is being started/invoked", {
+        sequence: getNewSequence().toObject()
+      });
+    },
+    sequenceStarted: function sequenceStarted(seqResponse) {
+      log.debug("The new sequence this function registered was successfully started", {
+        seqResponse: seqResponse
+      });
+    },
+
+    /**
+     * right before forwarding the sequence status to the `sequenceTracker` lambda
+     */
+    sequenceTracker: function sequenceTracker(_sequenceTracker, workflowStatus) {
+      log.info("About to send the LambdaSequence's status to the sequenceTracker [ ".concat(_sequenceTracker, " ]"), {
+        sequenceTracker: _sequenceTracker,
+        workflowStatus: workflowStatus
+      });
+    },
+    returnToApiGateway: function returnToApiGateway(result, responseHeaders) {
+      log.debug("Returning results to API Gateway", {
+        statusCode: commonTypes.HttpStatusCodes.Success,
+        result: JSON.stringify(result),
+        responseHeaders: responseHeaders
+      });
+    },
+
+    /**
+     * as soon as an error is detected in the wrapper, write a log message about the error
+     */
+    processingError: function processingError(e, workflowStatus) {
+      log.info("Processing error in handler function; error occurred sometime after the \"".concat(workflowStatus, "\" workflow status: [ ").concat(e.message, " ]"), {
+        error: e,
+        workflowStatus: workflowStatus
+      });
+    }
+  };
+};
+
+function _async$1(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var invokeNewSequence = _async$1(function () {
+  var results = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+  if (!sequence) {
+    return;
+  }
+
+  results = results || {};
+  return awsLog.invoke.apply(void 0, _toConsumableArray(sequence.next(_typeof(results) === "object" ? results : {
+    data: results
+  })));
+});
+var sequence;
+/**
+ * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)
+ */
+
+function registerSequence(log, context) {
+  return function (s) {
+    loggedMessages(log).newSequenceRegistered();
+    sequence = s;
+  };
+}
+/** returns the sequence which was set by `startSequence()` */
+
+function getNewSequence() {
+  return sequence;
+}
+
+/**
+ * Serializes a `LambdaSequence` into a string representation
+ * so it can be passed as a header parameter in HTTP responses
+ * as well invokation requests to other Lambda functions.
+ */
+function serializeSequence(s) {
+  return;
+}
+
+/**
+ * Reduces a sequence object to a simple "status" based representation
+ */
+var sequenceStatus = function sequenceStatus(correlationId) {
+  return function (s, dataOrError) {
+    var status = s.isDone ? dataOrError instanceof Error ? "error" : "success" : "running";
+    var response = {
+      status: status,
+      correlationId: correlationId,
+      currentFn: s.activeFn.arn,
+      originFn: s.steps[0].arn,
+      total: s.steps.length,
+      current: s.completed.length
+    };
+
+    switch (status) {
+      case "error":
+        return Object.assign(Object.assign({}, response), {
+          error: dataOrError
+        });
+
+      case "success":
+        return Object.assign(Object.assign({}, response), {
+          data: dataOrError
+        });
+
+      case "running":
+        return response;
+    }
+  };
+};
+
+var correlationId;
+/**
+ * Saves the `correlationId` for easy retrieval across various functions
+ */
+
+function setCorrelationId(id) {
+  correlationId = id;
+}
+/**
+ * Gets the `correlationId` for a running sequence (or an
+ * API Gateway request where the client sent in one)
+ */
+
+function getCorrelationId() {
+  return correlationId;
+}
+
+/**
+ * Ensures that frontend clients who call Lambda's
+ * will be given a CORs friendly response
+ */
+
+var CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Credentials": true
+};
+var contentType = "application/json";
+var fnHeaders = {};
+function getContentType() {
+  return contentType;
+}
+/**
+ * By passing in all the headers you received in a given
+ * invocation this function will pull out all the headers
+ * which start with `O-S-` (as this is the convention for
+ * secrets passed by `aws-orchestrate`). Each line item in
+ * a header represents a secret name/value pairing. For instance,
+ * A typical header might be keyed with `O-S-firemodel/SERVICE_ACCOUNT`.
+ *
+ * Each header name/value will be parsed and then stored in following format:
+ *
+ * ```typescript
+ * {
+ *    [module1]: {
+ *      secret1: value,
+ *      secret2: value
+ *    },
+ *    [module2]: {
+ *      secret3: value
+ *    }
+ * }
+ * ```
+ *
+ * This format is consistent with the opinionated format established by
+ * the `aws-ssm` library. This data structure can be retrieved at any
+ * point by a call to `getLocalSecrets()`.
+ */
+
+function saveSecretHeaders(headers) {
+  var localSecrets = Object.keys(headers).reduce(function (headerSecrets, key) {
+    if (key.slice(0, 4) === "O-S-") {
+      var _key$slice$split = key.slice(4).split("/"),
+          _key$slice$split2 = _slicedToArray(_key$slice$split, 2),
+          module = _key$slice$split2[0],
+          name = _key$slice$split2[1];
+
+      set(headerSecrets, "".concat(module, ".").concat(name), headers[key]);
+    }
+
+    return headerSecrets;
+  }, {});
+  saveSecretsLocally(localSecrets);
+  return localSecrets;
+}
+function setContentType(type) {
+  if (!type.includes("/")) {
+    throw new Error("The value sent to setContentType (\"".concat(type, "\") is not valid; it must be a valid MIME type."));
+  }
+
+  contentType = type;
+}
+/**
+ * Get the user/developer defined headers for this function
+ */
+
+function getFnHeaders() {
+  return fnHeaders;
+}
+function setFnHeaders(headers) {
+  if (_typeof(headers) !== "object") {
+    throw new Error("The value sent to setHeaders is not the required type. Was \"".concat(_typeof(headers), "\"; expected \"object\"."));
+  }
+
+  fnHeaders = headers;
+}
+
+function getBaseHeaders(opts) {
+  var _ref;
+
+  var correlationId = getCorrelationId();
+  var sequenceInfo = opts.sequence ? (_ref = {}, _defineProperty(_ref, "O-Sequence-Status", JSON.stringify(sequenceStatus(correlationId)(opts.sequence))), _defineProperty(_ref, "O-Serialized-Sequence", serializeSequence(opts.sequence)), _ref) : {};
+  return Object.assign(Object.assign(Object.assign({}, sequenceInfo), getFnHeaders()), _defineProperty({}, "X-Correlation-Id", correlationId));
+}
+/**
+ * All the HTTP _Response_ headers to send when returning to API Gateway
+ */
+
+
+function getResponseHeaders() {
+  var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  return Object.assign(Object.assign(Object.assign({}, getBaseHeaders(opts)), CORS_HEADERS), {
+    "Content-Type": getContentType()
+  });
+}
+
+/**
+ * detects if the given structure is of type <T> or
+ * has been boxed into an `IOrchestratedMessageBody`
+ */
+function isOrchestratedMessageBody(msg) {
+  return _typeof(msg) === "object" && msg.type === "orchestrated-message-body" ? true : false;
+}
+
+function _await$1(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+var _database;
+/**
+ * **database**
+ *
+ * Provides a convenient means to connect to the database which lives
+ * outside the _handler_ function's main thread. This allows the connection
+ * to the database to sometimes be preserved between function executions.
+ *
+ * This is loaded asynchronously and the containing code must explicitly
+ * load the `abstracted-admin` library (as this library only lists it as
+ * a devDep)
+ */
+
+
+function _invoke(body, then) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(then);
+  }
+
+  return then(result);
+}
+
+function _async$2(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var database = _async$2(function (config) {
+  var log = awsLog.logger().reloadContext();
+  return _invoke(function () {
+    if (!_database) {
+      return _invoke(function () {
+        if (!config) {
+          return function () {
+            if (process.env.FIREBASE_SERVICE_ACCOUNT && process.env.FIREBASE_DATA_ROOT_URL) {
+              log.debug("The environment variables are in place to configure database connectivity", {
+                firebaseDataRootUrl: process.env.FIREBASE_DATA_ROOT_URL
+              });
+            } else {
+              return _await$1(getSecrets(["firebase"]), function (_ref) {
+                var firebase = _ref.firebase;
+
+                if (!firebase) {
+                  throw new Error("The module \"firebase\" was not found in SSM; Firebase configuration could not be established");
+                }
+
+                if (!firebase.SERVICE_ACCOUNT) {
+                  throw new Error("The module \"firebase\" was found but it did not have a ");
+                }
+
+                log.debug("The Firebase service account has been retrieved from SSM and will be used.");
+                config = firebase.SERVICE_ACCOUNT;
+              });
+            }
+          }();
+        }
+      }, function (_result2) {
+        return  _await$1(new Promise(function (resolve) { resolve(_interopNamespace(require('abstracted-admin'))); }), function (_temp) {
+          var DB = _temp.DB;
+          return _await$1(DB.connect(config), function (_DB$connect) {
+            _database = _DB$connect;
+          });
+        });
+      });
+    }
+  }, function (_result3) {
+    return  _database;
+  });
+});
+
 function size(obj) {
   var size = 0,
       key;
@@ -381,67 +927,107 @@ function () {
     /**
      * **from**
      *
-     * unboxes request, sequence, and apiGateway data structures
+     * unboxes `request`, `sequence`, `apiGateway`, and `headers` data structures
      */
 
   }, {
     key: "from",
-    value: function from(request, logger) {
-      var _this2 = this;
+    value: function from(event, logger) {
+      var apiGateway;
+      var headers = {};
+      var sequence;
+      var request;
 
-      var apiGateway; // separate possible LambdaProxy request from main request
+      if (commonTypes.isLambdaProxyRequest(event)) {
+        apiGateway = event;
+        headers = event.headers;
+        delete apiGateway.headers;
+        request = commonTypes.getBodyFromPossibleLambdaProxyRequest(event);
+        delete apiGateway.body;
+      } else if (isOrchestratedMessageBody(event)) {
+        headers = event.headers;
+        request = event.body;
 
-      if (commonTypes.isLambdaProxyRequest(request)) {
-        apiGateway = request;
-        request = commonTypes.getBodyFromPossibleLambdaProxyRequest(request);
-      }
-
-      if (!request._sequence) {
-        // there is no sequence property on the request
-        if (logger) {
-          logger.info("This execution is not part of a sequence");
+        if (event.sequenceSteps) {
+          this.ingestSteps(request, event.sequenceSteps);
+          sequence = this;
+        } else {
+          sequence = LambdaSequence.notASequence();
         }
-
-        return {
-          request: request,
-          apiGateway: apiGateway,
-          sequence: LambdaSequence.notASequence()
-        };
-      } // looks like a valid sequence
-
-
-      this._steps = request._sequence; // active function's output is sent into next's params
-
-      var transformedRequest = Object.assign(Object.assign({}, request), this.activeFn.params); // remove the sequence data from the request as this payload will be
-      // available in the returned LambdaSequence object
-
-      delete transformedRequest._sequence;
-      /**
-       * swap out the conductor's generic understanding of params
-       * with the actual request params (aka, dynamic props resolved)
-       */
-
-      this._steps = this._steps.map(function (s) {
-        var resolvedParams = s.arn === _this2.activeFn.arn ? transformedRequest : s.params;
-        s.params = resolvedParams;
-        return s;
-      });
-
-      if (logger) {
-        logger.info("This execution is part of a sequence", {
-          sequence: String(this)
+      } else if (event._sequence) {
+        var e = new Error();
+        console.log({
+          message: "Deprecated: a Lambda event received the property \"_sequence\" which is an OLD way of passing sequence data to other functions. This technique will be removed in the future.",
+          stack: e.stack
         });
-      }
+        request = Object.assign({}, event);
+        delete request._sequence;
+        this.ingestSteps(request, event._sequence);
+        sequence = this;
+      } else {
+        sequence = LambdaSequence.notASequence();
+      } // The active function's output is sent into the params
 
+
+      request = Object.assign(Object.assign({}, this.activeFn.params), request);
       return {
-        request: transformedRequest,
+        request: request,
         apiGateway: apiGateway,
-        sequence: this
+        sequence: sequence,
+        headers: headers
       };
     }
     /**
      * boolean flag which indicates whether the current execution of the function
      * is part of a _sequence_.
+     */
+
+  }, {
+    key: "ingestSteps",
+
+    /**
+     * Ingests a set of steps into the current sequence; resolving
+     * dynamic properties into real values at the same time.
+     *
+     * **Note:** if this sequence _already_ has steps it will throw
+     * an error.
+     *
+     * **Note:** you can pass in either a serialized string or the actual
+     * array of steps.
+     */
+    value: function ingestSteps(request, steps) {
+      var _this2 = this;
+
+      if (typeof steps === "string") {
+        steps = JSON.parse(steps);
+      }
+
+      if (this._steps.length > 0) {
+        throw new Error("Attempt to ingest steps into a LambdaSequence that already has steps!");
+      }
+
+      this._steps = steps;
+      this._isASequence = true;
+      var transformedRequest = _typeof(request) === "object" ? Object.assign(Object.assign({}, this.activeFn.params), request) : Object.assign(Object.assign({}, this.activeFn.params), {
+        request: request
+      });
+      /**
+       * Inject the prior function's request params into
+       * active functions params (set in the conductor)
+       */
+
+      this._steps = this._steps.map(function (s) {
+        return s.arn === _this2.activeFn.arn ? Object.assign(Object.assign({}, s), {
+          params: transformedRequest
+        }) : s;
+      });
+    }
+    /**
+     * **dynamicProperties**
+     *
+     * if the _value_ of a parameter passed to a function leads with the `:`
+     * character this is an indicator that it is a "dynamic property" and
+     * it's true value should be looked up from the sequence results.
      */
 
   }, {
@@ -632,14 +1218,6 @@ function () {
       });
       return result;
     }
-    /**
-     * **dynamicProperties**
-     *
-     * if the _value_ of a parameter passed to a function leads with the `:`
-     * character this is an indicator that it is a "dynamic property" and
-     * it's true value should be looked up from the sequence results.
-     */
-
   }, {
     key: "dynamicProperties",
     get: function get() {
@@ -674,16 +1252,21 @@ function () {
      * - the `sequence` as an instantiated class of **LambdaSequence**
      * - the `apiGateway` will have the information from the Lambda Proxy request
      * (only if request came from API Gateway)
+     * - the `headers` will be filled with a dictionary of name/value pairs regardless
+     * of whether the request came from API Gateway (equivalent to `apiGateway.headers`)
+     * or from another function which was invoked as part of s `LambdaSequence`
      *
      * Example Code:
      *
     ```typescript
     export function handler(event, context, callback) {
     const { request, sequence, apiGateway } = LambdaSequence.from(event);
-    // ... do some stuf ...
-    await sequence.next();
+    // ... do some stuff ...
+    await sequence.next()
     }
     ```
+     * **Note:** if you are using the `wrapper` function then the primary use of this
+     * function will have already been done for you by the _wrapper_.
      */
 
   }, {
@@ -812,13 +1395,13 @@ function () {
     this._defaultErrorCode = DEFAULT_ERROR_CODE;
   }
   /**
-   * Add another error type to the expected error types.
+   * Add an error handler for a known/expected error
    */
 
 
   _createClass(ErrorMeta, [{
-    key: "add",
-    value: function add(
+    key: "addHandler",
+    value: function addHandler(
     /** the return code that will be returned for this error */
     code,
     /** how will an error be matched */
@@ -849,28 +1432,37 @@ function () {
       this._defaultErrorCode = code;
       return this;
     }
-    /**
-     * **setDefaultHandlerFunction**
-     *
-     *
-     *
-     * @param arn the function's arn (this can be the abbreviated variety so long as
-     * proper ENV variables are set)
-     */
-
   }, {
-    key: "setDefaultHandlerFunction",
-    value: function setDefaultHandlerFunction(arn) {
-      this._arn = arn;
+    key: "setDefaultHandler",
+    value: function setDefaultHandler(param) {
+      switch (_typeof(param)) {
+        case "string":
+          this._arn = param;
+          this._defaultHandlerFn = undefined;
+          this._defaultError = undefined;
+          break;
+
+        case "function":
+          this._defaultHandlerFn = param;
+          this._arn = undefined;
+          this._defaultError = undefined;
+          break;
+
+        default:
+          if (param instanceof Error) {
+            this._defaultError = param;
+            this._arn = undefined;
+            this._defaultHandlerFn = undefined;
+          } else {
+            console.log({
+              message: "The passed in setDefaultHandler param was of an unknown type ".concat(_typeof(param), "; the action has been ignored")
+            });
+          }
+
+      }
+
       return this;
     }
-    /**
-     * The default code for unhandled errors.
-     *
-     * Note: if an unhandled error has the property of `httpStatus` set and is a number
-     * then it will be respected over the default.
-     */
-
   }, {
     key: "toString",
     value: function toString() {
@@ -884,6 +1476,43 @@ function () {
     get: function get() {
       return this._errors;
     }
+  }, {
+    key: "defaultHandling",
+    get: function get() {
+      if (this._arn) {
+        return {
+          type: "error-forwarding",
+          code: this.defaultErrorCode,
+          arn: this._arn,
+          prop: "_arn"
+        };
+      }
+
+      if (this._defaultHandlerFn) {
+        return {
+          type: "handler-fn",
+          code: this.defaultErrorCode,
+          defaultHandlerFn: this._defaultHandlerFn,
+          prop: "_defaultHandlerFn"
+        };
+      }
+
+      if (this._defaultError) {
+        return {
+          type: "default-error",
+          code: this.defaultErrorCode,
+          error: this._defaultError,
+          prop: "_defaultError"
+        };
+      }
+    }
+    /**
+     * The default code for unhandled errors.
+     *
+     * Note: if an unhandled error has the property of `httpStatus` set and is a number
+     * then it will be respected over the default.
+     */
+
   }, {
     key: "defaultErrorCode",
     get: function get() {
@@ -964,23 +1593,6 @@ function (_Error) {
   return UnhandledError;
 }(_wrapNativeSuper(Error));
 
-/**
- * **findError**
- *
- * Look for the error encountered within the "known errors" that
- * the function defined and return it's `ErrorHandler` if found.
- * If _not_ found then return `false`.
- */
-function findError(e, expectedErrors) {
-  var found = false;
-  expectedErrors.list.forEach(function (i) {
-    if (e.code === i.identifiedBy.code || e.name == i.identifiedBy.name || e.message.includes(i.identifiedBy.messageContains) || e instanceof i.identifiedBy.errorClass) {
-      found = i;
-    }
-  });
-  return found;
-}
-
 var HandledError =
 /*#__PURE__*/
 function (_Error) {
@@ -1043,123 +1655,30 @@ function (_Error) {
 }(_wrapNativeSuper(Error));
 
 /**
- * **getSecrets**
- *
- * gets the needed module secrets; using locally available information if available, otherwise
- * going out SSM to get.
- *
- * @param modules the modules which are have secrets that are needed for the functions execution.
- * @param localLookup the property to look for the secrets in the incoming event/request
+ * converts an `Error` (or subclass) into a error hash
+ * which **API Gateway** can process.
  */
-function _await(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
 
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-function _async(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
+function convertToApiGatewayError(e) {
+  var defaultCode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_ERROR_CODE;
+  return {
+    headers: getResponseHeaders(),
+    errorCode: e.errorCode || defaultCode,
+    errorType: e.name || e.code || "Error",
+    errorMessage: e.message,
+    stackTrace: e.stack
   };
 }
 
-function getSecrets(event) {
-  return _async(function (modules, localLookup) {
-    if (localLookup && event && event[localLookup]) {
-      var localModules = Object.keys(event[localLookup]);
-
-      if (localModules.every(function (i) {
-        return modules.includes(i);
-      })) {
-        return event[localLookup];
-      }
-    }
-
-    return _await(new Promise(function (resolve) { resolve(_interopNamespace(require('aws-ssm'))); }), function (_temp) {
-      var SSM = _temp.SSM;
-      return _await(SSM.modules(modules));
-    });
-  });
-}
-
-function _await$1(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-var _database;
 /**
- * **database**
+ * **wrapper**
  *
- * Provides a convenient means to connect to the database which lives
- * outside the _handler_ function's main thread. This allows the connection
- * to the database to sometimes be preserved between function executions.
+ * A higher order function which wraps a serverless _handler_-function with the aim of providing
+ * a better typing, logging, and orchestration experience.
  *
- * This is loaded asynchronously and the containing code must explicitly
- * load the `abstracted-admin` library (as this library only lists it as
- * a devDep)
+ * @param event will be either the body of the request or the hash passed in by API Gateway
+ * @param context the contextual props and functions which AWS provides
  */
-
-
-function _invoke(body, then) {
-  var result = body();
-
-  if (result && result.then) {
-    return result.then(then);
-  }
-
-  return then(result);
-}
-
-function _async$1(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var database = _async$1(function (config) {
-  return _invoke(function () {
-    if (!_database) {
-      return _await$1(new Promise(function (resolve) { resolve(_interopNamespace(require('abstracted-admin'))); }), function (_temp) {
-        var DB = _temp.DB;
-        return _await$1(DB.connect(config), function (_DB$connect) {
-          _database = _DB$connect;
-        });
-      });
-    }
-  }, function () {
-    return _database;
-  });
-});
 
 function _await$2(value, then, direct) {
   if (direct) {
@@ -1173,95 +1692,20 @@ function _await$2(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _async$2(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
+function _empty() {}
 
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var invokeNewSequence = _async$2(function () {
-  var results = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-  var log = arguments.length > 1 ? arguments[1] : undefined;
-
-  {
-    return;
+function _awaitIgnored(value, direct) {
+  if (!direct) {
+    return value && value.then ? value.then(_empty) : Promise.resolve();
   }
-
-  results = results || {};
-  return _await$2(awsLog.invoke.apply(void 0, _toConsumableArray(sequence.next(_typeof(results) === "object" ? results : {
-    data: results
-  }))), function () {
-    log.info("The new sequence has been kicked off");
-  });
-});
-var sequence;
-function startSequence(log, context) {
-  return function (sequence) {
-    log.info("This function [ ".concat(context.functionName, " ] will kick off a new sequence with ").concat(sequence.steps.length, " steps."), {
-      sequence: sequence
-    });
-  };
 }
 
-/**
- * Ensures that frontend clients who call Lambda's
- * will be given a CORs friendly response
- */
-var CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Credentials": true
-};
-var contentType = "application/json";
-var fnHeaders = {};
-function getContentType() {
-  return contentType;
-}
-function setContentType(type) {
-  if (!type.includes("/")) {
-    throw new Error("The value sent to setContentType (\"".concat(type, "\") is not valid; it must be a valid MIME type."));
+function _invokeIgnored(body) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(_empty);
   }
-
-  contentType = type;
-}
-function getHeaders() {
-  return fnHeaders;
-}
-function setHeaders(headers) {
-  if (_typeof(headers) !== "object") {
-    throw new Error("The value sent to setHeaders is not the required type. Was \"".concat(_typeof(headers), "\"; expected \"object\"."));
-  }
-
-  fnHeaders = headers;
-}
-
-/**
- * **wrapper**
- *
- * A higher order function which wraps a serverless _handler_-function with the aim of providing
- * a better typing, logging, and orchestration experience.
- *
- * @param event will be either the body of the request or the hash passed in by API Gateway
- * @param context the contextual props and functions which AWS provides
- */
-
-function _await$3(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
 }
 
 function _invoke$1(body, then) {
@@ -1274,13 +1718,217 @@ function _invoke$1(body, then) {
   return then(result);
 }
 
-function _empty() {}
+function _settle(pact, state, value) {
+  if (!pact.s) {
+    if (value instanceof _Pact) {
+      if (value.s) {
+        if (state & 1) {
+          state = value.s;
+        }
 
-function _invokeIgnored(body) {
-  var result = body();
+        value = value.v;
+      } else {
+        value.o = _settle.bind(null, pact, state);
+        return;
+      }
+    }
 
-  if (result && result.then) {
-    return result.then(_empty);
+    if (value && value.then) {
+      value.then(_settle.bind(null, pact, state), _settle.bind(null, pact, 2));
+      return;
+    }
+
+    pact.s = state;
+    pact.v = value;
+    var observer = pact.o;
+
+    if (observer) {
+      observer(pact);
+    }
+  }
+}
+
+var _Pact =
+/*#__PURE__*/
+function () {
+  function _Pact() {}
+
+  _Pact.prototype.then = function (onFulfilled, onRejected) {
+    var result = new _Pact();
+    var state = this.s;
+
+    if (state) {
+      var callback = state & 1 ? onFulfilled : onRejected;
+
+      if (callback) {
+        try {
+          _settle(result, 1, callback(this.v));
+        } catch (e) {
+          _settle(result, 2, e);
+        }
+
+        return result;
+      } else {
+        return this;
+      }
+    }
+
+    this.o = function (_this) {
+      try {
+        var value = _this.v;
+
+        if (_this.s & 1) {
+          _settle(result, 1, onFulfilled ? onFulfilled(value) : value);
+        } else if (onRejected) {
+          _settle(result, 1, onRejected(value));
+        } else {
+          _settle(result, 2, value);
+        }
+      } catch (e) {
+        _settle(result, 2, e);
+      }
+    };
+
+    return result;
+  };
+
+  return _Pact;
+}();
+
+function _switch(discriminant, cases) {
+  var dispatchIndex = -1;
+  var awaitBody;
+
+  outer: {
+    for (var i = 0; i < cases.length; i++) {
+      var test = cases[i][0];
+
+      if (test) {
+        var testValue = test();
+
+        if (testValue && testValue.then) {
+          break outer;
+        }
+
+        if (testValue === discriminant) {
+          dispatchIndex = i;
+          break;
+        }
+      } else {
+        // Found the default case, set it as the pending dispatch case
+        dispatchIndex = i;
+      }
+    }
+
+    if (dispatchIndex !== -1) {
+      do {
+        var body = cases[dispatchIndex][1];
+
+        while (!body) {
+          dispatchIndex++;
+          body = cases[dispatchIndex][1];
+        }
+
+        var result = body();
+
+        if (result && result.then) {
+          awaitBody = true;
+          break outer;
+        }
+
+        var fallthroughCheck = cases[dispatchIndex][2];
+        dispatchIndex++;
+      } while (fallthroughCheck && !fallthroughCheck());
+
+      return result;
+    }
+  }
+
+  var pact = new _Pact();
+
+  var reject = _settle.bind(null, pact, 2);
+
+  (awaitBody ? result.then(_resumeAfterBody) : testValue.then(_resumeAfterTest)).then(void 0, reject);
+  return pact;
+
+  function _resumeAfterTest(value) {
+    for (;;) {
+      if (value === discriminant) {
+        dispatchIndex = i;
+        break;
+      }
+
+      if (++i === cases.length) {
+        if (dispatchIndex !== -1) {
+          break;
+        } else {
+          _settle(pact, 1, result);
+
+          return;
+        }
+      }
+
+      test = cases[i][0];
+
+      if (test) {
+        value = test();
+
+        if (value && value.then) {
+          value.then(_resumeAfterTest).then(void 0, reject);
+          return;
+        }
+      } else {
+        dispatchIndex = i;
+      }
+    }
+
+    do {
+      var body = cases[dispatchIndex][1];
+
+      while (!body) {
+        dispatchIndex++;
+        body = cases[dispatchIndex][1];
+      }
+
+      var result = body();
+
+      if (result && result.then) {
+        result.then(_resumeAfterBody).then(void 0, reject);
+        return;
+      }
+
+      var fallthroughCheck = cases[dispatchIndex][2];
+      dispatchIndex++;
+    } while (fallthroughCheck && !fallthroughCheck());
+
+    _settle(pact, 1, result);
+  }
+
+  function _resumeAfterBody(result) {
+    for (;;) {
+      var fallthroughCheck = cases[dispatchIndex][2];
+
+      if (!fallthroughCheck || fallthroughCheck()) {
+        break;
+      }
+
+      dispatchIndex++;
+      var body = cases[dispatchIndex][1];
+
+      while (!body) {
+        dispatchIndex++;
+        body = cases[dispatchIndex][1];
+      }
+
+      result = body();
+
+      if (result && result.then) {
+        result.then(_resumeAfterBody).then(void 0, reject);
+        return;
+      }
+    }
+
+    _settle(pact, 1, result);
   }
 }
 
@@ -1313,83 +1961,116 @@ function _async$3(f) {
 }
 
 var wrapper = function wrapper(fn) {
+  var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
   return _async$3(function (event, context) {
-    var workflowStatus = "initializing";
+    var result;
+    var workflowStatus;
+    context.callbackWaitsForEmptyEventLoop = false;
     var log = awsLog.logger().lambda(event, context);
+    var msg = loggedMessages(log);
+    setCorrelationId(log.getCorrelationId());
     var errorMeta = new ErrorMeta();
     return _catch(function () {
-      context.callbackWaitsForEmptyEventLoop = false;
+      var status = sequenceStatus(log.getCorrelationId());
 
       var _LambdaSequence$from = LambdaSequence.from(event),
           request = _LambdaSequence$from.request,
           sequence = _LambdaSequence$from.sequence,
-          apiGateway = _LambdaSequence$from.apiGateway;
+          apiGateway = _LambdaSequence$from.apiGateway,
+          headers = _LambdaSequence$from.headers;
 
-      log.info("The handler function \"".concat(context.functionName, "\" has started execution.  ").concat(sequence.isSequence ? "This handler is part of a sequence [".concat(log.getCorrelationId(), " ].") : "This handler was not triggered as part of a sequence."), {
-        clientContext: context.clientContext,
-        request: request,
-        sequence: sequence,
-        apiGateway: apiGateway
-      });
-      var startSequence$1 = startSequence(log, context);
+      saveSecretHeaders(headers);
+      maskLoggingForSecrets(getLocalSecrets(), log);
+      msg.start(request, headers, context, sequence, apiGateway); //#region PREP
+
+      var registerSequence$1 = registerSequence(log, context);
       var handlerContext = Object.assign(Object.assign({}, context), {
         log: log,
-        setHeaders: setHeaders,
+        headers: headers,
+        setHeaders: setFnHeaders,
         setContentType: setContentType,
         database: database,
         sequence: sequence,
-        startSequence: startSequence$1,
+        registerSequence: registerSequence$1,
         isSequence: sequence.isSequence,
         isDone: sequence.isDone,
         apiGateway: apiGateway,
-        getSecrets: getSecrets(request),
-        isApiGatewayRequest: apiGateway && apiGateway.headers ? true : false,
-        errorMeta: errorMeta
-      });
-      workflowStatus = "running-function"; // CALL the HANDLER FUNCTION
+        getSecret: getSecret,
+        getSecrets: getSecrets,
+        isApiGatewayRequest: apiGateway && apiGateway.resource ? true : false,
+        errorMgmt: errorMeta
+      }); //#endregion
+      //#region CALL the HANDLER FUNCTION
 
-      return _await$3(fn(request, handlerContext), function (results) {
-        workflowStatus = "function-complete"; // SEQUENCE (continuation)
+      workflowStatus = "running-function";
+      return _await$2(fn(request, handlerContext), function (_fn) {
+        result = _fn;
+        log.debug("finished calling the handler function", {
+          result: result
+        });
+        workflowStatus = "function-complete"; //#endregion
+        //region SEQUENCE (next)
 
         return _invoke$1(function () {
           if (sequence.isSequence && !sequence.isDone) {
             workflowStatus = "invoke-started";
-            return _await$3(awsLog.invoke.apply(void 0, _toConsumableArray(sequence.next(results))), function () {
+            return _await$2(awsLog.invoke.apply(void 0, _toConsumableArray(sequence.next(result))), function () {
+              log.debug("finished invoking the next function in the sequence", {
+                sequence: sequence
+              });
               workflowStatus = "invoke-complete";
             });
           }
         }, function () {
-          // SEQUENCE (orchestration starting)
-          return _await$3(invokeNewSequence(results, log), function () {
-            if (handlerContext.isApiGatewayRequest) {
-              var headers = Object.assign(Object.assign(Object.assign({}, CORS_HEADERS), getHeaders()), {
-                "Content-Type": getContentType()
-              });
-              var response = {
-                statusCode: 200,
-                headers: headers,
-                body: JSON.stringify(results)
-              };
-              log.debug("Returning results to API Gateway", {
-                statusCode: 200,
-                results: results
-              });
-              return response;
-            } else {
-              log.debug("Returning results to non-API Gateway caller", {
-                results: results
-              });
-              return results;
-            }
-          }); // RETURN
-          // END of RETURN BLOCK
+          //#endregion
+          //#region SEQUENCE (orchestration starting)
+          workflowStatus = "sequence-starting";
+          msg.sequenceStarting();
+          return _await$2(invokeNewSequence(result, log), function (seqResponse) {
+            msg.sequenceStarted(seqResponse);
+            log.debug("kicked off the new sequence defined in this function", {
+              sequence: getNewSequence()
+            });
+            workflowStatus = "sequence-started"; //#endregion
+            //#region SEQUENCE (send to tracker)
+
+            return _invoke$1(function () {
+              if (options.sequenceTracker || sequence.isSequence) {
+                workflowStatus = "sequence-tracker-starting";
+                msg.sequenceTracker(options.sequenceTracker, workflowStatus);
+                return _invokeIgnored(function () {
+                  if (sequence.isDone) {
+                    return _awaitIgnored(awsLog.invoke(options.sequenceTracker, status(sequence), result));
+                  } else {
+                    return _awaitIgnored(awsLog.invoke(options.sequenceTracker, status(sequence)));
+                  }
+                });
+              }
+            }, function () {
+              //#endregion
+              //#region RETURN-VALUES
+              workflowStatus = "returning-values";
+
+              if (handlerContext.isApiGatewayRequest) {
+                var response = {
+                  statusCode: commonTypes.HttpStatusCodes.Success,
+                  headers: getResponseHeaders(),
+                  body: JSON.stringify(result)
+                };
+                msg.returnToApiGateway(result, getResponseHeaders());
+                return response;
+              } else {
+                log.debug("Returning results to non-API Gateway caller", {
+                  result: result
+                });
+                return result;
+              }
+            }); //#endregion
+          });
         });
       });
     }, function (e) {
-      log.info("Processing error in handler function: ".concat(e.message), {
-        error: e,
-        workflowStatus: workflowStatus
-      });
+      msg.processingError(e, workflowStatus);
       var found = findError(e, errorMeta);
       var isApiGatewayRequest = _typeof(event) === "object" && event.headers ? true : false;
       return function () {
@@ -1399,7 +2080,7 @@ var wrapper = function wrapper(fn) {
 
             if (!resolved) {
               if (isApiGatewayRequest) {
-                return HandledError.apiGatewayError(found.code, e, log.getContext());
+                return convertToApiGatewayError(new HandledError(found.code, e, log.getContext()));
               } else {
                 throw new HandledError(found.code, e, log.getContext());
               }
@@ -1408,7 +2089,7 @@ var wrapper = function wrapper(fn) {
 
           return _invokeIgnored(function () {
             if (found.handling.forwardTo) {
-              return _await$3(awsLog.invoke(found.handling.forwardTo, e), function () {
+              return _await$2(awsLog.invoke(found.handling.forwardTo, e), function () {
                 log.info("Forwarded error to the function \"".concat(found.handling.forwardTo, "\""), {
                   error: e,
                   forwardTo: found.handling.forwardTo
@@ -1417,18 +2098,93 @@ var wrapper = function wrapper(fn) {
             }
           });
         } else {
-          log.warn("The error in \"".concat(context.functionName, "\" has been returned to API Gateway using the default handler"), {
-            error: e,
-            workflowStatus: workflowStatus
+          // UNFOUND ERROR
+          log.debug("An unfound error is being processed by the default handling mechanism", {
+            defaultHandling: errorMeta.defaultHandling,
+            errorMessage: e.message,
+            stack: e.stack
           });
+          var handling = errorMeta.defaultHandling;
+          return _switch(handling.type, [[function () {
+            return "handler-fn";
+          }, function () {
+            //#region handle-fn
 
-          if (isApiGatewayRequest) {
-            // API Gateway structured error
-            // TODO: can this be thrown instead so we don't need to use "any"?
-            throw UnhandledError.apiGatewayError(errorMeta.defaultErrorCode, e, context.awsRequestId);
-          } else {
-            throw new UnhandledError(errorMeta.defaultErrorCode, e, context.awsRequestId);
-          }
+            /**
+             * results are broadly three things:
+             *
+             * 1. handler throws an error
+             * 2. handler returns `true` which means that result should be considered successful
+             * 3. handler returns _falsy_ which means that the default error should be thrown
+             */
+            try {
+              var passed = handling.defaultHandlerFn(e);
+
+              if (passed === true) {
+                log.debug("The error was fully handled by the handling function/callback; resulting in a successful condition.");
+
+                if (isApiGatewayRequest) {
+                  return {
+                    statusCode: result ? commonTypes.HttpStatusCodes.Success : commonTypes.HttpStatusCodes.NoContent,
+                    headers: getResponseHeaders(),
+                    body: result ? JSON.stringify(result) : ""
+                  };
+                } else {
+                  return result;
+                }
+              } else {
+                log.debug("The error was passed to the callback/handler function but it did NOT resolve the error condition.");
+              }
+            } catch (e2) {
+              // handler threw an error
+              log.debug("the handler function threw an error: ".concat(e2.message), {
+                messsage: e2.message,
+                stack: e2.stack
+              });
+
+              if (isApiGatewayRequest) {
+                return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
+              }
+            }
+          }], [function () {
+            return "error-forwarding";
+          }, function () {
+            //#region error-forwarding
+            log.debug("The error will be forwarded to another function for handling", {
+              arn: handling.arn
+            });
+            return _await$2(awsLog.invoke(handling.arn, e), function () {
+            });
+          }], [function () {
+            return "default-error";
+          }, function () {
+            //#region default-error
+            handling.error.message = handling.error.message || e.message;
+            handling.error.stack = e.stack;
+
+            if (isApiGatewayRequest) {
+              return convertToApiGatewayError(handling.error);
+            } else {
+              throw handling.error;
+            }
+          }], [function () {
+            return "default";
+          }, function () {
+            //#region default
+            log.debug("Error handled by default unknown policy");
+
+            if (isApiGatewayRequest) {
+              return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
+            } else {
+              throw new UnhandledError(errorMeta.defaultErrorCode, e);
+            }
+          }], [void 0, function () {
+            log.debug("Unknown handling technique for unhandled error", {
+              type: handling.type,
+              errorMessage: e.message
+            });
+            throw new UnhandledError(errorMeta.defaultErrorCode, e);
+          }]]);
         }
       }();
     });

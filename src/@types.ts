@@ -3,20 +3,96 @@ import {
   IAWSLambdaProxyIntegrationRequest,
   IAWSLambaContext,
   Omit,
-  IServerlessFunction
+  arn,
+  IServerlessFunction,
+  IHttpResponseHeaders,
+  IHttpRequestHeaders
 } from "common-types";
 import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
-import { getSecrets as secrets, IGetSecrets } from "./wrapper/getSecrets";
+import { getSecrets, getSecret } from "./wrapper-fn/secrets";
 import { IFirebaseAdminConfig } from "abstracted-firebase";
 type DB = import("abstracted-admin").DB;
-import { setContentType, setHeaders } from "./wrapper/headers";
+import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
 
 export type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 
 /**
- * **ILambdSequenceStep**
+ * The API Gateway's _proxy integration request_ structure with the
+ * `body` and `headers` removed
+ */
+export type IApiGateway = Omit<
+  IAWSLambdaProxyIntegrationRequest,
+  "body" | "headers"
+>;
+
+export interface IWrapperOptions {
+  /**
+   * If you supply an **arn** for this parameter it will turn on
+   * the `SequenceTracker` and sequence status will be forwarded to this **arn**
+   * at the completion of each step of the `LambdaSequence`.
+   *
+   * > **Note:** The **arn** provided can be a "partial arn" so long as the appropriate
+   * > environment variables are set.
+   *
+   * > **Note:** This option only needs to be set at the _first_ step in the sequence;
+   * > from that point the instruction to use this tracking will be carried forward in
+   * > the `o-sequence-tracker` _header_ variable.
+   */
+  sequenceTracker?: arn;
+}
+
+/**
+ * Highlights the most likely props coming in from a request but allows
+ * additional properties to be defined too.
+ */
+export type IWrapperRequestHeaders =
+  | IHttpRequestHeaders
+  | IAWSLambdaProxyIntegrationRequest;
+
+export interface IWrapperResponseHeaders extends IHttpResponseHeaders {
+  ["X-Correlation-Id"]: string;
+  /**
+   * The transport for firemodel's **service account** when
+   * operating within a `LambdaSequence`.
+   *
+   * > **Note:** the naming convention after the `O-` is meant
+   * > to mimic the name of the SSM `module/name`
+   */
+  ["O-firemodel/SERVICE_ACCOUNT"]?: string;
+  /**
+   * The status of the _sequence_ when being passed from function
+   * to function.
+   */
+  ["O-Sequence-Status"]?: string;
+  /**
+   * The `LambdaSequence` serialized for passing to the next function
+   */
+  ["O-Serialized-Sequence"]?: string;
+}
+
+/**
+ * **IOrchestratedMessageBody**
+ *
+ * When making `fn`-to-`fn` invocations the message _body_
+ * is boxed into this higher level structure which allows the _body_ to remain
+ * untouched but providing transport for HTTP headers and the serialized
+ * `LambdaSequence` information.
+ *
+ * This additional _meta_ infromation is critical to the out-of-the box
+ * experience provided by the `wrapper` function as well providing strong typing
+ * throughout.
+ */
+export interface IOrchestratedMessageBody<T> {
+  type: "orchestrated-message-body";
+  sequenceSteps?: ILambdaSequenceStep[];
+  headers: IWrapperResponseHeaders;
+  body: T;
+}
+
+/**
+ * **ILambdaSequenceStep**
  *
  * A _step_ in a `LambdaSequence`. This includes the function name (`arn`), parameters passed
  * into the step (`params`), workflow status (assigned/active/completed), as well the `results` of
@@ -43,6 +119,9 @@ export interface ILambaSequenceFromResponse<T> {
   request: T;
   apiGateway?: IAWSLambdaProxyIntegrationRequest;
   sequence: LambdaSequence;
+  headers:
+    | Omit<IWrapperResponseHeaders, "X-Correlation-ID">
+    | IHttpRequestHeaders;
 }
 
 /**
@@ -92,6 +171,7 @@ export interface IErrorHandlingDefault {
  * "secrets" returned.
  */
 export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
+  headers: IWrapperRequestHeaders;
   /**
    * The sequence which this execution is part of
    */
@@ -120,10 +200,27 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    */
   database: (config?: IFirebaseAdminConfig) => Promise<DB>;
   /**
-   * a utility function to help facilitate getting secrets
-   * either from SSM or locally if available
+   * **getSecrets**
+   *
+   * gets secrets; leveraging passed in header secrets or going to AWS's
+   * **SSM** if needed.
+   *
+   * ```typescript
+   * const secrets = await context.getSecrets(['firebase', 'netlify'])
+   * ```
    */
-  getSecrets: IGetSecrets<T>;
+  getSecrets: typeof getSecrets;
+  /**
+   * **getSecret**
+   *
+   * gets a single secret; ideally using local secrets but will go to AWS's
+   * **SSM** if needed.
+   *
+   * ```typescript
+   * const serviceAccount = await context.getSecret('firebase/SERVICE_ACCOUNT')
+   * ```
+   */
+  getSecret: typeof getSecret;
   /**
    * The API Gateway "proxy integration" request data; this is left blank if the call was not
    * made from API Gateway (or the function is not using proxy integration)
@@ -135,25 +232,29 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    */
   isApiGatewayRequest: boolean;
   /**
-   * Allows you to describe all the errors you expect as well as how to handle them as well
-   * _unhandled_ or _unexpected_ errors.
+   * Allows you to manage how to handle errors which are encountered; both _expected_
+   * and _unexpected_ are captured and each can be handled in whichever way you prefer.
    */
-  errorMeta: ErrorMeta;
+  errorMgmt: ErrorMeta;
   /**
    * The **header** for any API Gateway originated function is `appliacation/json` but this
    * can be changed to something else if needed.
    */
   setContentType: typeof setContentType;
   /**
-   * Requests that originate from API Gateway will automatically be provided CORS headers as
-   * well as a default `Content-Type` of `application/json`. This method allows you to add
-   * additional name/value pairs to the headers passed back if this is required.
+   * Most of the required headers sent back to **API Gateway** or to other **Lambda functions**
+   * in a _sequence_ will be provided automatically (e.g., CORS, correlationId, etc.) but if your
+   * function needs to send additional headers then you can add them here.
    */
-  setHeaders: typeof setHeaders;
+  setHeaders: typeof setFnHeaders;
   /**
-   * Allows the handler author to invoke a new `LambdaSequence`.
+   * Allows the handler author to _register_ a new `LambdaSequence` for execution.
+   *
+   * For "conductors" (aka, handler functions which kick-off sequences), this
+   * function should always be called and the `wrapper` function will ensure that
+   * the `LambdaSequence` is started before the handler function completes.
    */
-  startSequence: (sequence: LambdaSequence) => void;
+  registerSequence: (sequence: LambdaSequence) => void;
 }
 
 /**
@@ -173,3 +274,39 @@ export type IHandlerFunction<E, R> = (
 export interface IErrorWithExtraProperties extends Error {
   [key: string]: any;
 }
+
+export type IErrorHandlerFunction = (err: Error) => boolean;
+export interface IErrorClass extends Error {}
+
+export interface IDefaultHandlingBase {
+  type: "error-forwarding" | "handler-fn" | "default-error" | "default";
+  code: number;
+  prop: string;
+}
+
+export interface IDefaultHandlingForwarding extends IDefaultHandlingBase {
+  type: "error-forwarding";
+  arn: string;
+}
+
+export interface IDefaultHandlingError extends IDefaultHandlingBase {
+  type: "default-error";
+  error: IErrorClass;
+}
+
+export interface IDefaultHandlingCallback extends IDefaultHandlingBase {
+  type: "handler-fn";
+  defaultHandlerFn: IErrorHandlerFunction;
+}
+
+export interface IDefaultHandlingDefault extends IDefaultHandlingBase {
+  type: "default";
+}
+
+export type IDefaultHandling =
+  | IDefaultHandlingForwarding
+  | IDefaultHandlingError
+  | IDefaultHandlingCallback
+  | IDefaultHandlingDefault;
+
+export type WithBodySequence<T> = T & { _sequence: string };
