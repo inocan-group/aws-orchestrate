@@ -1,5 +1,5 @@
 import { IAWSLambaContext, IAwsLambdaEvent, IApiGatewayErrorResponse, IApiGatewayResponse } from "common-types";
-import { IHandlerContext } from "./@types";
+import { IHandlerContext, IWrapperOptions } from "./@types";
 /**
  * **wrapper**
  *
@@ -9,4 +9,4 @@ import { IHandlerContext } from "./@types";
  * @param event will be either the body of the request or the hash passed in by API Gateway
  * @param context the contextual props and functions which AWS provides
  */
-export declare const wrapper: <I, O>(fn: (event: I, context: IHandlerContext<I>) => Promise<O>) => (event: IAwsLambdaEvent<I>, context: IAWSLambaContext) => Promise<O | IApiGatewayResponse | IApiGatewayErrorResponse<any>>;
+export declare const wrapper: <I, O>(fn: (event: I, context: IHandlerContext<I>) => Promise<O>, options?: IWrapperOptions) => (event: IAwsLambdaEvent<I>, context: IAWSLambaContext) => Promise<O | IApiGatewayResponse | IApiGatewayErrorResponse<any>>;

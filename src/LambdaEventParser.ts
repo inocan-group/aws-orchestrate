@@ -11,7 +11,7 @@ import {
  * Ensures that the _typed_ `request` is separated from a possible Proxy Integration
  * Request that would have originated from API Gateway; also returns the `apiGateway`
  * payload with the "body" removed (as it would be redundant to the request).
- * 
+ *
  * Typical usage is:
  *
 ```typescript

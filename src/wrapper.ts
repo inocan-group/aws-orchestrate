@@ -10,22 +10,24 @@ import { logger, invoke } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
 import { LambdaSequence } from "./LambdaSequence";
 import { UnhandledError } from "./errors/UnhandledError";
-import { findError } from "./wrapper/findError";
-import { IHandlerContext } from "./@types";
+import { IHandlerContext, IWrapperOptions } from "./@types";
 import { HandledError } from "./errors/HandledError";
-import { getSecrets } from "./wrapper/getSecrets";
-import { database } from "./database-connect";
 import {
-  startSequence as start,
-  invokeNewSequence
-} from "./wrapper/startSequence";
-import {
-  setHeaders,
+  registerSequence as register,
+  invokeNewSequence,
+  findError,
+  getSecrets,
+  database,
+  setFnHeaders,
   setContentType,
+  getResponseHeaders,
   setCorrelationId,
-  getAllHeaders
-} from "./wrapper/headers";
+  saveSecretHeaders,
+  loggedMessages,
+  getNewSequence
+} from "./wrapper-fn/index";
 import { convertToApiGatewayError } from "./errors";
+import { sequenceStatus } from "./sequences";
 
 /**
  * **wrapper**
@@ -37,7 +39,8 @@ import { convertToApiGatewayError } from "./errors";
  * @param context the contextual props and functions which AWS provides
  */
 export const wrapper = function<I, O>(
-  fn: (event: I, context: IHandlerContext<I>) => Promise<O>
+  fn: (event: I, context: IHandlerContext<I>) => Promise<O>,
+  options: IWrapperOptions = {}
 ) {
   return async function(
     event: IAwsLambdaEvent<I>,
@@ -51,86 +54,107 @@ export const wrapper = function<I, O>(
       | "invoke-complete"
       | "invoke-started"
       | "sequence-defined"
+      | "sequence-starting"
       | "sequence-started"
-      | "completing" = "initializing";
+      | "sequence-tracker-starting"
+      | "completing"
+      | "returning-values"
+      | "initializing";
 
     context.callbackWaitsForEmptyEventLoop = false;
     const log = logger().lambda(event, context);
+    const msg = loggedMessages(log);
+    setCorrelationId(log.getCorrelationId());
     const errorMeta: ErrorMeta = new ErrorMeta();
+
     try {
-      const { request, sequence, apiGateway } = LambdaSequence.from(event);
-      setCorrelationId(log.getCorrelationId());
-      log.info(
-        `The handler function "${
-          context.functionName
-        }" has started execution.  ${
-          sequence.isSequence
-            ? `This handler is part of a sequence [${log.getCorrelationId()} ].`
-            : "This handler was not triggered as part of a sequence."
-        }`,
-        {
-          clientContext: context.clientContext,
-          request,
-          sequence,
-          apiGateway
-        }
+      const status = sequenceStatus(log.getCorrelationId());
+      const { request, sequence, apiGateway, headers } = LambdaSequence.from(
+        event
       );
-      const startSequence = start(log, context);
+      saveSecretHeaders(headers);
+      msg.start(request, headers, context, sequence, apiGateway);
+
+      //#region PREP
+      const registerSequence = register(log, context);
       const handlerContext: IHandlerContext<I> = {
         ...context,
         log,
-        setHeaders,
+        headers,
+        setHeaders: setFnHeaders,
         setContentType,
         database,
         sequence,
-        startSequence,
+        registerSequence,
         isSequence: sequence.isSequence,
         isDone: sequence.isDone,
         apiGateway,
-        getSecrets: getSecrets(request),
-        isApiGatewayRequest: apiGateway && apiGateway.headers ? true : false,
+        getSecrets,
+        isApiGatewayRequest: apiGateway && apiGateway.resource ? true : false,
         errorMgmt: errorMeta
       };
+      //#endregion
+
+      //#region CALL the HANDLER FUNCTION
       workflowStatus = "running-function";
-      // CALL the HANDLER FUNCTION
       result = await fn(request, handlerContext);
-
+      log.debug(`finished calling the handler function`, { result });
       workflowStatus = "function-complete";
+      //#endregion
 
-      // SEQUENCE (continuation)
+      //region SEQUENCE (next)
       if (sequence.isSequence && !sequence.isDone) {
         workflowStatus = "invoke-started";
         await invoke(...sequence.next(result));
+        log.debug(`finished invoking the next function in the sequence`, {
+          sequence
+        });
         workflowStatus = "invoke-complete";
       }
+      //#endregion
 
-      // SEQUENCE (orchestration starting)
-      await invokeNewSequence(result, log);
+      //#region SEQUENCE (orchestration starting)
+      workflowStatus = "sequence-starting";
+      msg.sequenceStarting();
+      const seqResponse = await invokeNewSequence(result, log);
+      msg.sequenceStarted(seqResponse);
+      log.debug(`kicked off the new sequence defined in this function`, {
+        sequence: getNewSequence()
+      });
+      workflowStatus = "sequence-started";
+      //#endregion
 
-      // RETURN
-      const headers = getAllHeaders();
+      //#region SEQUENCE (send to tracker)
+      if (options.sequenceTracker || sequence.isSequence) {
+        workflowStatus = "sequence-tracker-starting";
+        msg.sequenceTracker(options.sequenceTracker, workflowStatus);
+        if (sequence.isDone) {
+          await invoke(options.sequenceTracker, status(sequence), result);
+        } else {
+          await invoke(options.sequenceTracker, status(sequence));
+        }
+      }
+      //#endregion
+
+      //#region RETURN-VALUES
+      workflowStatus = "returning-values";
+
       if (handlerContext.isApiGatewayRequest) {
         const response: IApiGatewayResponse = {
           statusCode: HttpStatusCodes.Success,
-          headers,
+          headers: getResponseHeaders(),
           body: JSON.stringify(result)
         };
-        log.debug(`Returning results to API Gateway`, {
-          statusCode: 200,
-          headers,
-          result
-        });
+        msg.returnToApiGateway(result, getResponseHeaders());
         return response;
       } else {
         log.debug(`Returning results to non-API Gateway caller`, { result });
         return result;
       }
-      // END of RETURN BLOCK
+      //#endregion
     } catch (e) {
-      log.info(`Processing error in handler function: ${e.message}`, {
-        error: e,
-        workflowStatus
-      });
+      msg.processingError(e, workflowStatus);
+
       const found = findError(e, errorMeta);
       const isApiGatewayRequest: boolean =
         typeof event === "object" &&
@@ -191,7 +215,7 @@ export const wrapper = function<I, O>(
                     statusCode: result
                       ? HttpStatusCodes.Success
                       : HttpStatusCodes.NoContent,
-                    headers: getAllHeaders(),
+                    headers: getResponseHeaders(),
                     body: result ? JSON.stringify(result) : ""
                   };
                 } else {

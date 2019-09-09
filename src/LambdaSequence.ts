@@ -3,15 +3,23 @@ import {
   IDictionary,
   isLambdaProxyRequest,
   getBodyFromPossibleLambdaProxyRequest,
-  createError
+  createError,
+  IHttpRequestHeaders
 } from "common-types";
 import {
   ILambdaFunctionType,
   ILambdaSequenceStep,
   Sequence,
   ILambdaSequenceNextTuple,
-  ILambaSequenceFromResponse
+  ILambaSequenceFromResponse,
+  IOrchestratedMessageBody,
+  IWrapperResponseHeaders,
+  WithBodySequence,
+  IWrapperRequestHeaders
 } from "./@types";
+import { isOrchestratedMessageBody } from "./wrapper-fn";
+import { sequenceStatus } from "./sequences";
+import { logger } from "aws-log";
 
 function size(obj: IDictionary) {
   let size = 0,
@@ -50,16 +58,21 @@ export class LambdaSequence {
    * - the `sequence` as an instantiated class of **LambdaSequence**
    * - the `apiGateway` will have the information from the Lambda Proxy request
    * (only if request came from API Gateway)
+   * - the `headers` will be filled with a dictionary of name/value pairs regardless
+   * of whether the request came from API Gateway (equivalent to `apiGateway.headers`)
+   * or from another function which was invoked as part of s `LambdaSequence`
    *
    * Example Code:
    *
 ```typescript
 export function handler(event, context, callback) {
   const { request, sequence, apiGateway } = LambdaSequence.from(event);
-  // ... do some stuf ... 
-  await sequence.next();
+  // ... do some stuff ...
+  await sequence.next()
 }
 ```
+   * **Note:** if you are using the `wrapper` function then the primary use of this
+   * function will have already been done for you by the _wrapper_.
    */
   public static from<T extends IDictionary = IDictionary>(
     event: T | IAWSLambdaProxyIntegrationRequest,
@@ -187,57 +200,58 @@ export function handler(event, context, callback) {
   /**
    * **from**
    *
-   * unboxes request, sequence, and apiGateway data structures
+   * unboxes `request`, `sequence`, `apiGateway`, and `headers` data structures
    */
   public from<T extends IDictionary = IDictionary>(
-    request: T | IAWSLambdaProxyIntegrationRequest,
+    event: T | IAWSLambdaProxyIntegrationRequest | IOrchestratedMessageBody<T>,
     logger?: import("aws-log").ILoggerApi
   ): ILambaSequenceFromResponse<T> {
     let apiGateway: IAWSLambdaProxyIntegrationRequest | undefined;
+    let headers: IWrapperRequestHeaders = {};
+    let sequence: LambdaSequence;
+    let request: T;
 
-    // separate possible LambdaProxy request from main request
-    if (isLambdaProxyRequest(request)) {
-      apiGateway = request;
-      request = getBodyFromPossibleLambdaProxyRequest<T>(request);
-    }
-
-    if (!request._sequence) {
-      // there is no sequence property on the request
-      if (logger) {
-        logger.info("This execution is not part of a sequence");
+    if (isLambdaProxyRequest(event)) {
+      apiGateway = event;
+      headers = event.headers;
+      delete apiGateway.headers;
+      request = getBodyFromPossibleLambdaProxyRequest<T>(event);
+      delete apiGateway.body;
+    } else if (isOrchestratedMessageBody(event)) {
+      headers = (event as IOrchestratedMessageBody<T>).headers;
+      request = event.body;
+      if (event.sequenceSteps) {
+        this.ingestSteps(
+          request,
+          (event as IOrchestratedMessageBody<T>).sequenceSteps
+        );
+        sequence = this;
+      } else {
+        sequence = LambdaSequence.notASequence();
       }
-      return { request, apiGateway, sequence: LambdaSequence.notASequence() };
-    }
-
-    // looks like a valid sequence
-    this._steps = request._sequence;
-
-    // active function's output is sent into next's params
-    const transformedRequest = { ...request, ...this.activeFn.params } as T;
-
-    // remove the sequence data from the request as this payload will be
-    // available in the returned LambdaSequence object
-    delete transformedRequest._sequence;
-
-    /**
-     * swap out the conductor's generic understanding of params
-     * with the actual request params (aka, dynamic props resolved)
-     */
-    this._steps = this._steps.map(s => {
-      const resolvedParams =
-        s.arn === this.activeFn.arn ? transformedRequest : s.params;
-
-      s.params = resolvedParams;
-      return s;
-    });
-
-    if (logger) {
-      logger.info("This execution is part of a sequence", {
-        sequence: String(this)
+    } else if ((event as WithBodySequence<T>)._sequence) {
+      const e = new Error();
+      console.log({
+        message: `Deprecated: a Lambda event received the property "_sequence" which is an OLD way of passing sequence data to other functions. This technique will be removed in the future.`,
+        stack: e.stack
       });
+      request = { ...{}, ...event } as T;
+      delete request._sequence;
+      this.ingestSteps(request, (event as WithBodySequence<T>)._sequence);
+      sequence = this;
+    } else {
+      sequence = LambdaSequence.notASequence();
     }
 
-    return { request: transformedRequest, apiGateway, sequence: this };
+    // The active function's output is sent into the params
+    request = { ...this.activeFn.params, ...request } as T;
+
+    return {
+      request,
+      apiGateway,
+      sequence,
+      headers: headers as IWrapperRequestHeaders
+    };
   }
 
   /**
@@ -315,6 +329,45 @@ export function handler(event, context, callback) {
     });
 
     return result;
+  }
+
+  /**
+   * Ingests a set of steps into the current sequence; resolving
+   * dynamic properties into real values at the same time.
+   *
+   * **Note:** if this sequence _already_ has steps it will throw
+   * an error.
+   *
+   * **Note:** you can pass in either a serialized string or the actual
+   * array of steps.
+   */
+  public ingestSteps(request: any, steps: string | ILambdaSequenceStep[]) {
+    if (typeof steps === "string") {
+      steps = JSON.parse(steps) as ILambdaSequenceStep[];
+    }
+
+    if (this._steps.length > 0) {
+      throw new Error(
+        `Attempt to ingest steps into a LambdaSequence that already has steps!`
+      );
+    }
+
+    this._steps = steps;
+    this._isASequence = true;
+    const transformedRequest =
+      typeof request === "object"
+        ? { ...this.activeFn.params, ...request }
+        : { ...this.activeFn.params, request };
+
+    /**
+     * Inject the prior function's request params into
+     * active functions params (set in the conductor)
+     */
+    this._steps = this._steps.map(s => {
+      return s.arn === this.activeFn.arn
+        ? { ...s, params: transformedRequest }
+        : s;
+    });
   }
 
   /**

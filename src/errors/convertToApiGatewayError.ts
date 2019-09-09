@@ -1,6 +1,6 @@
 import { DEFAULT_ERROR_CODE } from "./ErrorMeta";
 import { IApiGatewayErrorResponse } from "common-types";
-import { getAllHeaders } from "../wrapper/headers";
+import { getResponseHeaders } from "../wrapper-fn/headers";
 /**
  * converts an `Error` (or subclass) into a error hash
  * which **API Gateway** can process.
@@ -10,7 +10,7 @@ export function convertToApiGatewayError(
   defaultCode: number = DEFAULT_ERROR_CODE
 ): IApiGatewayErrorResponse {
   return {
-    headers: getAllHeaders(),
+    headers: getResponseHeaders(),
     errorCode: e.errorCode || defaultCode,
     errorType: e.name || e.code || "Error",
     errorMessage: e.message,

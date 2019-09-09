@@ -3112,10 +3112,10 @@ common-types@^1.11.15:
   dependencies:
     "@types/json-schema" "^7.0.3"
 
-common-types@^1.12.0:
-  version "1.12.0"
-  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.12.0.tgz#91d350c264c20bf8d216ddb238b605f7481b57c0"
-  integrity sha512-33HJVJ9/HKOkogSMpB0b3ABgFSLfkpSmIVJdkLJOsAG9XpGmZ4PdbIiqi8ygDrRcuXzAp0kweZ5rIXRpjl2AIA==
+common-types@^1.12.1:
+  version "1.12.1"
+  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.12.1.tgz#1110e159838651ebddedefb7714e6ce849e90ee5"
+  integrity sha512-zTwEI/dGVvZlyJD4YTdUS0wYD+cf/8hgknhZ4/G1v1WSidUZdlXdBhPYQOm/Shqy9V0NhuOij86Eo4up0r5d8w==
   dependencies:
     "@types/json-schema" "^7.0.3"
 

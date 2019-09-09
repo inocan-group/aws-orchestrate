@@ -1,5 +1,5 @@
-import { isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest, HttpStatusCodes } from 'common-types';
-import { invoke, logger } from 'aws-log';
+import { HttpStatusCodes, isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest } from 'common-types';
+import { logger, invoke } from 'aws-log';
 
 function _typeof(obj) {
   if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
@@ -225,6 +225,483 @@ function _nonIterableRest() {
   throw new TypeError("Invalid attempt to destructure non-iterable instance");
 }
 
+/**
+ * **findError**
+ *
+ * Look for the error encountered within the "known errors" that
+ * the function defined and return it's `ErrorHandler` if found.
+ * If _not_ found then return `false`.
+ */
+function findError(e, expectedErrors) {
+  var found = false;
+  expectedErrors.list.forEach(function (i) {
+    if (e.code === i.identifiedBy.code || e.name == i.identifiedBy.name || e.message.includes(i.identifiedBy.messageContains) || e instanceof i.identifiedBy.errorClass) {
+      found = i;
+    }
+  });
+  return found;
+}
+
+/**
+ * **getSecrets**
+ *
+ * Gets the needed secrets for this function -- using locally available information
+ * if available (_params_ and/or _cached_ values from prior calls) -- otherwise
+ * goes out **SSM** to get it.
+ *
+ * In addition, all secrets requested (within the given function as well as
+ * _prior_ function's secrets in a sequence) will be auto-forwarded to subsequent
+ * functions in the currently executing sequence. Secrets _will not_ be passed back
+ * in the function's response.
+ *
+ * @param modules the modules which are have secrets that are needed0
+ */
+function _await(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+/**
+ * Goes through a set of secrets -- organized by `[module].[name] = secret` --
+ * and masks the values so that they don't leak into the log files.
+ */
+
+
+function _async(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var getSecrets = _async(function (modules) {
+  var log = logger().reloadContext();
+  var localSecrets = getLocalSecrets();
+
+  if (modules.every(function (i) {
+    return Object.keys(localSecrets).includes(i);
+  })) {
+    // everything found in local secrets
+    log.debug("Call to getSecrets() resulted in 100% hit rate for modules locally", {
+      modules: modules
+    });
+    return modules.reduce(function (secrets, mod) {
+      secrets[mod] = localSecrets[mod];
+      return secrets;
+    }, {});
+  } // at least SOME modules are NOT stored locally, the latency of getting some
+  // versus getting them all is negligible so we'll get them all from SSM
+
+
+  log.debug("Some modules requested were not found locally, requesting from SSM.", {
+    modules: modules
+  });
+  return _await(import('aws-ssm'), function (_temp) {
+    var SSM = _temp.SSM;
+    return _await(SSM.modules(modules), function (newSecrets) {
+      modules.forEach(function (m) {
+        if (!newSecrets[m]) {
+          throw new Error("Failure to retrieve the SSM module \"".concat(m, "\""));
+        }
+
+        if (Object.keys(newSecrets[m]).length === 0) {
+          log.warn("Attempt to retrieve module \"".concat(m, "\" returned but had no "));
+        }
+      });
+      log.debug("new SSM modules retrieved");
+      var secrets = Object.assign(Object.assign({}, localSecrets), newSecrets);
+      saveSecretsLocally(secrets);
+      maskLoggingForSecrets(newSecrets, log);
+      return secrets;
+    });
+  });
+});
+var localSecrets = {};
+/**
+ * Saves secrets locally so they can be used rather than
+ * going out to SSM. These secrets will then also be "passed
+ * forward" to any functions which are invoked.
+ */
+
+function saveSecretsLocally(secrets) {
+  localSecrets = secrets;
+}
+/**
+ * Gets the locally stored secrets. The format of the keys in this hash
+ * should be `module/SECRET` which cooresponds to the `aws-ssm` opinion
+ * on SSM naming.
+ */
+
+function getLocalSecrets() {
+  return localSecrets;
+}
+function maskLoggingForSecrets(modules, log) {
+  var secretPaths = [];
+  Object.keys(modules).forEach(function (mod) {
+    Object.keys(mod).forEach(function (s) {
+      if (_typeof(s) === "object") {
+        log.addToMaskedValues(modules[mod][s]);
+        secretPaths.push("".concat(mod, "/").concat(s));
+      }
+    });
+  });
+  log.debug("All secret values [ ".concat(secretPaths.length, " ] have been masked in logging"), {
+    secretPaths: secretPaths
+  });
+}
+
+/**
+ * A collection of log messages that the wrapper function will emit
+ */
+
+var loggedMessages = function loggedMessages(log) {
+  return {
+    /** a handler function just started executing */
+    start: function start(request, headers, context, sequence, apiGateway) {
+      log.info("The handler function \"".concat(context.functionName, "\" has started execution.  ").concat(sequence.isSequence ? "This handler is part of a sequence [".concat(log.getCorrelationId(), " ].") : "This handler was not triggered as part of a sequence."), {
+        request: request,
+        sequence: sequence.toObject(),
+        headers: headers,
+        apiGateway: apiGateway
+      });
+    },
+    newSequenceRegistered: function newSequenceRegistered() {
+      var sequence = getNewSequence();
+      log.debug("This function has registered a new sequence with ".concat(sequence.steps.length, " steps to be kicked off as part of this function's execution."), {
+        sequence: sequence.toObject()
+      });
+    },
+    sequenceStarting: function sequenceStarting() {
+      log.debug("The new sequence this function registered is being started/invoked", {
+        sequence: getNewSequence().toObject()
+      });
+    },
+    sequenceStarted: function sequenceStarted(seqResponse) {
+      log.debug("The new sequence this function registered was successfully started", {
+        seqResponse: seqResponse
+      });
+    },
+
+    /**
+     * right before forwarding the sequence status to the `sequenceTracker` lambda
+     */
+    sequenceTracker: function sequenceTracker(_sequenceTracker, workflowStatus) {
+      log.info("About to send the LambdaSequence's status to the sequenceTracker [ ".concat(_sequenceTracker, " ]"), {
+        sequenceTracker: _sequenceTracker,
+        workflowStatus: workflowStatus
+      });
+    },
+    returnToApiGateway: function returnToApiGateway(result, responseHeaders) {
+      log.debug("Returning results to API Gateway", {
+        statusCode: HttpStatusCodes.Success,
+        result: JSON.stringify(result),
+        responseHeaders: responseHeaders
+      });
+    },
+
+    /**
+     * as soon as an error is detected in the wrapper, write a log message about the error
+     */
+    processingError: function processingError(e, workflowStatus) {
+      log.info("Processing error in handler function; error occurred sometime after the \"".concat(workflowStatus, "\" workflow status: [ ").concat(e.message, " ]"), {
+        error: e,
+        workflowStatus: workflowStatus
+      });
+    }
+  };
+};
+
+function _async$1(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var invokeNewSequence = _async$1(function () {
+  var results = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+  if (!sequence) {
+    return;
+  }
+
+  results = results || {};
+  return invoke.apply(void 0, _toConsumableArray(sequence.next(_typeof(results) === "object" ? results : {
+    data: results
+  })));
+});
+var sequence;
+/**
+ * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)
+ */
+
+function registerSequence(log, context) {
+  return function (s) {
+    loggedMessages(log).newSequenceRegistered();
+    sequence = s;
+  };
+}
+/** returns the sequence which was set by `startSequence()` */
+
+function getNewSequence() {
+  return sequence;
+}
+
+/**
+ * Serializes a `LambdaSequence` into a string representation
+ * so it can be passed as a header parameter in HTTP responses
+ * as well invokation requests to other Lambda functions.
+ */
+function serializeSequence(s) {
+  return;
+}
+
+/**
+ * Reduces a sequence object to a simple "status" based representation
+ */
+var sequenceStatus = function sequenceStatus(correlationId) {
+  return function (s, dataOrError) {
+    var status = s.isDone ? dataOrError instanceof Error ? "error" : "success" : "running";
+    var response = {
+      status: status,
+      correlationId: correlationId,
+      currentFn: s.activeFn.arn,
+      originFn: s.steps[0].arn,
+      total: s.steps.length,
+      current: s.completed.length
+    };
+
+    switch (status) {
+      case "error":
+        return Object.assign(Object.assign({}, response), {
+          error: dataOrError
+        });
+
+      case "success":
+        return Object.assign(Object.assign({}, response), {
+          data: dataOrError
+        });
+
+      case "running":
+        return response;
+    }
+  };
+};
+
+var correlationId;
+/**
+ * Saves the `correlationId` for easy retrieval across various functions
+ */
+
+function setCorrelationId(id) {
+  correlationId = id;
+}
+/**
+ * Gets the `correlationId` for a running sequence (or an
+ * API Gateway request where the client sent in one)
+ */
+
+function getCorrelationId() {
+  return correlationId;
+}
+
+/**
+ * Ensures that frontend clients who call Lambda's
+ * will be given a CORs friendly response
+ */
+
+var CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Credentials": true
+};
+var contentType = "application/json";
+var fnHeaders = {};
+function getContentType() {
+  return contentType;
+}
+/**
+ * By passing in all the headers you received in a given
+ * invocation this function will pull out all the headers
+ * which start with `O-S-` (as this is the convention for
+ * secrets passed by `aws-orchestrate`).
+ *
+ * This _hash_ is returned but also stored locally for future
+ * calls to `getPassedInSecrets()`
+ */
+
+function saveSecretHeaders(headers) {
+  var localSecrets = Object.keys(headers).reduce(function (headerSecrets, key) {
+    if (key.slice(0, 4) === "O-S-") {
+      headerSecrets[key.slice(4)] = headers[key];
+    }
+
+    return headerSecrets;
+  }, {});
+  saveSecretsLocally(localSecrets);
+  return localSecrets;
+}
+function setContentType(type) {
+  if (!type.includes("/")) {
+    throw new Error("The value sent to setContentType (\"".concat(type, "\") is not valid; it must be a valid MIME type."));
+  }
+
+  contentType = type;
+}
+/**
+ * Get the user/developer defined headers for this function
+ */
+
+function getFnHeaders() {
+  return fnHeaders;
+}
+function setFnHeaders(headers) {
+  if (_typeof(headers) !== "object") {
+    throw new Error("The value sent to setHeaders is not the required type. Was \"".concat(_typeof(headers), "\"; expected \"object\"."));
+  }
+
+  fnHeaders = headers;
+}
+
+function getBaseHeaders(opts) {
+  var _ref;
+
+  var correlationId = getCorrelationId();
+  var sequenceInfo = opts.sequence ? (_ref = {}, _defineProperty(_ref, "O-Sequence-Status", JSON.stringify(sequenceStatus(correlationId)(opts.sequence))), _defineProperty(_ref, "O-Serialized-Sequence", serializeSequence(opts.sequence)), _ref) : {};
+  return Object.assign(Object.assign(Object.assign({}, sequenceInfo), getFnHeaders()), _defineProperty({}, "X-Correlation-Id", correlationId));
+}
+/**
+ * All the HTTP _Response_ headers to send when returning to API Gateway
+ */
+
+
+function getResponseHeaders() {
+  var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  return Object.assign(Object.assign(Object.assign({}, getBaseHeaders(opts)), CORS_HEADERS), {
+    "Content-Type": getContentType()
+  });
+}
+
+/**
+ * detects if the given structure is of type <T> or
+ * has been boxed into an `IOrchestratedMessageBody`
+ */
+function isOrchestratedMessageBody(msg) {
+  return _typeof(msg) === "object" && msg.type === "orchestrated-message-body" ? true : false;
+}
+
+function _await$1(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+var _database;
+/**
+ * **database**
+ *
+ * Provides a convenient means to connect to the database which lives
+ * outside the _handler_ function's main thread. This allows the connection
+ * to the database to sometimes be preserved between function executions.
+ *
+ * This is loaded asynchronously and the containing code must explicitly
+ * load the `abstracted-admin` library (as this library only lists it as
+ * a devDep)
+ */
+
+
+function _invoke(body, then) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(then);
+  }
+
+  return then(result);
+}
+
+function _async$2(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var database = _async$2(function (config) {
+  var log = logger().reloadContext();
+  return _invoke(function () {
+    if (!_database) {
+      return _invoke(function () {
+        if (!config) {
+          return function () {
+            if (process.env.FIREBASE_SERVICE_ACCOUNT && process.env.FIREBASE_DATA_ROOT_URL) {
+              log.debug("The environment variables are in place to configure database connectivity", {
+                firebaseDataRootUrl: process.env.FIREBASE_DATA_ROOT_URL
+              });
+            } else {
+              return _await$1(getSecrets(["firebase"]), function (_ref) {
+                var firebase = _ref.firebase;
+
+                if (!firebase) {
+                  throw new Error("The module \"firebase\" was not found in SSM; Firebase configuration could not be established");
+                }
+
+                if (!firebase.SERVICE_ACCOUNT) {
+                  throw new Error("The module \"firebase\" was found but it did not have a ");
+                }
+
+                log.debug("The Firebase service account has been retrieved from SSM and will be used.");
+                config = firebase.SERVICE_ACCOUNT;
+              });
+            }
+          }();
+        }
+      }, function (_result2) {
+        return  _await$1(import('abstracted-admin'), function (_temp) {
+          var DB = _temp.DB;
+          return _await$1(DB.connect(config), function (_DB$connect) {
+            _database = _DB$connect;
+          });
+        });
+      });
+    }
+  }, function (_result3) {
+    return  _database;
+  });
+});
+
 function size(obj) {
   var size = 0,
       key;
@@ -358,67 +835,107 @@ function () {
     /**
      * **from**
      *
-     * unboxes request, sequence, and apiGateway data structures
+     * unboxes `request`, `sequence`, `apiGateway`, and `headers` data structures
      */
 
   }, {
     key: "from",
-    value: function from(request, logger) {
-      var _this2 = this;
+    value: function from(event, logger) {
+      var apiGateway;
+      var headers = {};
+      var sequence;
+      var request;
 
-      var apiGateway; // separate possible LambdaProxy request from main request
+      if (isLambdaProxyRequest(event)) {
+        apiGateway = event;
+        headers = event.headers;
+        delete apiGateway.headers;
+        request = getBodyFromPossibleLambdaProxyRequest(event);
+        delete apiGateway.body;
+      } else if (isOrchestratedMessageBody(event)) {
+        headers = event.headers;
+        request = event.body;
 
-      if (isLambdaProxyRequest(request)) {
-        apiGateway = request;
-        request = getBodyFromPossibleLambdaProxyRequest(request);
-      }
-
-      if (!request._sequence) {
-        // there is no sequence property on the request
-        if (logger) {
-          logger.info("This execution is not part of a sequence");
+        if (event.sequenceSteps) {
+          this.ingestSteps(request, event.sequenceSteps);
+          sequence = this;
+        } else {
+          sequence = LambdaSequence.notASequence();
         }
-
-        return {
-          request: request,
-          apiGateway: apiGateway,
-          sequence: LambdaSequence.notASequence()
-        };
-      } // looks like a valid sequence
-
-
-      this._steps = request._sequence; // active function's output is sent into next's params
-
-      var transformedRequest = Object.assign(Object.assign({}, request), this.activeFn.params); // remove the sequence data from the request as this payload will be
-      // available in the returned LambdaSequence object
-
-      delete transformedRequest._sequence;
-      /**
-       * swap out the conductor's generic understanding of params
-       * with the actual request params (aka, dynamic props resolved)
-       */
-
-      this._steps = this._steps.map(function (s) {
-        var resolvedParams = s.arn === _this2.activeFn.arn ? transformedRequest : s.params;
-        s.params = resolvedParams;
-        return s;
-      });
-
-      if (logger) {
-        logger.info("This execution is part of a sequence", {
-          sequence: String(this)
+      } else if (event._sequence) {
+        var e = new Error();
+        console.log({
+          message: "Deprecated: a Lambda event received the property \"_sequence\" which is an OLD way of passing sequence data to other functions. This technique will be removed in the future.",
+          stack: e.stack
         });
-      }
+        request = Object.assign({}, event);
+        delete request._sequence;
+        this.ingestSteps(request, event._sequence);
+        sequence = this;
+      } else {
+        sequence = LambdaSequence.notASequence();
+      } // The active function's output is sent into the params
 
+
+      request = Object.assign(Object.assign({}, this.activeFn.params), request);
       return {
-        request: transformedRequest,
+        request: request,
         apiGateway: apiGateway,
-        sequence: this
+        sequence: sequence,
+        headers: headers
       };
     }
     /**
      * boolean flag which indicates whether the current execution of the function
      * is part of a _sequence_.
+     */
+
+  }, {
+    key: "ingestSteps",
+
+    /**
+     * Ingests a set of steps into the current sequence; resolving
+     * dynamic properties into real values at the same time.
+     *
+     * **Note:** if this sequence _already_ has steps it will throw
+     * an error.
+     *
+     * **Note:** you can pass in either a serialized string or the actual
+     * array of steps.
+     */
+    value: function ingestSteps(request, steps) {
+      var _this2 = this;
+
+      if (typeof steps === "string") {
+        steps = JSON.parse(steps);
+      }
+
+      if (this._steps.length > 0) {
+        throw new Error("Attempt to ingest steps into a LambdaSequence that already has steps!");
+      }
+
+      this._steps = steps;
+      this._isASequence = true;
+      var transformedRequest = _typeof(request) === "object" ? Object.assign(Object.assign({}, this.activeFn.params), request) : Object.assign(Object.assign({}, this.activeFn.params), {
+        request: request
+      });
+      /**
+       * Inject the prior function's request params into
+       * active functions params (set in the conductor)
+       */
+
+      this._steps = this._steps.map(function (s) {
+        return s.arn === _this2.activeFn.arn ? Object.assign(Object.assign({}, s), {
+          params: transformedRequest
+        }) : s;
+      });
+    }
+    /**
+     * **dynamicProperties**
+     *
+     * if the _value_ of a parameter passed to a function leads with the `:`
+     * character this is an indicator that it is a "dynamic property" and
+     * it's true value should be looked up from the sequence results.
      */
 
   }, {
@@ -609,14 +1126,6 @@ function () {
       });
       return result;
     }
-    /**
-     * **dynamicProperties**
-     *
-     * if the _value_ of a parameter passed to a function leads with the `:`
-     * character this is an indicator that it is a "dynamic property" and
-     * it's true value should be looked up from the sequence results.
-     */
-
   }, {
     key: "dynamicProperties",
     get: function get() {
@@ -651,16 +1160,21 @@ function () {
      * - the `sequence` as an instantiated class of **LambdaSequence**
      * - the `apiGateway` will have the information from the Lambda Proxy request
      * (only if request came from API Gateway)
+     * - the `headers` will be filled with a dictionary of name/value pairs regardless
+     * of whether the request came from API Gateway (equivalent to `apiGateway.headers`)
+     * or from another function which was invoked as part of s `LambdaSequence`
      *
      * Example Code:
      *
     ```typescript
     export function handler(event, context, callback) {
     const { request, sequence, apiGateway } = LambdaSequence.from(event);
-    // ... do some stuf ...
-    await sequence.next();
+    // ... do some stuff ...
+    await sequence.next()
     }
     ```
+     * **Note:** if you are using the `wrapper` function then the primary use of this
+     * function will have already been done for you by the _wrapper_.
      */
 
   }, {
@@ -987,23 +1501,6 @@ function (_Error) {
   return UnhandledError;
 }(_wrapNativeSuper(Error));
 
-/**
- * **findError**
- *
- * Look for the error encountered within the "known errors" that
- * the function defined and return it's `ErrorHandler` if found.
- * If _not_ found then return `false`.
- */
-function findError(e, expectedErrors) {
-  var found = false;
-  expectedErrors.list.forEach(function (i) {
-    if (e.code === i.identifiedBy.code || e.name == i.identifiedBy.name || e.message.includes(i.identifiedBy.messageContains) || e instanceof i.identifiedBy.errorClass) {
-      found = i;
-    }
-  });
-  return found;
-}
-
 var HandledError =
 /*#__PURE__*/
 function (_Error) {
@@ -1066,221 +1563,6 @@ function (_Error) {
 }(_wrapNativeSuper(Error));
 
 /**
- * **getSecrets**
- *
- * gets the needed module secrets; using locally available information if available, otherwise
- * going out SSM to get.
- *
- * @param modules the modules which are have secrets that are needed for the functions execution.
- * @param localLookup the property to look for the secrets in the incoming event/request
- */
-function _await(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-function _async(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-function getSecrets(event) {
-  return _async(function (modules, localLookup) {
-    if (localLookup && event && event[localLookup]) {
-      var localModules = Object.keys(event[localLookup]);
-
-      if (localModules.every(function (i) {
-        return modules.includes(i);
-      })) {
-        return event[localLookup];
-      }
-    }
-
-    return _await(import('aws-ssm'), function (_temp) {
-      var SSM = _temp.SSM;
-      return _await(SSM.modules(modules));
-    });
-  });
-}
-
-function _await$1(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-var _database;
-/**
- * **database**
- *
- * Provides a convenient means to connect to the database which lives
- * outside the _handler_ function's main thread. This allows the connection
- * to the database to sometimes be preserved between function executions.
- *
- * This is loaded asynchronously and the containing code must explicitly
- * load the `abstracted-admin` library (as this library only lists it as
- * a devDep)
- */
-
-
-function _invoke(body, then) {
-  var result = body();
-
-  if (result && result.then) {
-    return result.then(then);
-  }
-
-  return then(result);
-}
-
-function _async$1(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var database = _async$1(function (config) {
-  return _invoke(function () {
-    if (!_database) {
-      return _await$1(import('abstracted-admin'), function (_temp) {
-        var DB = _temp.DB;
-        return _await$1(DB.connect(config), function (_DB$connect) {
-          _database = _DB$connect;
-        });
-      });
-    }
-  }, function () {
-    return _database;
-  });
-});
-
-function _await$2(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-function _async$2(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var invokeNewSequence = _async$2(function () {
-  var results = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-  var log = arguments.length > 1 ? arguments[1] : undefined;
-
-  {
-    return;
-  }
-
-  results = results || {};
-  return _await$2(invoke.apply(void 0, _toConsumableArray(sequence.next(_typeof(results) === "object" ? results : {
-    data: results
-  }))), function () {
-    log.info("The new sequence has been kicked off");
-  });
-});
-var sequence;
-function startSequence(log, context) {
-  return function (sequence) {
-    log.info("This function [ ".concat(context.functionName, " ] will kick off a new sequence with ").concat(sequence.steps.length, " steps."), {
-      sequence: sequence
-    });
-  };
-}
-
-/**
- * Ensures that frontend clients who call Lambda's
- * will be given a CORs friendly response
- */
-var CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Credentials": true
-};
-var contentType = "application/json";
-var fnHeaders = {};
-var correlationId;
-function getContentType() {
-  return contentType;
-}
-function setContentType(type) {
-  if (!type.includes("/")) {
-    throw new Error("The value sent to setContentType (\"".concat(type, "\") is not valid; it must be a valid MIME type."));
-  }
-
-  contentType = type;
-}
-function getHeaders() {
-  return fnHeaders;
-}
-/**
- * set the `correlationId` so it is always passed
- * as a header variable on responses and invocations
- */
-
-function setCorrelationId(cid) {
-  correlationId = cid;
-}
-function getAllHeaders() {
-  return Object.assign(Object.assign(Object.assign({}, CORS_HEADERS), getHeaders()), {
-    "Content-Type": getContentType(),
-    "x-correlation-id": correlationId
-  });
-}
-function setHeaders(headers) {
-  if (_typeof(headers) !== "object") {
-    throw new Error("The value sent to setHeaders is not the required type. Was \"".concat(_typeof(headers), "\"; expected \"object\"."));
-  }
-
-  fnHeaders = headers;
-}
-
-/**
  * converts an `Error` (or subclass) into a error hash
  * which **API Gateway** can process.
  */
@@ -1288,7 +1570,7 @@ function setHeaders(headers) {
 function convertToApiGatewayError(e) {
   var defaultCode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_ERROR_CODE;
   return {
-    headers: getAllHeaders(),
+    headers: getResponseHeaders(),
     errorCode: e.errorCode || defaultCode,
     errorType: e.name || e.code || "Error",
     errorMessage: e.message,
@@ -1306,7 +1588,7 @@ function convertToApiGatewayError(e) {
  * @param context the contextual props and functions which AWS provides
  */
 
-function _await$3(value, then, direct) {
+function _await$2(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -1318,6 +1600,22 @@ function _await$3(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
+function _empty() {}
+
+function _awaitIgnored(value, direct) {
+  if (!direct) {
+    return value && value.then ? value.then(_empty) : Promise.resolve();
+  }
+}
+
+function _invokeIgnored(body) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(_empty);
+  }
+}
+
 function _invoke$1(body, then) {
   var result = body();
 
@@ -1326,16 +1624,6 @@ function _invoke$1(body, then) {
   }
 
   return then(result);
-}
-
-function _empty() {}
-
-function _invokeIgnored(body) {
-  var result = body();
-
-  if (result && result.then) {
-    return result.then(_empty);
-  }
 }
 
 function _settle(pact, state, value) {
@@ -1581,85 +1869,114 @@ function _async$3(f) {
 }
 
 var wrapper = function wrapper(fn) {
+  var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
   return _async$3(function (event, context) {
     var result;
-    var workflowStatus = "initializing";
+    var workflowStatus;
     context.callbackWaitsForEmptyEventLoop = false;
     var log = logger().lambda(event, context);
+    var msg = loggedMessages(log);
+    setCorrelationId(log.getCorrelationId());
     var errorMeta = new ErrorMeta();
     return _catch(function () {
+      var status = sequenceStatus(log.getCorrelationId());
+
       var _LambdaSequence$from = LambdaSequence.from(event),
           request = _LambdaSequence$from.request,
           sequence = _LambdaSequence$from.sequence,
-          apiGateway = _LambdaSequence$from.apiGateway;
+          apiGateway = _LambdaSequence$from.apiGateway,
+          headers = _LambdaSequence$from.headers;
 
-      setCorrelationId(log.getCorrelationId());
-      log.info("The handler function \"".concat(context.functionName, "\" has started execution.  ").concat(sequence.isSequence ? "This handler is part of a sequence [".concat(log.getCorrelationId(), " ].") : "This handler was not triggered as part of a sequence."), {
-        clientContext: context.clientContext,
-        request: request,
-        sequence: sequence,
-        apiGateway: apiGateway
-      });
-      var startSequence$1 = startSequence(log, context);
+      saveSecretHeaders(headers);
+      msg.start(request, headers, context, sequence, apiGateway); //#region PREP
+
+      var registerSequence$1 = registerSequence(log, context);
       var handlerContext = Object.assign(Object.assign({}, context), {
         log: log,
-        setHeaders: setHeaders,
+        headers: headers,
+        setHeaders: setFnHeaders,
         setContentType: setContentType,
         database: database,
         sequence: sequence,
-        startSequence: startSequence$1,
+        registerSequence: registerSequence$1,
         isSequence: sequence.isSequence,
         isDone: sequence.isDone,
         apiGateway: apiGateway,
-        getSecrets: getSecrets(request),
-        isApiGatewayRequest: apiGateway && apiGateway.headers ? true : false,
+        getSecrets: getSecrets,
+        isApiGatewayRequest: apiGateway && apiGateway.resource ? true : false,
         errorMgmt: errorMeta
-      });
-      workflowStatus = "running-function"; // CALL the HANDLER FUNCTION
+      }); //#endregion
+      //#region CALL the HANDLER FUNCTION
 
-      return _await$3(fn(request, handlerContext), function (_fn) {
+      workflowStatus = "running-function";
+      return _await$2(fn(request, handlerContext), function (_fn) {
         result = _fn;
-        workflowStatus = "function-complete"; // SEQUENCE (continuation)
+        log.debug("finished calling the handler function", {
+          result: result
+        });
+        workflowStatus = "function-complete"; //#endregion
+        //region SEQUENCE (next)
 
         return _invoke$1(function () {
           if (sequence.isSequence && !sequence.isDone) {
             workflowStatus = "invoke-started";
-            return _await$3(invoke.apply(void 0, _toConsumableArray(sequence.next(result))), function () {
+            return _await$2(invoke.apply(void 0, _toConsumableArray(sequence.next(result))), function () {
+              log.debug("finished invoking the next function in the sequence", {
+                sequence: sequence
+              });
               workflowStatus = "invoke-complete";
             });
           }
         }, function () {
-          // SEQUENCE (orchestration starting)
-          return _await$3(invokeNewSequence(result, log), function () {
-            // RETURN
-            var headers = getAllHeaders();
+          //#endregion
+          //#region SEQUENCE (orchestration starting)
+          workflowStatus = "sequence-starting";
+          msg.sequenceStarting();
+          return _await$2(invokeNewSequence(result, log), function (seqResponse) {
+            msg.sequenceStarted(seqResponse);
+            log.debug("kicked off the new sequence defined in this function", {
+              sequence: getNewSequence()
+            });
+            workflowStatus = "sequence-started"; //#endregion
+            //#region SEQUENCE (send to tracker)
 
-            if (handlerContext.isApiGatewayRequest) {
-              var response = {
-                statusCode: HttpStatusCodes.Success,
-                headers: headers,
-                body: JSON.stringify(result)
-              };
-              log.debug("Returning results to API Gateway", {
-                statusCode: 200,
-                headers: headers,
-                result: result
-              });
-              return response;
-            } else {
-              log.debug("Returning results to non-API Gateway caller", {
-                result: result
-              });
-              return result;
-            }
-          }); // END of RETURN BLOCK
+            return _invoke$1(function () {
+              if (options.sequenceTracker || sequence.isSequence) {
+                workflowStatus = "sequence-tracker-starting";
+                msg.sequenceTracker(options.sequenceTracker, workflowStatus);
+                return _invokeIgnored(function () {
+                  if (sequence.isDone) {
+                    return _awaitIgnored(invoke(options.sequenceTracker, status(sequence), result));
+                  } else {
+                    return _awaitIgnored(invoke(options.sequenceTracker, status(sequence)));
+                  }
+                });
+              }
+            }, function () {
+              //#endregion
+              //#region RETURN-VALUES
+              workflowStatus = "returning-values";
+
+              if (handlerContext.isApiGatewayRequest) {
+                var response = {
+                  statusCode: HttpStatusCodes.Success,
+                  headers: getResponseHeaders(),
+                  body: JSON.stringify(result)
+                };
+                msg.returnToApiGateway(result, getResponseHeaders());
+                return response;
+              } else {
+                log.debug("Returning results to non-API Gateway caller", {
+                  result: result
+                });
+                return result;
+              }
+            }); //#endregion
+          });
         });
       });
     }, function (e) {
-      log.info("Processing error in handler function: ".concat(e.message), {
-        error: e,
-        workflowStatus: workflowStatus
-      });
+      msg.processingError(e, workflowStatus);
       var found = findError(e, errorMeta);
       var isApiGatewayRequest = _typeof(event) === "object" && event.headers ? true : false;
       return function () {
@@ -1678,7 +1995,7 @@ var wrapper = function wrapper(fn) {
 
           return _invokeIgnored(function () {
             if (found.handling.forwardTo) {
-              return _await$3(invoke(found.handling.forwardTo, e), function () {
+              return _await$2(invoke(found.handling.forwardTo, e), function () {
                 log.info("Forwarded error to the function \"".concat(found.handling.forwardTo, "\""), {
                   error: e,
                   forwardTo: found.handling.forwardTo
@@ -1715,7 +2032,7 @@ var wrapper = function wrapper(fn) {
                 if (isApiGatewayRequest) {
                   return {
                     statusCode: result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
-                    headers: getAllHeaders(),
+                    headers: getResponseHeaders(),
                     body: result ? JSON.stringify(result) : ""
                   };
                 } else {
@@ -1742,7 +2059,7 @@ var wrapper = function wrapper(fn) {
             log.debug("The error will be forwarded to another function for handling", {
               arn: handling.arn
             });
-            return _await$3(invoke(handling.arn, e), function () {
+            return _await$2(invoke(handling.arn, e), function () {
             });
           }], [function () {
             return "default-error";
