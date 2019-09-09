@@ -4,6 +4,7 @@ import { sequenceStatus, serializeSequence } from "../sequences";
 import { getCorrelationId } from "./correlationId";
 import { saveSecretsLocally, getLocalSecrets } from "./secrets";
 import set from "lodash.set";
+import { logger } from "aws-log";
 
 /**
  * Ensures that frontend clients who call Lambda's
@@ -67,10 +68,25 @@ export function saveSecretHeaders(headers: IDictionary) {
  * for being passed in the header of forwarding invocation.
  */
 export function getHeaderSecrets() {
-  const secrets = getLocalSecrets();
-  return Object.keys(secrets).reduce(
-    (headerSecrets: IDictionary, key: keyof typeof secrets & string) => {
-      headerSecrets[`O-S-${key}`] = secrets[key];
+  const log = logger().reloadContext();
+  const modules = getLocalSecrets();
+  return Object.keys(modules).reduce(
+    (headerSecrets: IDictionary, mod: keyof typeof modules & string) => {
+      const secrets = modules[mod];
+      if (typeof secrets === "object") {
+        Object.keys(secrets).forEach(secret => {
+          headerSecrets[`O-S-${mod}/${secret}`] = modules[mod][secret];
+        });
+      } else {
+        log.warn(
+          `Attempt to generate header secrets but module "${mod}" is not a hash of name/values. Ignoring this module but continuing.`,
+          {
+            module: mod,
+            type: typeof secrets,
+            localModules: Object.keys(modules)
+          }
+        );
+      }
       return headerSecrets;
     },
     {}
