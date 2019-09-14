@@ -244,7 +244,9 @@ export function handler(event, context, callback) {
     }
 
     // The active function's output is sent into the params
-    request = { ...this.activeFn.params, ...request } as T;
+    const activeFn =
+      this.activeFn && this.activeFn.params ? this.activeFn.params : {};
+    request = { ...activeFn, ...request } as T;
 
     return {
       request,
@@ -366,7 +368,7 @@ export function handler(event, context, callback) {
      * active functions params (set in the conductor)
      */
     this._steps = this._steps.map(s => {
-      return s.arn === this.activeFn.arn
+      return this.activeFn && s.arn === this.activeFn.arn
         ? { ...s, params: transformedRequest }
         : s;
     });
@@ -380,14 +382,17 @@ export function handler(event, context, callback) {
    * it's true value should be looked up from the sequence results.
    */
   public get dynamicProperties(): Array<{ key: string; from: string }> {
-    return Object.keys(this.activeFn.params).reduce((prev, key) => {
-      const currentValue = this.activeFn.params[key];
-      const valueIsDynamic = String(currentValue).slice(0, 1) === ":";
+    return Object.keys(this.activeFn ? this.activeFn.params : {}).reduce(
+      (prev, key) => {
+        const currentValue = this.activeFn.params[key];
+        const valueIsDynamic = String(currentValue).slice(0, 1) === ":";
 
-      return valueIsDynamic
-        ? prev.concat({ key, from: currentValue.slice(1) })
-        : prev;
-    }, []);
+        return valueIsDynamic
+          ? prev.concat({ key, from: currentValue.slice(1) })
+          : prev;
+      },
+      []
+    );
   }
 
   public toString() {
@@ -401,7 +406,9 @@ export function handler(event, context, callback) {
       obj.totalSteps = this.steps.length;
       obj.completedSteps = this.completed.length;
       if (this.activeFn) {
-        obj.activeFn = { arn: this.activeFn.arn, params: this.activeFn.params };
+        obj.activeFn = this.activeFn
+          ? { arn: this.activeFn.arn, params: this.activeFn.params }
+          : {};
       }
       if (this.completed) {
         obj.completed = this.completed.map(i => i.arn);
