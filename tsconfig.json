@@ -8,6 +8,7 @@
     "sourceMap": true,
     "noImplicitAny": true,
     "outDir": "./dist",
+    "noEmit": true,
     "removeComments": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,

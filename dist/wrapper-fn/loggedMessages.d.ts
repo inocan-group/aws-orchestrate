@@ -10,14 +10,14 @@ export declare const loggedMessages: (log: {
     info: typeof import("aws-log").info;
     warn: typeof import("aws-log").warn;
     error: typeof import("aws-log").error;
-    addToLocalContext: typeof import("aws-log").addToLocalContext;
+    addToLocalContext: typeof import("aws-log").addToLocalCtx;
     addToMaskedValues: (...props: (string | [string, import("aws-log").IAwsLogMaskingStrategy])[]) => {
         log: typeof import("aws-log").info;
         debug: typeof import("aws-log").debug;
         info: typeof import("aws-log").info;
         warn: typeof import("aws-log").warn;
         error: typeof import("aws-log").error;
-        addToLocalContext: typeof import("aws-log").addToLocalContext;
+        addToLocalContext: typeof import("aws-log").addToLocalCtx;
         addToMaskedValues: any;
         setMaskedValues: (...props: (string | [string, import("aws-log").IAwsLogMaskingStrategy])[]) => {
             log: typeof import("aws-log").info;
@@ -25,7 +25,7 @@ export declare const loggedMessages: (log: {
             info: typeof import("aws-log").info;
             warn: typeof import("aws-log").warn;
             error: typeof import("aws-log").error;
-            addToLocalContext: typeof import("aws-log").addToLocalContext;
+            addToLocalContext: typeof import("aws-log").addToLocalCtx;
             addToMaskedValues: any;
             setMaskedValues: any;
             pathBasedMaskingStrategy: (strategy: import("aws-log").IAwsLogMaskingStrategy, ...paths: string[]) => void;
@@ -44,14 +44,14 @@ export declare const loggedMessages: (log: {
         info: typeof import("aws-log").info;
         warn: typeof import("aws-log").warn;
         error: typeof import("aws-log").error;
-        addToLocalContext: typeof import("aws-log").addToLocalContext;
+        addToLocalContext: typeof import("aws-log").addToLocalCtx;
         addToMaskedValues: (...props: (string | [string, import("aws-log").IAwsLogMaskingStrategy])[]) => {
             log: typeof import("aws-log").info;
             debug: typeof import("aws-log").debug;
             info: typeof import("aws-log").info;
             warn: typeof import("aws-log").warn;
             error: typeof import("aws-log").error;
-            addToLocalContext: typeof import("aws-log").addToLocalContext;
+            addToLocalContext: typeof import("aws-log").addToLocalCtx;
             addToMaskedValues: any;
             setMaskedValues: any;
             pathBasedMaskingStrategy: (strategy: import("aws-log").IAwsLogMaskingStrategy, ...paths: string[]) => void;
