@@ -490,8 +490,10 @@ var loggedMessages = function loggedMessages(log) {
      * as soon as an error is detected in the wrapper, write a log message about the error
      */
     processingError: function processingError(e, workflowStatus) {
+      var stack = e.stack || new Error().stack;
       log.info("Processing error in handler function; error occurred sometime after the \"".concat(workflowStatus, "\" workflow status: [ ").concat(e.message, " ]"), {
-        error: e,
+        errorMessage: e.message,
+        stack: stack,
         workflowStatus: workflowStatus
       });
     }
@@ -1969,12 +1971,13 @@ var wrapper = function wrapper(fn) {
   return _async$3(function (event, context) {
     var result;
     var workflowStatus;
+    workflowStatus = "initializing";
     context.callbackWaitsForEmptyEventLoop = false;
     var log = awsLog.logger().lambda(event, context);
     var msg = loggedMessages(log);
-    setCorrelationId(log.getCorrelationId());
     var errorMeta = new ErrorMeta();
     return _catch(function () {
+      setCorrelationId(log.getCorrelationId());
       var status = sequenceStatus(log.getCorrelationId());
 
       var _LambdaSequence$from = LambdaSequence.from(event),
@@ -1987,6 +1990,7 @@ var wrapper = function wrapper(fn) {
       maskLoggingForSecrets(getLocalSecrets(), log);
       msg.start(request, headers, context, sequence, apiGateway); //#region PREP
 
+      workflowStatus = "prep-starting";
       var registerSequence$1 = registerSequence(log, context);
       var handlerContext = Object.assign(Object.assign({}, context), {
         log: log,

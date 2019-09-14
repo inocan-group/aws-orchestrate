@@ -52,6 +52,7 @@ export const wrapper = function<I, O>(
     let result: O;
     let workflowStatus:
       | "initializing"
+      | "prep-starting"
       | "running-function"
       | "function-complete"
       | "invoke-complete"
@@ -61,16 +62,14 @@ export const wrapper = function<I, O>(
       | "sequence-started"
       | "sequence-tracker-starting"
       | "completing"
-      | "returning-values"
-      | "initializing";
-
+      | "returning-values";
+    workflowStatus = "initializing";
     context.callbackWaitsForEmptyEventLoop = false;
     const log = logger().lambda(event, context);
     const msg = loggedMessages(log);
-    setCorrelationId(log.getCorrelationId());
     const errorMeta: ErrorMeta = new ErrorMeta();
-
     try {
+      setCorrelationId(log.getCorrelationId());
       const status = sequenceStatus(log.getCorrelationId());
       const { request, sequence, apiGateway, headers } = LambdaSequence.from(
         event
@@ -80,6 +79,7 @@ export const wrapper = function<I, O>(
       msg.start(request, headers, context, sequence, apiGateway);
 
       //#region PREP
+      workflowStatus = "prep-starting";
       const registerSequence = register(log, context);
       const handlerContext: IHandlerContext<I> = {
         ...context,
