@@ -121,14 +121,16 @@ export const wrapper = function<I, O>(
       //#endregion
 
       //#region SEQUENCE (orchestration starting)
-      workflowStatus = "sequence-starting";
-      msg.sequenceStarting();
-      const seqResponse = await invokeNewSequence(result, log);
-      msg.sequenceStarted(seqResponse);
-      log.debug(`kicked off the new sequence defined in this function`, {
-        sequence: getNewSequence()
-      });
-      workflowStatus = "sequence-started";
+      if (getNewSequence()) {
+        workflowStatus = "sequence-starting";
+        msg.sequenceStarting();
+        const seqResponse = await invokeNewSequence(result, log);
+        msg.sequenceStarted(seqResponse);
+        log.debug(`kicked off the new sequence defined in this function`, {
+          sequence: getNewSequence()
+        });
+        workflowStatus = "sequence-started";
+      }
       //#endregion
 
       //#region SEQUENCE (send to tracker)
