@@ -976,7 +976,7 @@ function () {
 
 
       var activeFn = this.activeFn && this.activeFn.params ? this.activeFn.params : {};
-      request = Object.assign(Object.assign({}, this.activeFn.params), request);
+      request = Object.assign(Object.assign({}, activeFn), request);
       return {
         request: request,
         apiGateway: apiGateway,
@@ -1055,10 +1055,10 @@ function () {
         obj.completedSteps = this.completed.length;
 
         if (this.activeFn) {
-          obj.activeFn = {
+          obj.activeFn = this.activeFn ? {
             arn: this.activeFn.arn,
             params: this.activeFn.params
-          };
+          } : {};
         }
 
         if (this.completed) {
@@ -1231,7 +1231,7 @@ function () {
     get: function get() {
       var _this4 = this;
 
-      return Object.keys(this.activeFn.params).reduce(function (prev, key) {
+      return Object.keys(this.activeFn ? this.activeFn.params : {}).reduce(function (prev, key) {
         var currentValue = _this4.activeFn.params[key];
         var valueIsDynamic = String(currentValue).slice(0, 1) === ":";
         return valueIsDynamic ? prev.concat({
