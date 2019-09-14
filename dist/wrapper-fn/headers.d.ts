@@ -1,5 +1,6 @@
 import { IDictionary, IHttpResponseHeaders } from "common-types";
 import { IWrapperResponseHeaders } from "../@types";
+import { ILoggerApi } from "aws-log";
 /**
  * Ensures that frontend clients who call Lambda's
  * will be given a CORs friendly response
@@ -35,7 +36,7 @@ export declare function getContentType(): string;
  * the `aws-ssm` library. This data structure can be retrieved at any
  * point by a call to `getLocalSecrets()`.
  */
-export declare function saveSecretHeaders(headers: IDictionary): IDictionary<any>;
+export declare function saveSecretHeaders(headers: IDictionary, log: ILoggerApi): IDictionary<any>;
 /**
  * Takes all of the saved local secrets and puts them into the right format
  * for being passed in the header of forwarding invocation.

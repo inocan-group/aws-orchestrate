@@ -140,10 +140,16 @@ export function maskLoggingForSecrets(modules: IDictionary, log: ILoggerApi) {
       }
     });
   });
-  log.debug(
-    `All secret values [ ${secretPaths.length} ] have been masked in logging`,
-    {
-      secretPaths
-    }
-  );
+  if (secretPaths.length > 0) {
+    log.debug(
+      `All secret values [ ${secretPaths.length} ] have been masked in logging`,
+      {
+        secretPaths
+      }
+    );
+  } else {
+    log.debug(
+      `No secrets where added in this function's call; no additional masking needed.`
+    );
+  }
 }
