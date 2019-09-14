@@ -975,6 +975,7 @@ function () {
       } // The active function's output is sent into the params
 
 
+      var activeFn = this.activeFn && this.activeFn.params ? this.activeFn.params : {};
       request = Object.assign(Object.assign({}, this.activeFn.params), request);
       return {
         request: request,
@@ -1024,7 +1025,7 @@ function () {
        */
 
       this._steps = this._steps.map(function (s) {
-        return s.arn === _this2.activeFn.arn ? Object.assign(Object.assign({}, s), {
+        return _this2.activeFn && s.arn === _this2.activeFn.arn ? Object.assign(Object.assign({}, s), {
           params: transformedRequest
         }) : s;
       });

@@ -244,6 +244,8 @@ export function handler(event, context, callback) {
     }
 
     // The active function's output is sent into the params
+    const activeFn =
+      this.activeFn && this.activeFn.params ? this.activeFn.params : {};
     request = { ...this.activeFn.params, ...request } as T;
 
     return {
@@ -366,7 +368,7 @@ export function handler(event, context, callback) {
      * active functions params (set in the conductor)
      */
     this._steps = this._steps.map(s => {
-      return s.arn === this.activeFn.arn
+      return this.activeFn && s.arn === this.activeFn.arn
         ? { ...s, params: transformedRequest }
         : s;
     });
