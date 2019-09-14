@@ -52,6 +52,7 @@ export const wrapper = function<I, O>(
     let result: O;
     let workflowStatus:
       | "initializing"
+      | "starting-try-catch"
       | "prep-starting"
       | "running-function"
       | "function-complete"
@@ -69,17 +70,18 @@ export const wrapper = function<I, O>(
     const msg = loggedMessages(log);
     const errorMeta: ErrorMeta = new ErrorMeta();
     try {
+      workflowStatus = "starting-try-catch";
       setCorrelationId(log.getCorrelationId());
-      const status = sequenceStatus(log.getCorrelationId());
       const { request, sequence, apiGateway, headers } = LambdaSequence.from(
         event
       );
-      saveSecretHeaders(headers);
+      saveSecretHeaders(headers, log);
       maskLoggingForSecrets(getLocalSecrets(), log);
       msg.start(request, headers, context, sequence, apiGateway);
 
       //#region PREP
       workflowStatus = "prep-starting";
+      const status = sequenceStatus(log.getCorrelationId());
       const registerSequence = register(log, context);
       const handlerContext: IHandlerContext<I> = {
         ...context,

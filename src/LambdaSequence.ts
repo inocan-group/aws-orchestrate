@@ -216,6 +216,7 @@ export function handler(event, context, callback) {
       headers = event.headers;
       delete apiGateway.headers;
       request = getBodyFromPossibleLambdaProxyRequest<T>(event);
+      sequence = LambdaSequence.notASequence();
       delete apiGateway.body;
     } else if (isOrchestratedMessageBody(event)) {
       headers = (event as IOrchestratedMessageBody<T>).headers;

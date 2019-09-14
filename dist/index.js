@@ -432,9 +432,14 @@ function maskLoggingForSecrets(modules, log) {
       }
     });
   });
-  log.debug("All secret values [ ".concat(secretPaths.length, " ] have been masked in logging"), {
-    secretPaths: secretPaths
-  });
+
+  if (secretPaths.length > 0) {
+    log.debug("All secret values [ ".concat(secretPaths.length, " ] have been masked in logging"), {
+      secretPaths: secretPaths
+    });
+  } else {
+    log.debug("No secrets where added in this function's call; no additional masking needed.");
+  }
 }
 
 /**
@@ -553,35 +558,41 @@ function serializeSequence(s) {
 }
 
 /**
- * Reduces a sequence object to a simple "status" based representation
+ * A higher order function which first takes a `correlationId` and returns a function which provides
+ * a simple status of the sequence.
  */
 var sequenceStatus = function sequenceStatus(correlationId) {
-  return function (s, dataOrError) {
-    var status = s.isDone ? dataOrError instanceof Error ? "error" : "success" : "running";
-    var response = {
-      status: status,
-      correlationId: correlationId,
-      currentFn: s.activeFn.arn,
-      originFn: s.steps[0].arn,
-      total: s.steps.length,
-      current: s.completed.length
-    };
+  return (
+    /**
+     * Reduces a sequence object to a simple "status" based representation
+     */
+    function (s, dataOrError) {
+      var status = s.isDone ? dataOrError instanceof Error ? "error" : "success" : "running";
+      var response = {
+        status: status,
+        correlationId: correlationId,
+        currentFn: s.activeFn ? s.activeFn.arn : "",
+        originFn: s.activeFn ? s.steps[0].arn : "",
+        total: s.steps.length,
+        current: s.completed.length
+      };
 
-    switch (status) {
-      case "error":
-        return Object.assign(Object.assign({}, response), {
-          error: dataOrError
-        });
+      switch (status) {
+        case "error":
+          return Object.assign(Object.assign({}, response), {
+            error: dataOrError
+          });
 
-      case "success":
-        return Object.assign(Object.assign({}, response), {
-          data: dataOrError
-        });
+        case "success":
+          return Object.assign(Object.assign({}, response), {
+            data: dataOrError
+          });
 
-      case "running":
-        return response;
+        case "running":
+          return response;
+      }
     }
-  };
+  );
 };
 
 var correlationId;
@@ -642,7 +653,8 @@ function getContentType() {
  * point by a call to `getLocalSecrets()`.
  */
 
-function saveSecretHeaders(headers) {
+function saveSecretHeaders(headers, log) {
+  var secrets = [];
   var localSecrets = Object.keys(headers).reduce(function (headerSecrets, key) {
     if (key.slice(0, 4) === "O-S-") {
       var _key$slice$split = key.slice(4).split("/"),
@@ -650,11 +662,20 @@ function saveSecretHeaders(headers) {
           module = _key$slice$split2[0],
           name = _key$slice$split2[1];
 
-      set(headerSecrets, "".concat(module, ".").concat(name), headers[key]);
+      var dotPath = "".concat(module, ".").concat(name);
+      set(headerSecrets, dotPath, headers[key]);
+      secrets.push(dotPath);
     }
 
     return headerSecrets;
   }, {});
+
+  if (secrets.length > 0) {
+    log.debug("Secrets [ ".concat(secrets.length, " ] from headers were identified"), {
+      secrets: secrets
+    });
+  }
+
   saveSecretsLocally(localSecrets);
   return localSecrets;
 }
@@ -949,6 +970,7 @@ function () {
         headers = event.headers;
         delete apiGateway.headers;
         request = commonTypes.getBodyFromPossibleLambdaProxyRequest(event);
+        sequence = LambdaSequence.notASequence();
         delete apiGateway.body;
       } else if (isOrchestratedMessageBody(event)) {
         headers = event.headers;
@@ -1979,8 +2001,8 @@ var wrapper = function wrapper(fn) {
     var msg = loggedMessages(log);
     var errorMeta = new ErrorMeta();
     return _catch(function () {
+      workflowStatus = "starting-try-catch";
       setCorrelationId(log.getCorrelationId());
-      var status = sequenceStatus(log.getCorrelationId());
 
       var _LambdaSequence$from = LambdaSequence.from(event),
           request = _LambdaSequence$from.request,
@@ -1988,11 +2010,12 @@ var wrapper = function wrapper(fn) {
           apiGateway = _LambdaSequence$from.apiGateway,
           headers = _LambdaSequence$from.headers;
 
-      saveSecretHeaders(headers);
+      saveSecretHeaders(headers, log);
       maskLoggingForSecrets(getLocalSecrets(), log);
       msg.start(request, headers, context, sequence, apiGateway); //#region PREP
 
       workflowStatus = "prep-starting";
+      var status = sequenceStatus(log.getCorrelationId());
       var registerSequence$1 = registerSequence(log, context);
       var handlerContext = Object.assign(Object.assign({}, context), {
         log: log,

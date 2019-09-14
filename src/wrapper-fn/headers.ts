@@ -4,7 +4,7 @@ import { sequenceStatus, serializeSequence } from "../sequences";
 import { getCorrelationId } from "./correlationId";
 import { saveSecretsLocally, getLocalSecrets } from "./secrets";
 import set from "lodash.set";
-import { logger } from "aws-log";
+import { logger, ILoggerApi } from "aws-log";
 
 /**
  * Ensures that frontend clients who call Lambda's
@@ -48,17 +48,25 @@ export function getContentType() {
  * the `aws-ssm` library. This data structure can be retrieved at any
  * point by a call to `getLocalSecrets()`.
  */
-export function saveSecretHeaders(headers: IDictionary) {
+export function saveSecretHeaders(headers: IDictionary, log: ILoggerApi) {
+  let secrets: string[] = [];
   const localSecrets = Object.keys(headers).reduce(
     (headerSecrets: IDictionary, key: keyof typeof headers & string) => {
       if (key.slice(0, 4) === `O-S-`) {
         const [module, name] = key.slice(4).split("/");
-        set(headerSecrets, `${module}.${name}`, headers[key]);
+        const dotPath = `${module}.${name}`;
+        set(headerSecrets, dotPath, headers[key]);
+        secrets.push(dotPath);
       }
       return headerSecrets;
     },
     {}
   );
+  if (secrets.length > 0) {
+    log.debug(`Secrets [ ${secrets.length} ] from headers were identified`, {
+      secrets
+    });
+  }
   saveSecretsLocally(localSecrets);
   return localSecrets;
 }
