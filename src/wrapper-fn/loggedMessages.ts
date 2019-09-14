@@ -73,10 +73,12 @@ export const loggedMessages = (log: ILoggerApi) => ({
    * as soon as an error is detected in the wrapper, write a log message about the error
    */
   processingError: (e: IErrorClass, workflowStatus: string) => {
+    const stack = e.stack || new Error().stack;
     log.info(
       `Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${e.message} ]`,
       {
-        error: e,
+        errorMessage: e.message,
+        stack,
         workflowStatus
       }
     );
