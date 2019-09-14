@@ -354,10 +354,12 @@ export function handler(event, context, callback) {
 
     this._steps = steps;
     this._isASequence = true;
+    const activeFnParams =
+      this.activeFn && this.activeFn.params ? this.activeFn.params : {};
     const transformedRequest =
       typeof request === "object"
-        ? { ...this.activeFn.params, ...request }
-        : { ...this.activeFn.params, request };
+        ? { ...activeFnParams, ...request }
+        : { ...activeFnParams, request };
 
     /**
      * Inject the prior function's request params into

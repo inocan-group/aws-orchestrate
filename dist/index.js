@@ -1014,7 +1014,8 @@ function () {
 
       this._steps = steps;
       this._isASequence = true;
-      var transformedRequest = _typeof(request) === "object" ? Object.assign(Object.assign({}, this.activeFn.params), request) : Object.assign(Object.assign({}, this.activeFn.params), {
+      var activeFnParams = this.activeFn && this.activeFn.params ? this.activeFn.params : {};
+      var transformedRequest = _typeof(request) === "object" ? Object.assign(Object.assign({}, activeFnParams), request) : Object.assign(Object.assign({}, activeFnParams), {
         request: request
       });
       /**
