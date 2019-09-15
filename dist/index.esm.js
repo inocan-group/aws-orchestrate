@@ -413,7 +413,7 @@ function maskLoggingForSecrets(modules, log) {
       secretPaths: secretPaths
     });
   } else {
-    log.debug("No secrets where added in this function's call; no additional masking needed.");
+    log.debug("No secrets where added in this function's call; no additional log masking needed.");
   }
 }
 
@@ -2112,7 +2112,7 @@ var wrapper = function wrapper(fn) {
           });
         } else {
           // UNFOUND ERROR
-          log.debug("An unfound error is being processed by the default handling mechanism", {
+          log.debug("An unexpected error is being processed by the default handling mechanism", {
             defaultHandling: errorMeta.defaultHandling,
             errorMessage: e.message,
             stack: e.stack

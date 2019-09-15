@@ -195,7 +195,7 @@ export const wrapper = function<I, O>(
       } else {
         // UNFOUND ERROR
         log.debug(
-          `An unfound error is being processed by the default handling mechanism`,
+          `An unexpected error is being processed by the default handling mechanism`,
           {
             defaultHandling: errorMeta.defaultHandling,
             errorMessage: e.message,
