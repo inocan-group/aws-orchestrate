@@ -151,7 +151,6 @@ export const wrapper = function<I, O>(
 
       //#region RETURN-VALUES
       workflowStatus = "returning-values";
-
       if (handlerContext.isApiGatewayRequest) {
         const response: IApiGatewayResponse = {
           statusCode: HttpStatusCodes.Success,

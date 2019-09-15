@@ -30,13 +30,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
       }
     );
   },
-  newSequenceRegistered() {
-    const sequence = getNewSequence();
-    log.debug(
-      `This function has registered a new sequence with ${sequence.steps.length} steps to be kicked off as part of this function's execution.`,
-      { sequence: sequence.toObject() }
-    );
-  },
+
   sequenceStarting() {
     log.debug(
       `The new sequence this function registered is being started/invoked`,

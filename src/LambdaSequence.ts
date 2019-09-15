@@ -4,6 +4,7 @@ import {
   isLambdaProxyRequest,
   getBodyFromPossibleLambdaProxyRequest
 } from "common-types";
+
 import {
   ILambdaFunctionType,
   ILambdaSequenceStep,
@@ -14,7 +15,7 @@ import {
   WithBodySequence,
   IWrapperRequestHeaders
 } from "./@types";
-import { isOrchestratedMessageBody } from "./wrapper-fn";
+import { isOrchestratedMessageBody } from "./sequences";
 
 function size(obj: IDictionary) {
   let size = 0,
