@@ -149,7 +149,7 @@ export function maskLoggingForSecrets(modules: IDictionary, log: ILoggerApi) {
     );
   } else {
     log.debug(
-      `No secrets where added in this function's call; no additional masking needed.`
+      `No secrets where added in this function's call; no additional log masking needed.`
     );
   }
 }

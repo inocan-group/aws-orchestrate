@@ -438,7 +438,7 @@ function maskLoggingForSecrets(modules, log) {
       secretPaths: secretPaths
     });
   } else {
-    log.debug("No secrets where added in this function's call; no additional masking needed.");
+    log.debug("No secrets where added in this function's call; no additional log masking needed.");
   }
 }
 
@@ -2057,16 +2057,21 @@ var wrapper = function wrapper(fn) {
         }, function () {
           //#endregion
           //#region SEQUENCE (orchestration starting)
-          workflowStatus = "sequence-starting";
-          msg.sequenceStarting();
-          return _await$2(invokeNewSequence(result, log), function (seqResponse) {
-            msg.sequenceStarted(seqResponse);
-            log.debug("kicked off the new sequence defined in this function", {
-              sequence: getNewSequence()
-            });
-            workflowStatus = "sequence-started"; //#endregion
+          return _invoke$1(function () {
+            if (getNewSequence()) {
+              workflowStatus = "sequence-starting";
+              msg.sequenceStarting();
+              return _await$2(invokeNewSequence(result, log), function (seqResponse) {
+                msg.sequenceStarted(seqResponse);
+                log.debug("kicked off the new sequence defined in this function", {
+                  sequence: getNewSequence()
+                });
+                workflowStatus = "sequence-started";
+              });
+            }
+          }, function () {
+            //#endregion
             //#region SEQUENCE (send to tracker)
-
             return _invoke$1(function () {
               if (options.sequenceTracker || sequence.isSequence) {
                 workflowStatus = "sequence-tracker-starting";
@@ -2132,7 +2137,7 @@ var wrapper = function wrapper(fn) {
           });
         } else {
           // UNFOUND ERROR
-          log.debug("An unfound error is being processed by the default handling mechanism", {
+          log.debug("An unexpected error is being processed by the default handling mechanism", {
             defaultHandling: errorMeta.defaultHandling,
             errorMessage: e.message,
             stack: e.stack
