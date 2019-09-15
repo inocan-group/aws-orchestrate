@@ -38,9 +38,15 @@ export declare class LambdaSequence {
      * function will have already been done for you by the _wrapper_.
      */
     static from<T extends IDictionary = IDictionary>(event: T | IAWSLambdaProxyIntegrationRequest, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
+    /**
+     * instantiate a sequence with no steps;
+     * this is considered a _non_-sequence (aka.,
+     * it is `LambdaSequence` class but until it
+     * has steps it's role is simply to state that
+     * it is NOT a sequence)
+     */
     static notASequence(): LambdaSequence;
     private _steps;
-    private _isASequence;
     /**
      * **add**
      *

@@ -3,7 +3,8 @@ import { ILoggerApi, invoke } from "aws-log";
 import { IAWSLambaContext } from "common-types";
 import { loggedMessages } from "./loggedMessages";
 
-let sequence: LambdaSequence;
+// default to NOT a sequence
+let sequence: LambdaSequence = LambdaSequence.notASequence();
 
 /**
  * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)
