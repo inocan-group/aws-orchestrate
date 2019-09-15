@@ -1,4 +1,4 @@
-import { HttpStatusCodes, isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest } from 'common-types';
+import { isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest, HttpStatusCodes } from 'common-types';
 import { logger, invoke } from 'aws-log';
 import get from 'lodash.get';
 import set from 'lodash.set';
@@ -232,298 +232,6 @@ function _nonIterableRest() {
 }
 
 /**
- * **findError**
- *
- * Look for the error encountered within the "known errors" that
- * the function defined and return it's `ErrorHandler` if found.
- * If _not_ found then return `false`.
- */
-function findError(e, expectedErrors) {
-  var found = false;
-  expectedErrors.list.forEach(function (i) {
-    if (e.code === i.identifiedBy.code || e.name == i.identifiedBy.name || e.message.includes(i.identifiedBy.messageContains) || e instanceof i.identifiedBy.errorClass) {
-      found = i;
-    }
-  });
-  return found;
-}
-
-/**
- * Allows getting a single secret out of either _locally_ stored secrets -- or
- * if not found -- going to **SSM** and pulling the module containing this secret.
- */
-function _await(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-/**
- * **getSecrets**
- *
- * Gets the needed secrets for this function -- using locally available information
- * if available (_params_ and/or _cached_ values from prior calls) -- otherwise
- * goes out **SSM** to get it.
- *
- * In addition, all secrets requested (within the given function as well as
- * _prior_ function's secrets in a sequence) will be auto-forwarded to subsequent
- * functions in the currently executing sequence. Secrets _will not_ be passed back
- * in the function's response.
- *
- * @param modules the modules which are have secrets that are needed
- */
-
-
-function _async(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var getSecrets = _async(function (modules) {
-  var log = logger().reloadContext();
-  var localSecrets = getLocalSecrets();
-
-  if (modules.every(function (i) {
-    return Object.keys(localSecrets).includes(i);
-  })) {
-    // everything found in local secrets
-    log.debug("Call to getSecrets() resulted in 100% hit rate for modules locally", {
-      modules: modules
-    });
-    return modules.reduce(function (secrets, mod) {
-      secrets[mod] = localSecrets[mod];
-      return secrets;
-    }, {});
-  } // at least SOME modules are NOT stored locally, the latency of getting some
-  // versus getting them all is negligible so we'll get them all from SSM
-
-
-  log.debug("Some modules requested were not found locally, requesting from SSM.", {
-    modules: modules
-  });
-  return _await(import('aws-ssm'), function (_temp) {
-    var SSM = _temp.SSM;
-    return _await(SSM.modules(modules), function (newSecrets) {
-      modules.forEach(function (m) {
-        if (!newSecrets[m]) {
-          throw new Error("Failure to retrieve the SSM module \"".concat(m, "\""));
-        }
-
-        if (Object.keys(newSecrets[m]).length === 0) {
-          log.warn("Attempt to retrieve module \"".concat(m, "\" returned but had no "));
-        }
-      });
-      log.debug("new SSM modules retrieved");
-      var secrets = Object.assign(Object.assign({}, localSecrets), newSecrets);
-      saveSecretsLocally(secrets);
-      maskLoggingForSecrets(newSecrets, log);
-      return secrets;
-    });
-  });
-});
-/**
- * Goes through a set of secrets -- organized by `[module].[name] = secret` --
- * and masks the values so that they don't leak into the log files.
- */
-
-var getSecret = _async(function (moduleAndName) {
-  var log = logger().reloadContext();
-  var localSecrets = getLocalSecrets();
-
-  if (!moduleAndName.includes("/")) {
-    throw new Error("When using getSecret() you must state both the module and the NAME of the secret where the two are delimted by a \"/\" character.");
-  }
-
-  var _moduleAndName$split = moduleAndName.split("/"),
-      _moduleAndName$split2 = _slicedToArray(_moduleAndName$split, 2),
-      module = _moduleAndName$split2[0],
-      name = _moduleAndName$split2[1];
-
-  if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
-    log.debug("getSecret(\"".concat(moduleAndName, "\") found secret locally"), {
-      module: module,
-      name: name
-    });
-    return get(localSecrets, "".concat(module, ".").concat(name));
-  } else {
-    log.debug("getSecret(\"".concat(moduleAndName, "\") did not find locally so asking SSM for module \"").concat(module, "\""), {
-      module: module,
-      name: name,
-      localModules: Object.keys(localSecrets)
-    });
-    return _await(getSecrets([module]), function () {
-      if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
-        log.debug("after SSM call for module \"".concat(module, "\" the secret was found"), {
-          module: module,
-          name: name
-        });
-        return get(localSecrets, "".concat(module, ".").concat(name));
-      } else {
-        throw new Error("Even after asking SSM for module \"".concat(module, "\" the secret \"").concat(name, "\" was not found!"));
-      }
-    });
-  }
-});
-var localSecrets = {};
-/**
- * Saves secrets locally so they can be used rather than
- * going out to SSM. These secrets will then also be "passed
- * forward" to any functions which are invoked.
- */
-
-function saveSecretsLocally(secrets) {
-  localSecrets = secrets;
-}
-/**
- * Gets the locally stored secrets. The format of the keys in this hash
- * should be `{ module1: { NAME: value, NAME2: value} }` which cooresponds
- * to the `aws-ssm` opinion on SSM naming.
- */
-
-function getLocalSecrets() {
-  return localSecrets;
-}
-function maskLoggingForSecrets(modules, log) {
-  var secretPaths = [];
-  Object.keys(modules).forEach(function (mod) {
-    Object.keys(mod).forEach(function (s) {
-      if (_typeof(s) === "object") {
-        log.addToMaskedValues(modules[mod][s]);
-        secretPaths.push("".concat(mod, "/").concat(s));
-      }
-    });
-  });
-
-  if (secretPaths.length > 0) {
-    log.debug("All secret values [ ".concat(secretPaths.length, " ] have been masked in logging"), {
-      secretPaths: secretPaths
-    });
-  } else {
-    log.debug("No secrets where added in this function's call; no additional log masking needed.");
-  }
-}
-
-/**
- * A collection of log messages that the wrapper function will emit
- */
-
-var loggedMessages = function loggedMessages(log) {
-  return {
-    /** a handler function just started executing */
-    start: function start(request, headers, context, sequence, apiGateway) {
-      log.info("The handler function \"".concat(context.functionName, "\" has started execution.  ").concat(sequence.isSequence ? "This handler is part of a sequence [".concat(log.getCorrelationId(), " ].") : "This handler was not triggered as part of a sequence."), {
-        request: request,
-        sequence: sequence.toObject(),
-        headers: headers,
-        apiGateway: apiGateway
-      });
-    },
-    newSequenceRegistered: function newSequenceRegistered() {
-      var sequence = getNewSequence();
-      log.debug("This function has registered a new sequence with ".concat(sequence.steps.length, " steps to be kicked off as part of this function's execution."), {
-        sequence: sequence.toObject()
-      });
-    },
-    sequenceStarting: function sequenceStarting() {
-      log.debug("The new sequence this function registered is being started/invoked", {
-        sequence: getNewSequence().toObject()
-      });
-    },
-    sequenceStarted: function sequenceStarted(seqResponse) {
-      log.debug("The new sequence this function registered was successfully started", {
-        seqResponse: seqResponse
-      });
-    },
-
-    /**
-     * right before forwarding the sequence status to the `sequenceTracker` lambda
-     */
-    sequenceTracker: function sequenceTracker(_sequenceTracker, workflowStatus) {
-      log.info("About to send the LambdaSequence's status to the sequenceTracker [ ".concat(_sequenceTracker, " ]"), {
-        sequenceTracker: _sequenceTracker,
-        workflowStatus: workflowStatus
-      });
-    },
-    returnToApiGateway: function returnToApiGateway(result, responseHeaders) {
-      log.debug("Returning results to API Gateway", {
-        statusCode: HttpStatusCodes.Success,
-        result: JSON.stringify(result),
-        responseHeaders: responseHeaders
-      });
-    },
-
-    /**
-     * as soon as an error is detected in the wrapper, write a log message about the error
-     */
-    processingError: function processingError(e, workflowStatus) {
-      var stack = e.stack || new Error().stack;
-      log.info("Processing error in handler function; error occurred sometime after the \"".concat(workflowStatus, "\" workflow status: [ ").concat(e.message, " ]"), {
-        errorMessage: e.message,
-        stack: stack,
-        workflowStatus: workflowStatus
-      });
-    }
-  };
-};
-
-function _async$1(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var invokeNewSequence = _async$1(function () {
-  var results = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
-  if (!sequence) {
-    return;
-  }
-
-  results = results || {};
-  return invoke.apply(void 0, _toConsumableArray(sequence.next(_typeof(results) === "object" ? results : {
-    data: results
-  })));
-});
-var sequence = LambdaSequence.notASequence();
-/**
- * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)
- */
-
-function registerSequence(log, context) {
-  return function (s) {
-    loggedMessages(log).newSequenceRegistered();
-    sequence = s;
-  };
-}
-/** returns the sequence which was set by `startSequence()` */
-
-function getNewSequence() {
-  return sequence;
-}
-
-/**
  * Serializes a `LambdaSequence` into a string representation
  * so it can be passed as a header parameter in HTTP responses
  * as well invokation requests to other Lambda functions.
@@ -570,131 +278,6 @@ var sequenceStatus = function sequenceStatus(correlationId) {
   );
 };
 
-var correlationId;
-/**
- * Saves the `correlationId` for easy retrieval across various functions
- */
-
-function setCorrelationId(id) {
-  correlationId = id;
-}
-/**
- * Gets the `correlationId` for a running sequence (or an
- * API Gateway request where the client sent in one)
- */
-
-function getCorrelationId() {
-  return correlationId;
-}
-
-/**
- * Ensures that frontend clients who call Lambda's
- * will be given a CORs friendly response
- */
-
-var CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Credentials": true
-};
-var contentType = "application/json";
-var fnHeaders = {};
-function getContentType() {
-  return contentType;
-}
-/**
- * By passing in all the headers you received in a given
- * invocation this function will pull out all the headers
- * which start with `O-S-` (as this is the convention for
- * secrets passed by `aws-orchestrate`). Each line item in
- * a header represents a secret name/value pairing. For instance,
- * A typical header might be keyed with `O-S-firemodel/SERVICE_ACCOUNT`.
- *
- * Each header name/value will be parsed and then stored in following format:
- *
- * ```typescript
- * {
- *    [module1]: {
- *      secret1: value,
- *      secret2: value
- *    },
- *    [module2]: {
- *      secret3: value
- *    }
- * }
- * ```
- *
- * This format is consistent with the opinionated format established by
- * the `aws-ssm` library. This data structure can be retrieved at any
- * point by a call to `getLocalSecrets()`.
- */
-
-function saveSecretHeaders(headers, log) {
-  var secrets = [];
-  var localSecrets = Object.keys(headers).reduce(function (headerSecrets, key) {
-    if (key.slice(0, 4) === "O-S-") {
-      var _key$slice$split = key.slice(4).split("/"),
-          _key$slice$split2 = _slicedToArray(_key$slice$split, 2),
-          module = _key$slice$split2[0],
-          name = _key$slice$split2[1];
-
-      var dotPath = "".concat(module, ".").concat(name);
-      set(headerSecrets, dotPath, headers[key]);
-      secrets.push(dotPath);
-    }
-
-    return headerSecrets;
-  }, {});
-
-  if (secrets.length > 0) {
-    log.debug("Secrets [ ".concat(secrets.length, " ] from headers were identified"), {
-      secrets: secrets
-    });
-  }
-
-  saveSecretsLocally(localSecrets);
-  return localSecrets;
-}
-function setContentType(type) {
-  if (!type.includes("/")) {
-    throw new Error("The value sent to setContentType (\"".concat(type, "\") is not valid; it must be a valid MIME type."));
-  }
-
-  contentType = type;
-}
-/**
- * Get the user/developer defined headers for this function
- */
-
-function getFnHeaders() {
-  return fnHeaders;
-}
-function setFnHeaders(headers) {
-  if (_typeof(headers) !== "object") {
-    throw new Error("The value sent to setHeaders is not the required type. Was \"".concat(_typeof(headers), "\"; expected \"object\"."));
-  }
-
-  fnHeaders = headers;
-}
-
-function getBaseHeaders(opts) {
-  var _ref;
-
-  var correlationId = getCorrelationId();
-  var sequenceInfo = opts.sequence ? (_ref = {}, _defineProperty(_ref, "O-Sequence-Status", JSON.stringify(sequenceStatus(correlationId)(opts.sequence))), _defineProperty(_ref, "O-Serialized-Sequence", serializeSequence(opts.sequence)), _ref) : {};
-  return Object.assign(Object.assign(Object.assign({}, sequenceInfo), getFnHeaders()), _defineProperty({}, "X-Correlation-Id", correlationId));
-}
-/**
- * All the HTTP _Response_ headers to send when returning to API Gateway
- */
-
-
-function getResponseHeaders() {
-  var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-  return Object.assign(Object.assign(Object.assign({}, getBaseHeaders(opts)), CORS_HEADERS), {
-    "Content-Type": getContentType()
-  });
-}
-
 /**
  * detects if the given structure is of type <T> or
  * has been boxed into an `IOrchestratedMessageBody`
@@ -702,99 +285,6 @@ function getResponseHeaders() {
 function isOrchestratedMessageBody(msg) {
   return _typeof(msg) === "object" && msg.type === "orchestrated-message-body" ? true : false;
 }
-
-function _await$1(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-var _database;
-/**
- * **database**
- *
- * Provides a convenient means to connect to the database which lives
- * outside the _handler_ function's main thread. This allows the connection
- * to the database to sometimes be preserved between function executions.
- *
- * This is loaded asynchronously and the containing code must explicitly
- * load the `abstracted-admin` library (as this library only lists it as
- * a devDep)
- */
-
-
-function _invoke(body, then) {
-  var result = body();
-
-  if (result && result.then) {
-    return result.then(then);
-  }
-
-  return then(result);
-}
-
-function _async$2(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var database = _async$2(function (config) {
-  var log = logger().reloadContext();
-  return _invoke(function () {
-    if (!_database) {
-      return _invoke(function () {
-        if (!config) {
-          return function () {
-            if (process.env.FIREBASE_SERVICE_ACCOUNT && process.env.FIREBASE_DATA_ROOT_URL) {
-              log.debug("The environment variables are in place to configure database connectivity", {
-                firebaseDataRootUrl: process.env.FIREBASE_DATA_ROOT_URL
-              });
-            } else {
-              return _await$1(getSecrets(["firebase"]), function (_ref) {
-                var firebase = _ref.firebase;
-
-                if (!firebase) {
-                  throw new Error("The module \"firebase\" was not found in SSM; Firebase configuration could not be established");
-                }
-
-                if (!firebase.SERVICE_ACCOUNT) {
-                  throw new Error("The module \"firebase\" was found but it did not have a ");
-                }
-
-                log.debug("The Firebase service account has been retrieved from SSM and will be used.");
-                config = firebase.SERVICE_ACCOUNT;
-              });
-            }
-          }();
-        }
-      }, function (_result2) {
-        return  _await$1(import('abstracted-admin'), function (_temp) {
-          var DB = _temp.DB;
-          return _await$1(DB.connect(config), function (_DB$connect) {
-            _database = _DB$connect;
-          });
-        });
-      });
-    }
-  }, function (_result3) {
-    return  _database;
-  });
-});
 
 function size(obj) {
   var size = 0,
@@ -1667,6 +1157,514 @@ function (_Error) {
 
   return HandledError;
 }(_wrapNativeSuper(Error));
+
+/**
+ * **findError**
+ *
+ * Look for the error encountered within the "known errors" that
+ * the function defined and return it's `ErrorHandler` if found.
+ * If _not_ found then return `false`.
+ */
+function findError(e, expectedErrors) {
+  var found = false;
+  expectedErrors.list.forEach(function (i) {
+    if (e.code === i.identifiedBy.code || e.name == i.identifiedBy.name || e.message.includes(i.identifiedBy.messageContains) || e instanceof i.identifiedBy.errorClass) {
+      found = i;
+    }
+  });
+  return found;
+}
+
+/**
+ * Allows getting a single secret out of either _locally_ stored secrets -- or
+ * if not found -- going to **SSM** and pulling the module containing this secret.
+ */
+function _await(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+/**
+ * **getSecrets**
+ *
+ * Gets the needed secrets for this function -- using locally available information
+ * if available (_params_ and/or _cached_ values from prior calls) -- otherwise
+ * goes out **SSM** to get it.
+ *
+ * In addition, all secrets requested (within the given function as well as
+ * _prior_ function's secrets in a sequence) will be auto-forwarded to subsequent
+ * functions in the currently executing sequence. Secrets _will not_ be passed back
+ * in the function's response.
+ *
+ * @param modules the modules which are have secrets that are needed
+ */
+
+
+function _async(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var getSecrets = _async(function (modules) {
+  var log = logger().reloadContext();
+  var localSecrets = getLocalSecrets();
+
+  if (modules.every(function (i) {
+    return Object.keys(localSecrets).includes(i);
+  })) {
+    // everything found in local secrets
+    log.debug("Call to getSecrets() resulted in 100% hit rate for modules locally", {
+      modules: modules
+    });
+    return modules.reduce(function (secrets, mod) {
+      secrets[mod] = localSecrets[mod];
+      return secrets;
+    }, {});
+  } // at least SOME modules are NOT stored locally, the latency of getting some
+  // versus getting them all is negligible so we'll get them all from SSM
+
+
+  log.debug("Some modules requested were not found locally, requesting from SSM.", {
+    modules: modules
+  });
+  return _await(import('aws-ssm'), function (_temp) {
+    var SSM = _temp.SSM;
+    return _await(SSM.modules(modules), function (newSecrets) {
+      modules.forEach(function (m) {
+        if (!newSecrets[m]) {
+          throw new Error("Failure to retrieve the SSM module \"".concat(m, "\""));
+        }
+
+        if (Object.keys(newSecrets[m]).length === 0) {
+          log.warn("Attempt to retrieve module \"".concat(m, "\" returned but had no "));
+        }
+      });
+      log.debug("new SSM modules retrieved");
+      var secrets = Object.assign(Object.assign({}, localSecrets), newSecrets);
+      saveSecretsLocally(secrets);
+      maskLoggingForSecrets(newSecrets, log);
+      return secrets;
+    });
+  });
+});
+/**
+ * Goes through a set of secrets -- organized by `[module].[name] = secret` --
+ * and masks the values so that they don't leak into the log files.
+ */
+
+var getSecret = _async(function (moduleAndName) {
+  var log = logger().reloadContext();
+  var localSecrets = getLocalSecrets();
+
+  if (!moduleAndName.includes("/")) {
+    throw new Error("When using getSecret() you must state both the module and the NAME of the secret where the two are delimted by a \"/\" character.");
+  }
+
+  var _moduleAndName$split = moduleAndName.split("/"),
+      _moduleAndName$split2 = _slicedToArray(_moduleAndName$split, 2),
+      module = _moduleAndName$split2[0],
+      name = _moduleAndName$split2[1];
+
+  if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
+    log.debug("getSecret(\"".concat(moduleAndName, "\") found secret locally"), {
+      module: module,
+      name: name
+    });
+    return get(localSecrets, "".concat(module, ".").concat(name));
+  } else {
+    log.debug("getSecret(\"".concat(moduleAndName, "\") did not find locally so asking SSM for module \"").concat(module, "\""), {
+      module: module,
+      name: name,
+      localModules: Object.keys(localSecrets)
+    });
+    return _await(getSecrets([module]), function () {
+      if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
+        log.debug("after SSM call for module \"".concat(module, "\" the secret was found"), {
+          module: module,
+          name: name
+        });
+        return get(localSecrets, "".concat(module, ".").concat(name));
+      } else {
+        throw new Error("Even after asking SSM for module \"".concat(module, "\" the secret \"").concat(name, "\" was not found!"));
+      }
+    });
+  }
+});
+var localSecrets = {};
+/**
+ * Saves secrets locally so they can be used rather than
+ * going out to SSM. These secrets will then also be "passed
+ * forward" to any functions which are invoked.
+ */
+
+function saveSecretsLocally(secrets) {
+  localSecrets = secrets;
+}
+/**
+ * Gets the locally stored secrets. The format of the keys in this hash
+ * should be `{ module1: { NAME: value, NAME2: value} }` which cooresponds
+ * to the `aws-ssm` opinion on SSM naming.
+ */
+
+function getLocalSecrets() {
+  return localSecrets;
+}
+function maskLoggingForSecrets(modules, log) {
+  var secretPaths = [];
+  Object.keys(modules).forEach(function (mod) {
+    Object.keys(mod).forEach(function (s) {
+      if (_typeof(s) === "object") {
+        log.addToMaskedValues(modules[mod][s]);
+        secretPaths.push("".concat(mod, "/").concat(s));
+      }
+    });
+  });
+
+  if (secretPaths.length > 0) {
+    log.debug("All secret values [ ".concat(secretPaths.length, " ] have been masked in logging"), {
+      secretPaths: secretPaths
+    });
+  } else {
+    log.debug("No secrets where added in this function's call; no additional log masking needed.");
+  }
+}
+
+function _async$1(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var invokeNewSequence = _async$1(function () {
+  var results = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+  if (!newSequence) {
+    return;
+  }
+
+  results = results || {};
+  return invoke.apply(void 0, _toConsumableArray(newSequence.next(_typeof(results) === "object" ? results : {
+    data: results
+  })));
+});
+var newSequence = LambdaSequence.notASequence();
+/**
+ * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)
+ */
+
+function registerSequence(log, context) {
+  return function (s) {
+    log.debug("This function has registered a new sequence with ".concat(s.steps.length, " steps to be kicked off as part of this function's execution."), {
+      sequence: s.toObject()
+    });
+    newSequence = s;
+  };
+}
+/**
+ * returns the sequence which was set by `startSequence()`
+ **/
+
+function getNewSequence() {
+  return newSequence;
+}
+
+var correlationId;
+/**
+ * Saves the `correlationId` for easy retrieval across various functions
+ */
+
+function setCorrelationId(id) {
+  correlationId = id;
+}
+/**
+ * Gets the `correlationId` for a running sequence (or an
+ * API Gateway request where the client sent in one)
+ */
+
+function getCorrelationId() {
+  return correlationId;
+}
+
+/**
+ * Ensures that frontend clients who call Lambda's
+ * will be given a CORs friendly response
+ */
+
+var CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Credentials": true
+};
+var contentType = "application/json";
+var fnHeaders = {};
+function getContentType() {
+  return contentType;
+}
+/**
+ * By passing in all the headers you received in a given
+ * invocation this function will pull out all the headers
+ * which start with `O-S-` (as this is the convention for
+ * secrets passed by `aws-orchestrate`). Each line item in
+ * a header represents a secret name/value pairing. For instance,
+ * A typical header might be keyed with `O-S-firemodel/SERVICE_ACCOUNT`.
+ *
+ * Each header name/value will be parsed and then stored in following format:
+ *
+ * ```typescript
+ * {
+ *    [module1]: {
+ *      secret1: value,
+ *      secret2: value
+ *    },
+ *    [module2]: {
+ *      secret3: value
+ *    }
+ * }
+ * ```
+ *
+ * This format is consistent with the opinionated format established by
+ * the `aws-ssm` library. This data structure can be retrieved at any
+ * point by a call to `getLocalSecrets()`.
+ */
+
+function saveSecretHeaders(headers, log) {
+  var secrets = [];
+  var localSecrets = Object.keys(headers).reduce(function (headerSecrets, key) {
+    if (key.slice(0, 4) === "O-S-") {
+      var _key$slice$split = key.slice(4).split("/"),
+          _key$slice$split2 = _slicedToArray(_key$slice$split, 2),
+          module = _key$slice$split2[0],
+          name = _key$slice$split2[1];
+
+      var dotPath = "".concat(module, ".").concat(name);
+      set(headerSecrets, dotPath, headers[key]);
+      secrets.push(dotPath);
+    }
+
+    return headerSecrets;
+  }, {});
+
+  if (secrets.length > 0) {
+    log.debug("Secrets [ ".concat(secrets.length, " ] from headers were identified"), {
+      secrets: secrets
+    });
+  }
+
+  saveSecretsLocally(localSecrets);
+  return localSecrets;
+}
+function setContentType(type) {
+  if (!type.includes("/")) {
+    throw new Error("The value sent to setContentType (\"".concat(type, "\") is not valid; it must be a valid MIME type."));
+  }
+
+  contentType = type;
+}
+/**
+ * Get the user/developer defined headers for this function
+ */
+
+function getFnHeaders() {
+  return fnHeaders;
+}
+function setFnHeaders(headers) {
+  if (_typeof(headers) !== "object") {
+    throw new Error("The value sent to setHeaders is not the required type. Was \"".concat(_typeof(headers), "\"; expected \"object\"."));
+  }
+
+  fnHeaders = headers;
+}
+
+function getBaseHeaders(opts) {
+  var _ref;
+
+  var correlationId = getCorrelationId();
+  var sequenceInfo = opts.sequence ? (_ref = {}, _defineProperty(_ref, "O-Sequence-Status", JSON.stringify(sequenceStatus(correlationId)(opts.sequence))), _defineProperty(_ref, "O-Serialized-Sequence", serializeSequence(opts.sequence)), _ref) : {};
+  return Object.assign(Object.assign(Object.assign({}, sequenceInfo), getFnHeaders()), _defineProperty({}, "X-Correlation-Id", correlationId));
+}
+/**
+ * All the HTTP _Response_ headers to send when returning to API Gateway
+ */
+
+
+function getResponseHeaders() {
+  var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  return Object.assign(Object.assign(Object.assign({}, getBaseHeaders(opts)), CORS_HEADERS), {
+    "Content-Type": getContentType()
+  });
+}
+
+function _await$1(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+var _database;
+/**
+ * **database**
+ *
+ * Provides a convenient means to connect to the database which lives
+ * outside the _handler_ function's main thread. This allows the connection
+ * to the database to sometimes be preserved between function executions.
+ *
+ * This is loaded asynchronously and the containing code must explicitly
+ * load the `abstracted-admin` library (as this library only lists it as
+ * a devDep)
+ */
+
+
+function _invoke(body, then) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(then);
+  }
+
+  return then(result);
+}
+
+function _async$2(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var database = _async$2(function (config) {
+  var log = logger().reloadContext();
+  return _invoke(function () {
+    if (!_database) {
+      return _invoke(function () {
+        if (!config) {
+          return function () {
+            if (process.env.FIREBASE_SERVICE_ACCOUNT && process.env.FIREBASE_DATA_ROOT_URL) {
+              log.debug("The environment variables are in place to configure database connectivity", {
+                firebaseDataRootUrl: process.env.FIREBASE_DATA_ROOT_URL
+              });
+            } else {
+              return _await$1(getSecrets(["firebase"]), function (_ref) {
+                var firebase = _ref.firebase;
+
+                if (!firebase) {
+                  throw new Error("The module \"firebase\" was not found in SSM; Firebase configuration could not be established");
+                }
+
+                if (!firebase.SERVICE_ACCOUNT) {
+                  throw new Error("The module \"firebase\" was found but it did not have a ");
+                }
+
+                log.debug("The Firebase service account has been retrieved from SSM and will be used.");
+                config = firebase.SERVICE_ACCOUNT;
+              });
+            }
+          }();
+        }
+      }, function (_result2) {
+        return  _await$1(import('abstracted-admin'), function (_temp) {
+          var DB = _temp.DB;
+          return _await$1(DB.connect(config), function (_DB$connect) {
+            _database = _DB$connect;
+          });
+        });
+      });
+    }
+  }, function (_result3) {
+    return  _database;
+  });
+});
+
+/**
+ * A collection of log messages that the wrapper function will emit
+ */
+
+var loggedMessages = function loggedMessages(log) {
+  return {
+    /** a handler function just started executing */
+    start: function start(request, headers, context, sequence, apiGateway) {
+      log.info("The handler function \"".concat(context.functionName, "\" has started execution.  ").concat(sequence.isSequence ? "This handler is part of a sequence [".concat(log.getCorrelationId(), " ].") : "This handler was not triggered as part of a sequence."), {
+        request: request,
+        sequence: sequence.toObject(),
+        headers: headers,
+        apiGateway: apiGateway
+      });
+    },
+    sequenceStarting: function sequenceStarting() {
+      log.debug("The new sequence this function registered is being started/invoked", {
+        sequence: getNewSequence().toObject()
+      });
+    },
+    sequenceStarted: function sequenceStarted(seqResponse) {
+      log.debug("The new sequence this function registered was successfully started", {
+        seqResponse: seqResponse
+      });
+    },
+
+    /**
+     * right before forwarding the sequence status to the `sequenceTracker` lambda
+     */
+    sequenceTracker: function sequenceTracker(_sequenceTracker, workflowStatus) {
+      log.info("About to send the LambdaSequence's status to the sequenceTracker [ ".concat(_sequenceTracker, " ]"), {
+        sequenceTracker: _sequenceTracker,
+        workflowStatus: workflowStatus
+      });
+    },
+    returnToApiGateway: function returnToApiGateway(result, responseHeaders) {
+      log.debug("Returning results to API Gateway", {
+        statusCode: HttpStatusCodes.Success,
+        result: JSON.stringify(result),
+        responseHeaders: responseHeaders
+      });
+    },
+
+    /**
+     * as soon as an error is detected in the wrapper, write a log message about the error
+     */
+    processingError: function processingError(e, workflowStatus) {
+      var stack = e.stack || new Error().stack;
+      log.info("Processing error in handler function; error occurred sometime after the \"".concat(workflowStatus, "\" workflow status: [ ").concat(e.message, " ]"), {
+        errorMessage: e.message,
+        stack: stack,
+        workflowStatus: workflowStatus
+      });
+    }
+  };
+};
 
 /**
  * converts an `Error` (or subclass) into a error hash
