@@ -105,7 +105,9 @@ export const wrapper = function<I, O>(
       //#region CALL the HANDLER FUNCTION
       workflowStatus = "running-function";
       result = await fn(request, handlerContext);
-      log.debug(`finished calling the handler function`, { result });
+      log.debug(
+        `handler function returned successfully; wrapper continuing ...`
+      );
       workflowStatus = "function-complete";
       //#endregion
 

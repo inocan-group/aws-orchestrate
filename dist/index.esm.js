@@ -2013,9 +2013,7 @@ var wrapper = function wrapper(fn) {
       workflowStatus = "running-function";
       return _await$2(fn(request, handlerContext), function (_fn) {
         result = _fn;
-        log.debug("finished calling the handler function", {
-          result: result
-        });
+        log.debug("handler function returned successfully; wrapper continuing ...");
         workflowStatus = "function-complete"; //#endregion
         //region SEQUENCE (next)
 
