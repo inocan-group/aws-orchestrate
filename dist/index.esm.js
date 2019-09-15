@@ -506,7 +506,7 @@ var invokeNewSequence = _async$1(function () {
     data: results
   })));
 });
-var sequence;
+var sequence = LambdaSequence.notASequence();
 /**
  * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)
  */
@@ -814,7 +814,6 @@ function () {
     _classCallCheck(this, LambdaSequence);
 
     this._steps = [];
-    this._isASequence = true;
   }
   /**
    * **add** (static initializer)
@@ -825,6 +824,7 @@ function () {
 
   _createClass(LambdaSequence, [{
     key: "add",
+    // private _isASequence: boolean = true;
 
     /**
      * **add**
@@ -1010,8 +1010,8 @@ function () {
         throw new Error("Attempt to ingest steps into a LambdaSequence that already has steps!");
       }
 
-      this._steps = steps;
-      this._isASequence = true;
+      this._steps = steps; // this._isASequence = true;
+
       var activeFnParams = this.activeFn && this.activeFn.params ? this.activeFn.params : {};
       var transformedRequest = _typeof(request) === "object" ? Object.assign(Object.assign({}, activeFnParams), request) : Object.assign(Object.assign({}, activeFnParams), {
         request: request
@@ -1044,10 +1044,10 @@ function () {
     key: "toObject",
     value: function toObject() {
       var obj = {
-        isASequence: this._isASequence
+        isASequence: this.isSequence
       };
 
-      if (this._isASequence) {
+      if (this.isSequence) {
         obj.totalSteps = this.steps.length;
         obj.completedSteps = this.completed.length;
 
@@ -1130,7 +1130,8 @@ function () {
   }, {
     key: "isSequence",
     get: function get() {
-      return this._isASequence;
+      // return this._isASequence;
+      return this._steps.length > 0;
     }
   }, {
     key: "isDone",
@@ -1280,12 +1281,20 @@ function () {
       var obj = new LambdaSequence();
       return obj.from(event, logger);
     }
+    /**
+     * instantiate a sequence with no steps;
+     * this is considered a _non_-sequence (aka.,
+     * it is `LambdaSequence` class but until it
+     * has steps it's role is simply to state that
+     * it is NOT a sequence)
+     */
+
   }, {
     key: "notASequence",
     value: function notASequence() {
       var obj = new LambdaSequence();
-      obj._steps = [];
-      obj._isASequence = false;
+      obj._steps = []; // obj._isASequence = false;
+
       return obj;
     }
   }]);
@@ -2031,7 +2040,7 @@ var wrapper = function wrapper(fn) {
           //#endregion
           //#region SEQUENCE (orchestration starting)
           return _invoke$1(function () {
-            if (getNewSequence()) {
+            if (getNewSequence().isSequence) {
               workflowStatus = "sequence-starting";
               msg.sequenceStarting();
               return _await$2(invokeNewSequence(result, log), function (seqResponse) {
@@ -2041,6 +2050,8 @@ var wrapper = function wrapper(fn) {
                 });
                 workflowStatus = "sequence-started";
               });
+            } else {
+              log.debug("This function did not kick off a NEW sequence.");
             }
           }, function () {
             //#endregion

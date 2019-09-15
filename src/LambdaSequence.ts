@@ -2,9 +2,7 @@ import {
   IAWSLambdaProxyIntegrationRequest,
   IDictionary,
   isLambdaProxyRequest,
-  getBodyFromPossibleLambdaProxyRequest,
-  createError,
-  IHttpRequestHeaders
+  getBodyFromPossibleLambdaProxyRequest
 } from "common-types";
 import {
   ILambdaFunctionType,
@@ -13,13 +11,10 @@ import {
   ILambdaSequenceNextTuple,
   ILambaSequenceFromResponse,
   IOrchestratedMessageBody,
-  IWrapperResponseHeaders,
   WithBodySequence,
   IWrapperRequestHeaders
 } from "./@types";
 import { isOrchestratedMessageBody } from "./wrapper-fn";
-import { sequenceStatus } from "./sequences";
-import { logger } from "aws-log";
 
 function size(obj: IDictionary) {
   let size = 0,
@@ -83,15 +78,22 @@ export function handler(event, context, callback) {
     return obj.from(event, logger);
   }
 
+  /**
+   * instantiate a sequence with no steps;
+   * this is considered a _non_-sequence (aka.,
+   * it is `LambdaSequence` class but until it
+   * has steps it's role is simply to state that
+   * it is NOT a sequence)
+   */
   public static notASequence() {
     const obj = new LambdaSequence();
     obj._steps = [];
-    obj._isASequence = false;
+    // obj._isASequence = false;
     return obj;
   }
 
   private _steps: ILambdaSequenceStep[] = [];
-  private _isASequence: boolean = true;
+  // private _isASequence: boolean = true;
 
   /**
    * **add**
@@ -262,7 +264,8 @@ export function handler(event, context, callback) {
    * is part of a _sequence_.
    */
   public get isSequence() {
-    return this._isASequence;
+    // return this._isASequence;
+    return this._steps.length > 0;
   }
 
   public get isDone() {
@@ -356,7 +359,7 @@ export function handler(event, context, callback) {
     }
 
     this._steps = steps;
-    this._isASequence = true;
+    // this._isASequence = true;
     const activeFnParams =
       this.activeFn && this.activeFn.params ? this.activeFn.params : {};
     const transformedRequest =
@@ -401,9 +404,9 @@ export function handler(event, context, callback) {
   }
   public toObject() {
     const obj: IDictionary = {
-      isASequence: this._isASequence
+      isASequence: this.isSequence
     };
-    if (this._isASequence) {
+    if (this.isSequence) {
       obj.totalSteps = this.steps.length;
       obj.completedSteps = this.completed.length;
       if (this.activeFn) {

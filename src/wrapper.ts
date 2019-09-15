@@ -123,7 +123,7 @@ export const wrapper = function<I, O>(
       //#endregion
 
       //#region SEQUENCE (orchestration starting)
-      if (getNewSequence()) {
+      if (getNewSequence().isSequence) {
         workflowStatus = "sequence-starting";
         msg.sequenceStarting();
         const seqResponse = await invokeNewSequence(result, log);
@@ -132,6 +132,8 @@ export const wrapper = function<I, O>(
           sequence: getNewSequence()
         });
         workflowStatus = "sequence-started";
+      } else {
+        log.debug(`This function did not kick off a NEW sequence.`);
       }
       //#endregion
 
