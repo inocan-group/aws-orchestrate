@@ -75,9 +75,9 @@ export const wrapper = function<I, O>(
       const { request, sequence, apiGateway, headers } = LambdaSequence.from(
         event
       );
+      msg.start(request, headers, context, sequence, apiGateway);
       saveSecretHeaders(headers, log);
       maskLoggingForSecrets(getLocalSecrets(), log);
-      msg.start(request, headers, context, sequence, apiGateway);
 
       //#region PREP
       workflowStatus = "prep-starting";
@@ -105,18 +105,16 @@ export const wrapper = function<I, O>(
       //#region CALL the HANDLER FUNCTION
       workflowStatus = "running-function";
       result = await fn(request, handlerContext);
-      log.debug(
-        `handler function returned successfully; wrapper continuing ...`
-      );
+      log.debug(`handler function returned to wrapper function`, { result });
       workflowStatus = "function-complete";
       //#endregion
 
       //region SEQUENCE (next)
       if (sequence.isSequence && !sequence.isDone) {
         workflowStatus = "invoke-started";
-        await invoke(...sequence.next(result));
+        const invokeParams = await invoke(...sequence.next<O>(result));
         log.debug(`finished invoking the next function in the sequence`, {
-          sequence
+          invokeParams
         });
         workflowStatus = "invoke-complete";
       }
@@ -128,9 +126,6 @@ export const wrapper = function<I, O>(
         msg.sequenceStarting();
         const seqResponse = await invokeNewSequence(result, log);
         msg.sequenceStarted(seqResponse);
-        log.debug(`kicked off the new sequence defined in this function`, {
-          sequence: getNewSequence()
-        });
         workflowStatus = "sequence-started";
       } else {
         log.debug(`This function did not kick off a NEW sequence.`);
