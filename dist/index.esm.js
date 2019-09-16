@@ -1,4 +1,4 @@
-import { isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest, HttpStatusCodes } from 'common-types';
+import { HttpStatusCodes, isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest } from 'common-types';
 import { compress as compress$1, decompress as decompress$1 } from 'lzutf8';
 import { logger, invoke } from 'aws-log';
 import get from 'lodash.get';
@@ -311,6 +311,345 @@ function isDynamic(obj) {
   return obj.type === "orchestrated-dynamic-property" && obj.lookup ? true : false;
 }
 
+var HandledError =
+/*#__PURE__*/
+function (_Error) {
+  _inherits(HandledError, _Error);
+
+  /**
+   * **Constructor**
+   *
+   * @param errorCode the numeric HTTP error code
+   * @param e the error which wasn't handled
+   * @param classification the type/subtype of the error; if only `subtype` stated then
+   * type will be defaulted to `handled-error`
+   */
+  function HandledError(errorCode, e, context) {
+    var _this;
+
+    _classCallCheck(this, HandledError);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(HandledError).call(this, e.message));
+    _this.stack = e.stack;
+    var type = e.name && e.name !== "Error" ? e.name : context.functionName;
+    var subType = e.code ? String(e.code) : "handled-error";
+    _this.classification = "".concat(type, "/").concat(subType);
+    _this.functionName = context.functionName;
+    _this.name = type;
+    _this.code = subType;
+    _this.httpStatus = errorCode;
+    return _this;
+  }
+  /**
+   * Create a serialized/string representation of the error
+   * for returning to **API Gateway**
+   */
+
+
+  _createClass(HandledError, null, [{
+    key: "apiGatewayError",
+    value: function apiGatewayError(errorCode, e, context) {
+      var obj = new HandledError(errorCode, e, context);
+      return JSON.stringify({
+        errorType: obj.name,
+        httpStatus: obj.httpStatus,
+        requestId: obj.requestId,
+        message: obj.message
+      });
+    }
+    /**
+     * creates an error to be thrown by a **Lambda** function which
+     * was initiatiated by a
+     */
+
+  }, {
+    key: "lambdaError",
+    value: function lambdaError(errorCode, e, context) {
+      var obj = new HandledError(errorCode, e, context);
+    }
+  }]);
+
+  return HandledError;
+}(_wrapNativeSuper(Error));
+
+var UnhandledError =
+/*#__PURE__*/
+function (_Error) {
+  _inherits(UnhandledError, _Error);
+
+  /**
+   * **Constructor**
+   *
+   * @param errorCode the numeric HTTP error code
+   * @param e the error which wasn't handled
+   * @param classification the type/subtype of the error; if only `subtype` stated then
+   * type will be defaulted to `unhandled-error`
+   */
+  function UnhandledError(errorCode, e, classification) {
+    var _this;
+
+    _classCallCheck(this, UnhandledError);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(UnhandledError).call(this, e.message));
+    _this.stack = e.stack;
+    classification = classification || "unhandled-error/".concat(e.name);
+    classification = classification.includes("/") ? classification : "unhandled-error/".concat(classification);
+
+    var _classification$split = classification.split("/"),
+        _classification$split2 = _slicedToArray(_classification$split, 2),
+        type = _classification$split2[0],
+        subType = _classification$split2[1];
+
+    _this.name = type;
+    _this.code = subType;
+    _this.httpStatus = errorCode;
+    return _this;
+  }
+  /**
+   * Create a serialized/string representation of the error
+   * for returning to **API Gateway**
+   */
+
+
+  _createClass(UnhandledError, null, [{
+    key: "apiGatewayError",
+    value: function apiGatewayError(errorCode, e, requestId, classification) {
+      var obj = new UnhandledError(errorCode, e, classification);
+      obj.requestId = requestId;
+      return {
+        statusCode: obj.httpStatus,
+        errorType: obj.name,
+        errorMessage: obj.message,
+        stackTrace: obj.stack,
+        body: JSON.stringify({
+          requestId: obj.requestId,
+          classification: classification
+        })
+      };
+    }
+    /**
+     * creates an error to be thrown by a **Lambda** function which
+     * was initiatiated by a
+     */
+
+  }, {
+    key: "lambdaError",
+    value: function lambdaError(errorCode, e, classification) {
+      var obj = new UnhandledError(errorCode, e, classification);
+    }
+  }]);
+
+  return UnhandledError;
+}(_wrapNativeSuper(Error));
+
+/**
+ * Allows the definition of a serverless function's
+ * expected error code
+ */
+var ErrorHandler =
+/*#__PURE__*/
+function () {
+  function ErrorHandler(code, identifiedBy, handling) {
+    _classCallCheck(this, ErrorHandler);
+
+    this.code = code;
+    this.identifiedBy = identifiedBy;
+    this.handling = handling;
+  }
+
+  _createClass(ErrorHandler, [{
+    key: "toString",
+    value: function toString() {
+      return {
+        code: this.code,
+        identifiedBy: this.identifiedBy,
+        handling: this.handling
+      };
+    }
+  }]);
+
+  return ErrorHandler;
+}();
+
+var DEFAULT_ERROR_CODE = 500;
+/**
+ * Is a container for a serverless function that
+ * describes:
+ *
+ * 1. What errors are _expected_
+ * 2. **Meta** for all errors -- expected and unexpected -- on:
+ *    - the return's exit code (which is typically a reduced set from the errors themselves)
+ *    - how to handle them (do something in the _current fn_ or pass to a _handling function_)
+ *
+ * By default, all errors are given a 500 exit code and log the error at the "error" severity
+ * level but perform no additional work.
+ */
+
+var ErrorMeta =
+/*#__PURE__*/
+function () {
+  function ErrorMeta() {
+    _classCallCheck(this, ErrorMeta);
+
+    this._errors = [];
+    this._defaultErrorCode = DEFAULT_ERROR_CODE;
+  }
+  /**
+   * Add an error handler for a known/expected error
+   */
+
+
+  _createClass(ErrorMeta, [{
+    key: "addHandler",
+    value: function addHandler(
+    /** the return code that will be returned for this error */
+    code,
+    /** how will an error be matched */
+    identifiedBy,
+    /**
+     * how will an error be handled; it doesn't NEED to be handled and its a reasonable
+     * goal/outcome just to set the appropriate http error code
+     */
+    handling) {
+      this._errors.push(new ErrorHandler(code, identifiedBy, handling));
+    }
+    /**
+     * Returns the list of errors being managed.
+     */
+
+  }, {
+    key: "setDefaultErrorCode",
+
+    /**
+     * Allows you to set a default code for unhandled errors; the default is
+     * `500`. This method follows the _fluent_ conventions and returns and instance
+     * of itself as a return value.
+     *
+     * Note: if an unhandled error has the property of `httpStatus` set and is a number
+     * then it will be respected over the default.
+     */
+    value: function setDefaultErrorCode(code) {
+      this._defaultErrorCode = code;
+      return this;
+    }
+  }, {
+    key: "setDefaultHandler",
+    value: function setDefaultHandler(param) {
+      switch (_typeof(param)) {
+        case "string":
+          this._arn = param;
+          this._defaultHandlerFn = undefined;
+          this._defaultError = undefined;
+          break;
+
+        case "function":
+          this._defaultHandlerFn = param;
+          this._arn = undefined;
+          this._defaultError = undefined;
+          break;
+
+        default:
+          if (param instanceof Error) {
+            this._defaultError = param;
+            this._arn = undefined;
+            this._defaultHandlerFn = undefined;
+          } else {
+            console.log({
+              message: "The passed in setDefaultHandler param was of an unknown type ".concat(_typeof(param), "; the action has been ignored")
+            });
+          }
+
+      }
+
+      return this;
+    }
+    /**
+     * States how to deal with the default error handling. Default
+     * error handling is used once all "known errors" have been exhausted.
+     */
+
+  }, {
+    key: "toString",
+    value: function toString() {
+      return JSON.stringify({
+        defaultCode: this._defaultErrorCode,
+        errors: this._errors
+      });
+    }
+  }, {
+    key: "list",
+    get: function get() {
+      return this._errors;
+    }
+  }, {
+    key: "defaultHandling",
+    get: function get() {
+      if (this._arn) {
+        return {
+          type: "error-forwarding",
+          code: this.defaultErrorCode,
+          arn: this._arn,
+          prop: "_arn"
+        };
+      }
+
+      if (this._defaultHandlerFn) {
+        return {
+          type: "handler-fn",
+          code: this.defaultErrorCode,
+          defaultHandlerFn: this._defaultHandlerFn,
+          prop: "_defaultHandlerFn"
+        };
+      }
+
+      if (this._defaultError) {
+        return {
+          type: "default-error",
+          code: this.defaultErrorCode,
+          error: this._defaultError,
+          prop: "_defaultError"
+        };
+      }
+
+      return {
+        type: "default",
+        code: this.defaultErrorCode,
+        prop: "_default"
+      };
+    }
+    /**
+     * The default code for unhandled errors.
+     *
+     * Note: if an unhandled error has the property of `httpStatus` set and is a number
+     * then it will be respected over the default.
+     */
+
+  }, {
+    key: "defaultErrorCode",
+    get: function get() {
+      return this._defaultErrorCode;
+    }
+  }]);
+
+  return ErrorMeta;
+}();
+
+/**
+ * converts an `Error` (or subclass) into a error hash
+ * which **API Gateway** can process.
+ */
+
+function convertToApiGatewayError(e) {
+  var defaultCode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_ERROR_CODE;
+  return {
+    headers: getResponseHeaders(),
+    errorCode: e.errorCode || defaultCode,
+    errorType: e.name || e.code || "Error",
+    errorMessage: e.message,
+    stackTrace: e.stack
+  };
+}
+
 /**
  * compresses large payloads larger than 4k (or whatever size
  * you state in the second parameter)
@@ -321,31 +660,53 @@ function compress(data, ifLargerThan) {
 
   if (typeof data !== "string") {
     payload = JSON.stringify(data);
+  } else {
+    payload = data;
   }
 
   if (payload.length > (ifLargerThan || 4096)) {
     return {
       compressed: true,
-      data: compress$1(payload, {
-        inputEncoding: "String",
-        outputEncoding: "Base64"
-      })
+      data: compressionHandler(payload)
     };
   } else {
     return data;
   }
 }
+
+function compressionHandler(data) {
+  try {
+    return compress$1(data, {
+      inputEncoding: "String",
+      outputEncoding: "Base64"
+    });
+  } catch (e) {
+    e.message = "Problem compressing section. Error message: ".concat(e.message, "\n\nText being compressed started with: ").concat(data.slice(0, 10));
+    throw new UnhandledError(HttpStatusCodes.Conflict, e, "aws-orchestrate/decompress");
+  }
+}
+
+function isCompressedSection(data) {
+  return _typeof(data) === "object" && data.compressed === true ? true : false;
+}
 function decompress(data) {
   var parse = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+  var parser = parse ? JSON.parse : function (a) {
+    return a;
+  };
+  return isCompressedSection(data) ? parser(decompressionHandler(data)) : data;
+}
 
-  if (_typeof(data) === "object" && data.compressed === true) {
-    return parse ? JSON.parse(decompress$1(data, {
+function decompressionHandler(section) {
+  try {
+    return decompress$1(section.data, {
       inputEncoding: "Base64",
       outputEncoding: "String"
-    })) : decompress$1(data);
+    });
+  } catch (e) {
+    e.message = "Problem decompressing section. Error message: ".concat(e.message, "\n\nText being decompressed started with: ").concat(section.data.slice(0, 10));
+    throw new UnhandledError(HttpStatusCodes.Conflict, e, "aws-orchestrate/decompress");
   }
-
-  return data;
 }
 
 function isBareRequest(event) {
@@ -840,7 +1201,6 @@ function () {
       } else if (isOrchestratedRequest(event)) {
         headers = decompress(event.headers);
         request = decompress(event.body);
-        console.log(decompress(event.sequence));
         sequence = LambdaSequence.deserialize(decompress(event.sequence));
       } else if (isBareRequest(event)) {
         headers = {};
@@ -897,8 +1257,7 @@ function () {
         throw new Error("Attempt to ingest steps into a LambdaSequence that already has steps!");
       }
 
-      this._steps = steps; // this._isASequence = true;
-
+      this._steps = steps;
       var activeFnParams = this.activeFn && this.activeFn.params ? this.activeFn.params : {};
       var transformedRequest = _typeof(request) === "object" ? Object.assign(Object.assign({}, activeFnParams), request) : Object.assign(Object.assign({}, activeFnParams), {
         request: request
@@ -1009,11 +1368,11 @@ function () {
           }
         }
 
-        var ValueNow = function ValueNow(key, value) {
+        var valueNow = function valueNow(key, value) {
           return value;
         };
 
-        props[key] = ValueNow(key, value);
+        props[key] = valueNow(key, value);
         return props;
       }, {});
     }
@@ -1224,329 +1583,6 @@ function () {
 
   return LambdaEventParser;
 }();
-
-/**
- * Allows the definition of a serverless function's
- * expected error code
- */
-var ErrorHandler =
-/*#__PURE__*/
-function () {
-  function ErrorHandler(code, identifiedBy, handling) {
-    _classCallCheck(this, ErrorHandler);
-
-    this.code = code;
-    this.identifiedBy = identifiedBy;
-    this.handling = handling;
-  }
-
-  _createClass(ErrorHandler, [{
-    key: "toString",
-    value: function toString() {
-      return {
-        code: this.code,
-        identifiedBy: this.identifiedBy,
-        handling: this.handling
-      };
-    }
-  }]);
-
-  return ErrorHandler;
-}();
-
-var DEFAULT_ERROR_CODE = 500;
-/**
- * Is a container for a serverless function that
- * describes:
- *
- * 1. What errors are _expected_
- * 2. **Meta** for all errors -- expected and unexpected -- on:
- *    - the return's exit code (which is typically a reduced set from the errors themselves)
- *    - how to handle them (do something in the _current fn_ or pass to a _handling function_)
- *
- * By default, all errors are given a 500 exit code and log the error at the "error" severity
- * level but perform no additional work.
- */
-
-var ErrorMeta =
-/*#__PURE__*/
-function () {
-  function ErrorMeta() {
-    _classCallCheck(this, ErrorMeta);
-
-    this._errors = [];
-    this._defaultErrorCode = DEFAULT_ERROR_CODE;
-  }
-  /**
-   * Add an error handler for a known/expected error
-   */
-
-
-  _createClass(ErrorMeta, [{
-    key: "addHandler",
-    value: function addHandler(
-    /** the return code that will be returned for this error */
-    code,
-    /** how will an error be matched */
-    identifiedBy,
-    /**
-     * how will an error be handled; it doesn't NEED to be handled and its a reasonable
-     * goal/outcome just to set the appropriate http error code
-     */
-    handling) {
-      this._errors.push(new ErrorHandler(code, identifiedBy, handling));
-    }
-    /**
-     * Returns the list of errors being managed.
-     */
-
-  }, {
-    key: "setDefaultErrorCode",
-
-    /**
-     * Allows you to set a default code for unhandled errors; the default is
-     * `500`. This method follows the _fluent_ conventions and returns and instance
-     * of itself as a return value.
-     *
-     * Note: if an unhandled error has the property of `httpStatus` set and is a number
-     * then it will be respected over the default.
-     */
-    value: function setDefaultErrorCode(code) {
-      this._defaultErrorCode = code;
-      return this;
-    }
-  }, {
-    key: "setDefaultHandler",
-    value: function setDefaultHandler(param) {
-      switch (_typeof(param)) {
-        case "string":
-          this._arn = param;
-          this._defaultHandlerFn = undefined;
-          this._defaultError = undefined;
-          break;
-
-        case "function":
-          this._defaultHandlerFn = param;
-          this._arn = undefined;
-          this._defaultError = undefined;
-          break;
-
-        default:
-          if (param instanceof Error) {
-            this._defaultError = param;
-            this._arn = undefined;
-            this._defaultHandlerFn = undefined;
-          } else {
-            console.log({
-              message: "The passed in setDefaultHandler param was of an unknown type ".concat(_typeof(param), "; the action has been ignored")
-            });
-          }
-
-      }
-
-      return this;
-    }
-    /**
-     * States how to deal with the default error handling. Default
-     * error handling is used once all "known errors" have been exhausted.
-     */
-
-  }, {
-    key: "toString",
-    value: function toString() {
-      return JSON.stringify({
-        defaultCode: this._defaultErrorCode,
-        errors: this._errors
-      });
-    }
-  }, {
-    key: "list",
-    get: function get() {
-      return this._errors;
-    }
-  }, {
-    key: "defaultHandling",
-    get: function get() {
-      if (this._arn) {
-        return {
-          type: "error-forwarding",
-          code: this.defaultErrorCode,
-          arn: this._arn,
-          prop: "_arn"
-        };
-      }
-
-      if (this._defaultHandlerFn) {
-        return {
-          type: "handler-fn",
-          code: this.defaultErrorCode,
-          defaultHandlerFn: this._defaultHandlerFn,
-          prop: "_defaultHandlerFn"
-        };
-      }
-
-      if (this._defaultError) {
-        return {
-          type: "default-error",
-          code: this.defaultErrorCode,
-          error: this._defaultError,
-          prop: "_defaultError"
-        };
-      }
-
-      return {
-        type: "default",
-        code: this.defaultErrorCode,
-        prop: "_default"
-      };
-    }
-    /**
-     * The default code for unhandled errors.
-     *
-     * Note: if an unhandled error has the property of `httpStatus` set and is a number
-     * then it will be respected over the default.
-     */
-
-  }, {
-    key: "defaultErrorCode",
-    get: function get() {
-      return this._defaultErrorCode;
-    }
-  }]);
-
-  return ErrorMeta;
-}();
-
-var UnhandledError =
-/*#__PURE__*/
-function (_Error) {
-  _inherits(UnhandledError, _Error);
-
-  /**
-   * **Constructor**
-   *
-   * @param errorCode the numeric HTTP error code
-   * @param e the error which wasn't handled
-   * @param classification the type/subtype of the error; if only `subtype` stated then
-   * type will be defaulted to `unhandled-error`
-   */
-  function UnhandledError(errorCode, e, classification) {
-    var _this;
-
-    _classCallCheck(this, UnhandledError);
-
-    _this = _possibleConstructorReturn(this, _getPrototypeOf(UnhandledError).call(this, e.message));
-    _this.stack = e.stack;
-    classification = classification || "unhandled-error/".concat(e.name);
-    classification = classification.includes("/") ? classification : "unhandled-error/".concat(classification);
-
-    var _classification$split = classification.split("/"),
-        _classification$split2 = _slicedToArray(_classification$split, 2),
-        type = _classification$split2[0],
-        subType = _classification$split2[1];
-
-    _this.name = type;
-    _this.code = subType;
-    _this.httpStatus = errorCode;
-    return _this;
-  }
-  /**
-   * Create a serialized/string representation of the error
-   * for returning to **API Gateway**
-   */
-
-
-  _createClass(UnhandledError, null, [{
-    key: "apiGatewayError",
-    value: function apiGatewayError(errorCode, e, requestId, classification) {
-      var obj = new UnhandledError(errorCode, e, classification);
-      obj.requestId = requestId;
-      return {
-        statusCode: obj.httpStatus,
-        errorType: obj.name,
-        errorMessage: obj.message,
-        stackTrace: obj.stack,
-        body: JSON.stringify({
-          requestId: obj.requestId,
-          classification: classification
-        })
-      };
-    }
-    /**
-     * creates an error to be thrown by a **Lambda** function which
-     * was initiatiated by a
-     */
-
-  }, {
-    key: "lambdaError",
-    value: function lambdaError(errorCode, e, classification) {
-      var obj = new UnhandledError(errorCode, e, classification);
-    }
-  }]);
-
-  return UnhandledError;
-}(_wrapNativeSuper(Error));
-
-var HandledError =
-/*#__PURE__*/
-function (_Error) {
-  _inherits(HandledError, _Error);
-
-  /**
-   * **Constructor**
-   *
-   * @param errorCode the numeric HTTP error code
-   * @param e the error which wasn't handled
-   * @param classification the type/subtype of the error; if only `subtype` stated then
-   * type will be defaulted to `handled-error`
-   */
-  function HandledError(errorCode, e, context) {
-    var _this;
-
-    _classCallCheck(this, HandledError);
-
-    _this = _possibleConstructorReturn(this, _getPrototypeOf(HandledError).call(this, e.message));
-    _this.stack = e.stack;
-    var type = e.name && e.name !== "Error" ? e.name : context.functionName;
-    var subType = e.code ? String(e.code) : "handled-error";
-    _this.classification = "".concat(type, "/").concat(subType);
-    _this.functionName = context.functionName;
-    _this.name = type;
-    _this.code = subType;
-    _this.httpStatus = errorCode;
-    return _this;
-  }
-  /**
-   * Create a serialized/string representation of the error
-   * for returning to **API Gateway**
-   */
-
-
-  _createClass(HandledError, null, [{
-    key: "apiGatewayError",
-    value: function apiGatewayError(errorCode, e, context) {
-      var obj = new HandledError(errorCode, e, context);
-      return JSON.stringify({
-        errorType: obj.name,
-        httpStatus: obj.httpStatus,
-        requestId: obj.requestId,
-        message: obj.message
-      });
-    }
-    /**
-     * creates an error to be thrown by a **Lambda** function which
-     * was initiatiated by a
-     */
-
-  }, {
-    key: "lambdaError",
-    value: function lambdaError(errorCode, e, context) {
-      var obj = new HandledError(errorCode, e, context);
-    }
-  }]);
-
-  return HandledError;
-}(_wrapNativeSuper(Error));
 
 /**
  * **findError**
@@ -1763,22 +1799,6 @@ var loggedMessages = function loggedMessages(log) {
     }
   };
 };
-
-/**
- * converts an `Error` (or subclass) into a error hash
- * which **API Gateway** can process.
- */
-
-function convertToApiGatewayError(e) {
-  var defaultCode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_ERROR_CODE;
-  return {
-    headers: getResponseHeaders(),
-    errorCode: e.errorCode || defaultCode,
-    errorType: e.name || e.code || "Error",
-    errorMessage: e.message,
-    stackTrace: e.stack
-  };
-}
 
 /**
  * **wrapper**
@@ -2310,4 +2330,4 @@ var wrapper = function wrapper(fn) {
   });
 };
 
-export { LambdaEventParser, LambdaSequence, compress, decompress, dynamic, isBareRequest, isDynamic, isOrchestratedRequest, sequenceStatus, serializeSequence, wrapper };
+export { LambdaEventParser, LambdaSequence, compress, decompress, dynamic, isBareRequest, isCompressedSection, isDynamic, isOrchestratedRequest, sequenceStatus, serializeSequence, wrapper };
