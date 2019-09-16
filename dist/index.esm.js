@@ -320,7 +320,10 @@ function compress(data, ifLargerThan) {
   if (payload.length > (ifLargerThan || 4096)) {
     return {
       compressed: true,
-      data: compress$1(payload)
+      data: compress$1(payload, {
+        inputEncoding: "String",
+        outputEncoding: "Base64"
+      })
     };
   } else {
     return data;
@@ -331,6 +334,7 @@ function decompress(data) {
 
   if (_typeof(data) === "object" && data.compressed === true) {
     return parse ? JSON.parse(decompress$1(data, {
+      inputEncoding: "Base64",
       outputEncoding: "String"
     })) : decompress$1(data);
   }
