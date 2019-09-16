@@ -699,7 +699,7 @@ function decompress(data) {
 
 function decompressionHandler(section) {
   try {
-    return decompress$1(section, {
+    return decompress$1(section.data, {
       inputEncoding: "Base64",
       outputEncoding: "String"
     });

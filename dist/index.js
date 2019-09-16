@@ -724,7 +724,7 @@ function decompress(data) {
 
 function decompressionHandler(section) {
   try {
-    return lzutf8.decompress(section, {
+    return lzutf8.decompress(section.data, {
       inputEncoding: "Base64",
       outputEncoding: "String"
     });

@@ -65,7 +65,10 @@ export function decompress<T = any>(
 
 function decompressionHandler<T>(section: ICompressedSection) {
   try {
-    return d(section, { inputEncoding: "Base64", outputEncoding: "String" });
+    return d(section.data, {
+      inputEncoding: "Base64",
+      outputEncoding: "String"
+    });
   } catch (e) {
     e.message = `Problem decompressing section. Error message: ${
       e.message
