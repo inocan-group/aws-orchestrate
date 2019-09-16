@@ -6,7 +6,8 @@ import {
   arn,
   IServerlessFunction,
   IHttpResponseHeaders,
-  IHttpRequestHeaders
+  IHttpRequestHeaders,
+  IAwsLambdaEvent
 } from "common-types";
 import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
@@ -15,6 +16,7 @@ import { getSecrets, getSecret } from "./wrapper-fn/secrets";
 import { IFirebaseAdminConfig } from "abstracted-firebase";
 type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
+import { ISequenceTrackerStatus } from "./exported-functions/SequenceTracker";
 
 export type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 
@@ -73,6 +75,65 @@ export interface IWrapperResponseHeaders extends IHttpResponseHeaders {
 }
 
 /**
+ * the `arn` and `params` to pass in. The _parameters_
+ * can be either a static value or a function
+ */
+export interface IServerlessFunctionSignature {
+  arn: string;
+  /** either a static param or a dynamic "lookup" property */
+  params: IDictionary<any | IOrchestratedDynamicProperty>;
+}
+
+export type ISerializedSequence =
+  | ISerializedSequenceFalse
+  | ISerializedSequenceTrue;
+
+export interface ISerializedSequenceFalse {
+  isSequence: false;
+}
+
+export interface ISerializedSequenceTrue {
+  isSequence: true;
+  totalSteps: number;
+  completedSteps: number;
+  /**
+   * the function in the sequence which is now _executing_; returns
+   * not only function name but parameters passed
+   */
+  activeFn?: IServerlessFunctionSignature;
+  /** the _functions_ (names only) in the sequence which have **completed** */
+  completed: string[];
+  /** the _functions_ (names only) in the sequence which have **remain** to be executed */
+  remaining: string[];
+  /**
+   * The **steps** defined in the sequence. This is an _ordered_ array of steps, including
+   * their ARN, their input _params_,
+   */
+  steps: ILambdaSequenceStep[];
+  /**
+   * The **responses** from _all functions_ which have already executed.
+   *
+   * Data structure is:
+   *
+   * ```typescript
+   * {
+   *    functionArn: { ... }
+   * }
+   * ```
+   */
+  responses: IDictionary<IDictionary>;
+}
+
+/**
+ * if the `body` is greater than **4k** then it will be
+ * compressed when sent over the wire
+ */
+export interface ICompressedSection {
+  compressed: true;
+  data: string;
+}
+
+/**
  * **IOrchestratedMessageBody**
  *
  * When making `fn`-to-`fn` invocations the message _body_
@@ -84,12 +145,24 @@ export interface IWrapperResponseHeaders extends IHttpResponseHeaders {
  * experience provided by the `wrapper` function as well providing strong typing
  * throughout.
  */
-export interface IOrchestratedMessageBody<T> {
+export interface IOrchestratedRequest<T> {
   type: "orchestrated-message-body";
-  sequenceSteps?: ILambdaSequenceStep[];
-  headers: IWrapperResponseHeaders;
-  body: T;
+  sequence: ISerializedSequence | ICompressedSection;
+  headers: IWrapperResponseHeaders | ICompressedSection;
+  body: T | ICompressedSection;
 }
+
+/**
+ * This is a antiquated request form which should not be used anymore
+ */
+export type IBareRequest<T> = T & {
+  _sequence?: ILambdaSequenceStep[];
+};
+
+export type IOrchestrationRequestTypes<T> =
+  | IOrchestratedRequest<T>
+  | IBareRequest<T>
+  | IAWSLambdaProxyIntegrationRequest;
 
 /**
  * **ILambdaSequenceStep**
@@ -100,10 +173,9 @@ export interface IOrchestratedMessageBody<T> {
  */
 export interface ILambdaSequenceStep<T = IDictionary> {
   arn: string;
-  params: Partial<T>;
+  params: IOrchestratedProperties<T>;
   type: ILambdaFunctionType;
   status: "assigned" | "active" | "completed";
-  results?: T;
 }
 
 export type ILambdaFunctionType =
@@ -112,8 +184,6 @@ export type ILambdaFunctionType =
   | "step-start"
   | "fan-in"
   | "other";
-
-export type Sequence<T> = T & { _sequence: ILambdaSequenceStep[] };
 
 export interface ILambaSequenceFromResponse<T> {
   request: T;
@@ -132,7 +202,7 @@ export interface ILambaSequenceFromResponse<T> {
  * to it. Within these parameters it also includes the
  * `_sequence` property to pass along the sequence meta-data
  */
-export type ILambdaSequenceNextTuple<T> = [string, Sequence<T>];
+export type ILambdaSequenceNextTuple<T> = [string, IOrchestratedRequest<T>];
 
 /**
  * Configure how an error should be identified; typically you would only
@@ -309,4 +379,44 @@ export type IDefaultHandling =
   | IDefaultHandlingCallback
   | IDefaultHandlingDefault;
 
-export type WithBodySequence<T> = T & { _sequence: string };
+/**
+ * Allows an Orchestrator to state a property that came from a previously
+ * function execution.
+ */
+export type IOrchestratedDynamicProperty = {
+  /** static identifier */
+  type: "orchestrated-dynamic-property";
+  /**
+   * a string that uses _dot notation_ to indicate both the function (aka, `arn`)
+   * and _property_ from the given function which you want to poss in.
+   *
+   * For instance, `myFunction.data` would reference the `myFunction` responses and pull
+   * off the value of the `data` from the responses.
+   */
+  lookup: string;
+};
+
+/**
+ * Properties defined must be _static_ at the time of the
+ * Orchestrator's run-time (e.g., `T[P]`) or they can alternatively
+ * defer to a function which will be passed a hash of all functions
+ * which have been executed so far in the sequence
+ * ( `IOrchestratedDynamicProperty` ).
+ *
+ * An example of the _dynamic_ association in an Orchestrator might
+ * look something like:
+ *
+ * ```typescript
+ * Lambda
+ *  .add('firstThis')
+ *  .add('thenThis')
+ *  .add('andNow', {
+ *     title: 'something static',
+ *     data: dynamic('firstThis', 'data'),
+ *     supplemental: dynamic('thenThis', 'data')
+ *   })
+ * ```
+ */
+export type IOrchestratedProperties<T> = {
+  [P in keyof T]: T[P] | IOrchestratedDynamicProperty;
+};

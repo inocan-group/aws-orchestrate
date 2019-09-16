@@ -8,14 +8,23 @@ import {
 import {
   ILambdaFunctionType,
   ILambdaSequenceStep,
-  Sequence,
   ILambdaSequenceNextTuple,
   ILambaSequenceFromResponse,
-  IOrchestratedMessageBody,
-  WithBodySequence,
-  IWrapperRequestHeaders
+  IOrchestratedRequest,
+  IWrapperRequestHeaders,
+  ISerializedSequence,
+  ICompressedSection,
+  IOrchestratedDynamicProperty,
+  IOrchestratedProperties,
+  IWrapperResponseHeaders,
+  IBareRequest,
+  IOrchestrationRequestTypes
 } from "./@types";
-import { isOrchestratedMessageBody } from "./sequences";
+import { isOrchestratedRequest } from "./sequences/isOrchestratedMessageBody";
+import { getRequestHeaders } from "./wrapper-fn/headers";
+import { isDynamic, compress, decompress, isBareRequest } from "./sequences";
+import get from "lodash.get";
+import { logger as awsLogger } from "aws-log";
 
 function size(obj: IDictionary) {
   let size = 0,
@@ -26,7 +35,6 @@ function size(obj: IDictionary) {
   return size;
 }
 
-export type IPropertyOrDynamicReference<T> = { [P in keyof T]: T[P] | string };
 export class LambdaSequence {
   /**
    * **add** (static initializer)
@@ -35,7 +43,7 @@ export class LambdaSequence {
    */
   public static add<T extends IDictionary = IDictionary>(
     arn: string,
-    params: Partial<IPropertyOrDynamicReference<T>> = {},
+    params: Partial<IOrchestratedProperties<T>> = {},
     type: ILambdaFunctionType = "task"
   ) {
     const obj = new LambdaSequence();
@@ -71,12 +79,22 @@ export function handler(event, context, callback) {
    * function will have already been done for you by the _wrapper_.
    */
   public static from<T extends IDictionary = IDictionary>(
-    event: T | IAWSLambdaProxyIntegrationRequest,
+    event: IOrchestrationRequestTypes<T>,
     logger?: import("aws-log").ILoggerApi
   ) {
     const obj = new LambdaSequence();
 
     return obj.from(event, logger);
+  }
+
+  /**
+   * Takes a serialized sequence and brings it back to a `LambdaSequence` class.
+   */
+  public static deserialize<T>(s: ISerializedSequence): LambdaSequence {
+    const obj = new LambdaSequence();
+    obj.deserialize(s);
+
+    return obj;
   }
 
   /**
@@ -89,12 +107,17 @@ export function handler(event, context, callback) {
   public static notASequence() {
     const obj = new LambdaSequence();
     obj._steps = [];
-    // obj._isASequence = false;
     return obj;
   }
 
+  /**
+   * The steps defined in the sequence
+   */
   private _steps: ILambdaSequenceStep[] = [];
-  // private _isASequence: boolean = true;
+  /**
+   * The responses from completed functions in a sequence
+   */
+  private _responses: IDictionary;
 
   /**
    * **add**
@@ -118,7 +141,7 @@ export function handler(event, context, callback) {
    */
   public add<T extends IDictionary = IDictionary>(
     arn: string,
-    params: Partial<IPropertyOrDynamicReference<T>> = {},
+    params: Partial<IOrchestratedProperties<T>> = {},
     type: ILambdaFunctionType = "task"
   ) {
     this._steps.push({ arn, params, type, status: "assigned" });
@@ -128,36 +151,31 @@ export function handler(event, context, callback) {
   /**
    * **next**
    *
-   * Executes the _next_ function in the sequence. It will pass parameters which are a
-   * merge of those set during the original setup (aka, with the `add()` method) and
-   * additional values set here as the optional `additionalParams` value.
+   * Returns the parameters needed to execute the _next_ function in the sequence. The
+   * parameters passed to the next function will be of the format:
    *
-   * If this were not clear from the prior paragraph, it is expected that if a given function
-   * produces meaningful output that it would both _return_ the output (for non-orchestrated
-   * executions) and also add it to the `additionalParams` value in `next()` (for orchestrated
-   * executions)
+   * ```typescript
+   * { body, headers, sequence }
+   * ```
    *
-   * Finally, while this function doesn't _require_ you state the generic type, if you do then
-   * you will get more precise typing for the expected input of the next function
+   * This structure allows the receiving `LambdaSequence.from()` function to peel
+   * off _headers_ and _sequence_ information without any risk of namespace collisions
+   * with the returned request object (aka, `body`).
    */
-  public next<T extends IDictionary = IDictionary>(
-    additionalParams: Partial<T> = {},
+  public next<T extends IDictionary>(
+    /** the _current_ function's response */
+    currentFnResponse: Partial<T> = {},
     logger?: import("aws-log").ILoggerApi
   ): ILambdaSequenceNextTuple<T> {
-    if (logger) {
+    if (!logger) {
+      logger = awsLogger();
       logger.getContext();
     }
     if (this.isDone) {
-      if (logger) {
-        logger.info(
-          `The next() function [ ${this.activeFn.arn} ] was called but we are now done with the sequence so exiting.`
-        );
-      }
+      logger.info(
+        `The next() function called on ${this.activeFn.arn} was called but we are now done with the sequence so exiting.`
+      );
       return;
-    }
-
-    if (logger) {
-      logger.info(`the next() function is ${this.nextFn.arn}`, this.toJSON());
     }
 
     /**
@@ -165,39 +183,60 @@ export function handler(event, context, callback) {
      * and assign _results_
      */
     if (this.activeFn) {
-      const results = additionalParams;
+      const results = currentFnResponse;
       delete results._sequence;
-      this.activeFn.results = results;
+      this._responses[this.activeFn.arn] = results;
       this.activeFn.status = "completed";
     }
 
-    // resolve dynamic props in next function
-    this._steps = this._steps.map(i =>
-      i.arn === this.nextFn.arn
-        ? {
-            ...i,
-            params: this.resolveDynamicProperties(
-              this.nextFn.params,
-              additionalParams
-            )
-          }
-        : i
+    let body: T | ICompressedSection = this.resolveRequestProperties<T>(
+      this.nextFn
+    );
+    let sequence: ISerializedSequence | ICompressedSection = this.toObject();
+    let headers:
+      | IWrapperResponseHeaders
+      | ICompressedSection = getRequestHeaders();
+
+    logger.debug(
+      `LambdaSequence.next(): the "${
+        this.activeFn ? `"${this.activeFn.arn}" function` : `sequence Conductor`
+      }" will be calling "${this.nextFn.arn}" in a moment`,
+      {
+        fn: this.nextFn.arn,
+        request: {
+          type: "orchestrated-message-body",
+          body,
+          sequence,
+          headers
+        }
+      }
     );
 
-    const nextFunctionTuple: ILambdaSequenceNextTuple<T> = [
+    // compress if large
+    body = compress(body, 4096);
+    sequence = compress(sequence, 4096);
+    headers = compress(headers, 4096);
+
+    /**
+     * The parameters needed to pass into `aws-log`'s
+     * invoke() function
+     */
+    const invokeParams: ILambdaSequenceNextTuple<T> = [
       // the arn
       this.nextFn.arn,
       // the params passed forward
       {
-        ...this.nextFn.params,
-        _sequence: this.steps
-      } as Sequence<T>
+        type: "orchestrated-message-body",
+        sequence,
+        body,
+        headers
+      }
     ];
 
     // set the next function to active
     this.nextFn.status = "active";
 
-    return nextFunctionTuple;
+    return invokeParams;
   }
 
   /**
@@ -205,46 +244,53 @@ export function handler(event, context, callback) {
    *
    * unboxes `request`, `sequence`, `apiGateway`, and `headers` data structures
    */
-  public from<T extends IDictionary = IDictionary>(
-    event: T | IAWSLambdaProxyIntegrationRequest | IOrchestratedMessageBody<T>,
+  public from<T>(
+    event: IOrchestrationRequestTypes<T>,
     logger?: import("aws-log").ILoggerApi
   ): ILambaSequenceFromResponse<T> {
     let apiGateway: IAWSLambdaProxyIntegrationRequest | undefined;
     let headers: IWrapperRequestHeaders = {};
     let sequence: LambdaSequence;
     let request: T;
+    if (!logger) {
+      logger = awsLogger();
+      logger.getContext();
+    }
 
     if (isLambdaProxyRequest(event)) {
       apiGateway = event;
-      headers = event.headers;
+      headers = apiGateway.headers;
       delete apiGateway.headers;
-      request = getBodyFromPossibleLambdaProxyRequest<T>(event);
+      request = getBodyFromPossibleLambdaProxyRequest<T>(event) as T;
       sequence = LambdaSequence.notASequence();
       delete apiGateway.body;
-    } else if (isOrchestratedMessageBody(event)) {
-      headers = (event as IOrchestratedMessageBody<T>).headers;
-      request = event.body;
-      if (event.sequenceSteps) {
-        this.ingestSteps(
-          request,
-          (event as IOrchestratedMessageBody<T>).sequenceSteps
-        );
-        sequence = this;
-      } else {
-        sequence = LambdaSequence.notASequence();
-      }
-    } else if ((event as WithBodySequence<T>)._sequence) {
+    } else if (isOrchestratedRequest(event)) {
+      headers = decompress((event as IOrchestratedRequest<T>).headers);
+      request = decompress(event.body);
+      console.log(decompress(event.sequence));
+
+      sequence = LambdaSequence.deserialize<T>(decompress(event.sequence));
+    } else if (isBareRequest(event)) {
+      headers = {};
+      sequence =
+        typeof event === "object" && event._sequence
+          ? this.ingestSteps(event, event._sequence)
+          : LambdaSequence.notASequence();
+      request =
+        typeof event === "object" && event._sequence
+          ? (Object.keys(event).reduce((props: T, prop: keyof T & string) => {
+              if (prop !== "_sequence") {
+                props[prop] = event[prop];
+              }
+              return props;
+            }, {}) as T)
+          : event;
+
       const e = new Error();
-      console.log({
-        message: `Deprecated: a Lambda event received the property "_sequence" which is an OLD way of passing sequence data to other functions. This technique will be removed in the future.`,
-        stack: e.stack
-      });
-      request = { ...{}, ...event } as T;
-      delete request._sequence;
-      this.ingestSteps(request, (event as WithBodySequence<T>)._sequence);
-      sequence = this;
-    } else {
-      sequence = LambdaSequence.notASequence();
+      logger.warn(
+        `Deprecated message format. Bare messages -- where the property "_sequence" is used to convey sequence passing -- has been replaced with the IOrchestratedRequest message body. This technique will be removed in the future.`,
+        { stack: e.stack }
+      );
     }
 
     // The active function's output is sent into the params
@@ -253,7 +299,7 @@ export function handler(event, context, callback) {
     request = { ...activeFn, ...request } as T;
 
     return {
-      request,
+      request: request as T,
       apiGateway,
       sequence,
       headers: headers as IWrapperRequestHeaders
@@ -266,7 +312,7 @@ export function handler(event, context, callback) {
    */
   public get isSequence() {
     // return this._isASequence;
-    return this._steps.length > 0;
+    return this._steps && this._steps.length > 0;
   }
 
   public get isDone() {
@@ -279,12 +325,12 @@ export function handler(event, context, callback) {
    * completed _and_ any which are _active_.
    */
   public get remaining() {
-    return this._steps.filter(s => s.status === "assigned");
+    return this._steps ? this._steps.filter(s => s.status === "assigned") : [];
   }
 
   /** the tasks which have been completed */
   public get completed() {
-    return this._steps.filter(s => s.status === "completed");
+    return this._steps ? this._steps.filter(s => s.status === "completed") : [];
   }
 
   /** the total number of _steps_ in the sequence */
@@ -309,33 +355,6 @@ export function handler(event, context, callback) {
   public get activeFn() {
     const active = this._steps.filter(s => s.status === "active");
     return active.length > 0 ? active[0] : undefined;
-  }
-
-  /**
-   * Provides a dictionary of of **results** from the functions prior to it.
-   * The dictionary is two levels deep and will look like this:
-   * 
-```javascript
-{
-  [fnName]: {
-    prop1: value,
-    prop2: value
-  },
-  [fn2Name]: {
-    prop1: value
-  }
-}
-```
-   */
-  public get allHistoricResults() {
-    const completed = this._steps.filter(s => s.status === "completed");
-    let result: IDictionary = {};
-    completed.forEach(s => {
-      const fn = s.arn;
-      result[fn] = s.results;
-    });
-
-    return result;
   }
 
   /**
@@ -377,6 +396,8 @@ export function handler(event, context, callback) {
         ? { ...s, params: transformedRequest }
         : s;
     });
+
+    return this;
   }
 
   /**
@@ -400,20 +421,35 @@ export function handler(event, context, callback) {
     );
   }
 
+  /**
+   * Takes a serialized state of a sequence and returns
+   * a `LambdaSequence` which represents this state.
+   */
+  public deserialize(s: ISerializedSequence) {
+    if (!s.isSequence) {
+      return LambdaSequence.notASequence();
+    }
+
+    this._steps = s.steps;
+    this._responses = s.responses;
+
+    return this;
+  }
+
   public toString() {
     return JSON.stringify(this.toObject(), null, 2);
   }
-  public toObject() {
-    const obj: IDictionary = {
-      isASequence: this.isSequence
+  public toObject(): ISerializedSequence {
+    const obj: Partial<ISerializedSequence> = {
+      isSequence: this.isSequence
     };
-    if (this.isSequence) {
+    if (obj.isSequence) {
       obj.totalSteps = this.steps.length;
       obj.completedSteps = this.completed.length;
       if (this.activeFn) {
         obj.activeFn = this.activeFn
           ? { arn: this.activeFn.arn, params: this.activeFn.params }
-          : {};
+          : undefined;
       }
       if (this.completed) {
         obj.completed = this.completed.map(i => i.arn);
@@ -421,66 +457,47 @@ export function handler(event, context, callback) {
       if (this.remaining) {
         obj.remaining = this.remaining.map(i => i.arn);
       }
-      obj.results = this.completed.reduce(
-        (acc, curr) => {
-          const objSize = size(curr.results);
-          acc[curr.arn] =
-            objSize < 4096
-              ? curr.results
-              : {
-                  message: `truncated due to size [ ${objSize} ]`,
-                  properties: Object.keys(curr.results)
-                };
-          return acc;
-        },
-        {} as IDictionary
-      );
+      obj.steps = this._steps;
+      obj.responses = this._responses || {};
     }
-    return obj;
+    return obj as ISerializedSequence;
   }
   public toJSON() {
     return this.toObject();
   }
 
-  private resolveDynamicProperties(
-    conductorParams: IDictionary,
-    priorFnResults: IDictionary
-  ) {
-    /**
-     * Properties on `priorFnResults` which have been remapped by dyamic properties.
-     * Note that this only takes place when the conductor's dynamic property is for
-     * "last" function's result. If it is from prior results then it these will be considered
-     * additive properties and _remapped_ properties
-     */
-    let remappedProps: string[] = [];
-
-    Object.keys(conductorParams).forEach(key => {
-      const value = conductorParams[key];
-
-      if (typeof value === "string" && value.slice(0, 1) === ":") {
-        const lookup = value.slice(1);
-        const isFromLastFn = !lookup.includes(".");
-        if (isFromLastFn) {
-          remappedProps.push(lookup);
-          conductorParams[key] = priorFnResults[lookup];
-        } else {
-          const [fnLookup, fnProp] = lookup.split(".");
-          const relevantStep = this.steps.find(i => i.arn === fnLookup);
-
-          conductorParams[key] = relevantStep.results[fnProp];
+  /**
+   * Determine the request data to pass to the handler function:
+   *
+   * - Resolve _dynamic_ properties added by Conductor into static values
+   * - Add _static_ properties passed in from Conductor
+   *
+   */
+  private resolveRequestProperties<T>(fn: ILambdaSequenceStep) {
+    return Object.keys(fn.params as IOrchestratedProperties<T>).reduce(
+      (props: T, key: keyof T & string) => {
+        let value = (fn.params as IOrchestratedProperties<T>)[key];
+        if (isDynamic(value)) {
+          value = get(
+            this._responses,
+            (value as IOrchestratedDynamicProperty).lookup,
+            undefined
+          );
+          if (typeof value === undefined) {
+            throw new Error(
+              `The property "${key}" was set as a dynamic property by the Orchestrator but it was dependant on getting a value from ${
+                (fn.params as IOrchestratedProperties<T>)[key]
+              } which could not be found.`
+            );
+          }
         }
-      }
-    });
+        const ValueNow = (key: keyof T & string, value: any) =>
+          value as T[typeof key];
+        (props as T)[key] = ValueNow(key, value);
 
-    return {
-      ...Object.keys(priorFnResults).reduce(
-        (agg, curr) =>
-          !remappedProps.includes(curr)
-            ? { ...agg, [curr]: priorFnResults[curr] }
-            : agg,
-        {}
-      ),
-      ...conductorParams
-    };
+        return props;
+      },
+      {} as T
+    );
   }
 }

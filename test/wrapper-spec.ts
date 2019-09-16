@@ -1,9 +1,10 @@
 import { expect } from "chai";
 import { IHandlerContext, IHandlerFunction } from "../src/@types";
-import { wrapper } from "../src/index";
+import { wrapper, LambdaSequence, IOrchestratedRequest } from "../src/index";
 import { HandledError } from "../src/errors/HandledError";
 import { UnhandledError } from "../src/errors/UnhandledError";
 import { DEFAULT_ERROR_CODE } from "../src/errors/ErrorMeta";
+import { IApiGatewayResponse } from "common-types";
 
 interface IRequest {
   foo: string;
@@ -11,15 +12,17 @@ interface IRequest {
 }
 
 interface IResponse {
-  event: IRequest;
+  testing: boolean;
+  request: IRequest;
   context: IHandlerContext;
 }
 
+/** returns the sent in event and context */
 const handlerFn: IHandlerFunction<IRequest, IResponse> = async (
-  event,
+  request,
   context
 ) => {
-  return { event, context };
+  return { testing: true, request, context };
 };
 
 const handlerErrorFn: IHandlerFunction<IRequest, IResponse> = async (
@@ -27,7 +30,6 @@ const handlerErrorFn: IHandlerFunction<IRequest, IResponse> = async (
   context
 ) => {
   throw new Error("this is an error god dammit");
-  return { event, context };
 };
 
 const handlerErrorFnWithDefaultChanged: IHandlerFunction<
@@ -63,19 +65,31 @@ const handlerErrorFnWithKnownErrors: (
   }
 };
 
-const event1: IRequest = {
+const simpleEvent: IRequest = {
   foo: "foo is foo",
   bar: 456
+};
+
+const orchestrateEvent: IOrchestratedRequest<IRequest> = {
+  type: "orchestrated-message-body",
+  sequence: LambdaSequence.add("fn1")
+    .add("fn2", { foo: 1, bar: 2 })
+    .toObject(),
+  headers: {
+    "Content-Type": "application/json",
+    "X-Correlation-Id": "12345"
+  },
+  body: simpleEvent
 };
 
 describe("Handler Wrapper => ", () => {
   it('By default the "callbackWaitsForEmptyEventLoop" is set to "false"', async () => {
     process.env.AWS_STAGE = "dev";
-    const wrapped = wrapper<IRequest, IResponse>(async (event, context) => {
+    const wrapped = wrapper<IRequest, IResponse>(async (request, context) => {
       expect(context.callbackWaitsForEmptyEventLoop).to.equal(false);
-      return { event, context };
+      return { request, context, testing: true };
     });
-    const results = await wrapped(event1, {} as any);
+    const results = await wrapped(simpleEvent, {} as any);
     expect(results).to.be.an("object");
     expect(
       (results as IResponse).context.callbackWaitsForEmptyEventLoop
@@ -86,7 +100,7 @@ describe("Handler Wrapper => ", () => {
     process.env.AWS_STAGE = "dev";
     const wrapped = wrapper(handlerFn);
 
-    const results = await wrapped(event1, {} as any);
+    const results = await wrapped(simpleEvent, {} as any);
 
     expect(results).to.haveOwnProperty("event");
     expect(results).to.haveOwnProperty("context");
@@ -94,26 +108,53 @@ describe("Handler Wrapper => ", () => {
     expect((results as IResponse).context).to.haveOwnProperty("isDone");
   });
 
-  it("An ApiGateway response returns a JSON parsable response", async () => {
+  it("A bare request works", async () => {
     process.env.AWS_STAGE = "dev";
     const wrapped = wrapper(handlerFn);
+    const results = (await wrapped(simpleEvent, {} as any)) as IResponse;
 
-    const results = await wrapped(
-      {
-        headers: { "Content-type": "text/html" },
-        body: JSON.stringify(event1)
-      } as any,
-      {} as any
-    );
+    expect(results).to.be.an("object");
 
-    expect(results).to.be.a("string");
+    expect(results).to.haveOwnProperty("request");
+    expect(results).to.haveOwnProperty("context");
 
-    const parsedResults = JSON.parse(results as string);
+    expect(results.request.foo).to.equal(simpleEvent.foo);
+    expect(results.request.bar).to.equal(simpleEvent.bar);
 
-    expect(parsedResults).to.haveOwnProperty("data");
-    expect(parsedResults.data).to.haveOwnProperty("event");
-    expect(parsedResults.data.event.foo).to.equal("foo is foo");
-    expect(parsedResults.data).to.haveOwnProperty("context");
+    expect(results.context.headers).is.an("object");
+    expect(Object.keys(results.context.headers)).has.lengthOf(0);
+  });
+
+  it("An orchestrated request works", async () => {
+    process.env.AWS_STAGE = "dev";
+    process.env.AWS_REGION = "us-west-2";
+    process.env.AWS_ACCOUNT = "123456";
+    process.env.APP_NAME = "foobar";
+
+    const wrapped = wrapper(handlerFn);
+    const results = (await wrapped(orchestrateEvent, {} as any)) as IResponse;
+
+    expect(results).to.be.an("object");
+
+    console.log(results);
+
+    expect(results).to.haveOwnProperty("request");
+    expect(results).to.haveOwnProperty("context");
+
+    expect(results.request.foo).to.equal(simpleEvent.foo);
+    expect(results.request.bar).to.equal(simpleEvent.bar);
+
+    expect(results.context.headers).is.an("object");
+    expect(results.context.headers["X-Correlation-Id"]).is.a("string");
+    expect(results.context.headers["Content-Type"])
+      .is.a("string")
+      .and.equal("application/json");
+
+    expect(results.context.sequence).is.an.instanceOf(LambdaSequence);
+    const seqSummary = results.context.sequence.toObject();
+    console.log(seqSummary);
+
+    expect(seqSummary.isSequence).to.equal(true);
   });
 
   it("Unhandled error in function results in defaultCode and error proxied", async () => {

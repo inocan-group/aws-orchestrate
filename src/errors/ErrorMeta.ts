@@ -143,6 +143,10 @@ export class ErrorMeta {
     return this;
   }
 
+  /**
+   * States how to deal with the default error handling. Default
+   * error handling is used once all "known errors" have been exhausted.
+   */
   public get defaultHandling(): IDefaultHandling {
     if (this._arn) {
       return {
@@ -169,6 +173,12 @@ export class ErrorMeta {
         prop: "_defaultError"
       };
     }
+
+    return {
+      type: "default",
+      code: this.defaultErrorCode,
+      prop: "_default"
+    };
   }
 
   /**

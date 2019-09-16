@@ -94,6 +94,10 @@ export declare class ErrorMeta {
      * proper ENV variables are set)
      */
     setDefaultHandler(arn: string): ErrorMeta;
+    /**
+     * States how to deal with the default error handling. Default
+     * error handling is used once all "known errors" have been exhausted.
+     */
     readonly defaultHandling: IDefaultHandling;
     /**
      * The default code for unhandled errors.

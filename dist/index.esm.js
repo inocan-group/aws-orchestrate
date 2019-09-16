@@ -1,4 +1,5 @@
 import { isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest, HttpStatusCodes } from 'common-types';
+import { compress as compress$1, decompress as decompress$1 } from 'lzutf8';
 import { logger, invoke } from 'aws-log';
 import get from 'lodash.get';
 import set from 'lodash.set';
@@ -232,6 +233,14 @@ function _nonIterableRest() {
 }
 
 /**
+ * detects if the given structure is of type <T> or
+ * has been boxed into an `IOrchestratedMessageBody`
+ */
+function isOrchestratedRequest(msg) {
+  return _typeof(msg) === "object" && msg.type === "orchestrated-message-body" ? true : false;
+}
+
+/**
  * Serializes a `LambdaSequence` into a string representation
  * so it can be passed as a header parameter in HTTP responses
  * as well invokation requests to other Lambda functions.
@@ -279,22 +288,385 @@ var sequenceStatus = function sequenceStatus(correlationId) {
 };
 
 /**
- * detects if the given structure is of type <T> or
- * has been boxed into an `IOrchestratedMessageBody`
+ * A helper function for Orchestrators which produces a
+ * dynamic reference. Usage would be:
+ *
+ * ```typescript
+ * LambdaSequence
+ *  .add('myFirstFn')
+ *  .add('mySecondFn', { foo: dynamic<IFirstResponse>('myFirstFn', 'data') })
+ * ```
+ *
+ * This will take the `data` output from **myFirstFn** and pass it into **mySecondFn**
+ * as the property `foo`. If you pass in a generic type to `dynamic` it will enforce
+ * the property name is indeed a response property for the given function.
  */
-function isOrchestratedMessageBody(msg) {
-  return _typeof(msg) === "object" && msg.type === "orchestrated-message-body" ? true : false;
+function isDynamic(obj) {
+  return obj.type === "orchestrated-dynamic-property" && obj.lookup ? true : false;
 }
 
-function size(obj) {
-  var size = 0,
-      key;
+/**
+ * compresses large payloads larger than 4k (or whatever size
+ * you state in the second parameter)
+ */
 
-  for (key in obj) {
-    if (obj.hasOwnProperty(key)) size++;
+function compress(data, ifLargerThan) {
+  var payload;
+
+  if (typeof data !== "string") {
+    payload = JSON.stringify(data);
   }
 
-  return size;
+  if (payload.length > (ifLargerThan || 4096)) {
+    return {
+      compressed: true,
+      data: compress$1(payload)
+    };
+  } else {
+    return data;
+  }
+}
+function decompress(data) {
+  var parse = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
+  if (_typeof(data) === "object" && data.compressed === true) {
+    return parse ? JSON.parse(decompress$1(data)) : decompress$1(data);
+  }
+
+  return data;
+}
+
+function isBareRequest(event) {
+  return !isLambdaProxyRequest(event) && !isOrchestratedRequest(event) ? true : false;
+}
+
+var correlationId;
+/**
+ * Saves the `correlationId` for easy retrieval across various functions
+ */
+
+function setCorrelationId(id) {
+  correlationId = id;
+}
+/**
+ * Gets the `correlationId` for a running sequence (or an
+ * API Gateway request where the client sent in one)
+ */
+
+function getCorrelationId() {
+  return correlationId;
+}
+
+/**
+ * Allows getting a single secret out of either _locally_ stored secrets -- or
+ * if not found -- going to **SSM** and pulling the module containing this secret.
+ */
+function _await(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+/**
+ * **getSecrets**
+ *
+ * Gets the needed secrets for this function -- using locally available information
+ * if available (_params_ and/or _cached_ values from prior calls) -- otherwise
+ * goes out **SSM** to get it.
+ *
+ * In addition, all secrets requested (within the given function as well as
+ * _prior_ function's secrets in a sequence) will be auto-forwarded to subsequent
+ * functions in the currently executing sequence. Secrets _will not_ be passed back
+ * in the function's response.
+ *
+ * @param modules the modules which are have secrets that are needed
+ */
+
+
+function _async(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var getSecrets = _async(function (modules) {
+  var log = logger().reloadContext();
+  var localSecrets = getLocalSecrets();
+
+  if (modules.every(function (i) {
+    return Object.keys(localSecrets).includes(i);
+  })) {
+    // everything found in local secrets
+    log.debug("Call to getSecrets() resulted in 100% hit rate for modules locally", {
+      modules: modules
+    });
+    return modules.reduce(function (secrets, mod) {
+      secrets[mod] = localSecrets[mod];
+      return secrets;
+    }, {});
+  } // at least SOME modules are NOT stored locally, the latency of getting some
+  // versus getting them all is negligible so we'll get them all from SSM
+
+
+  log.debug("Some modules requested were not found locally, requesting from SSM.", {
+    modules: modules
+  });
+  return _await(import('aws-ssm'), function (_temp) {
+    var SSM = _temp.SSM;
+    return _await(SSM.modules(modules), function (newSecrets) {
+      modules.forEach(function (m) {
+        if (!newSecrets[m]) {
+          throw new Error("Failure to retrieve the SSM module \"".concat(m, "\""));
+        }
+
+        if (Object.keys(newSecrets[m]).length === 0) {
+          log.warn("Attempt to retrieve module \"".concat(m, "\" returned but had no "));
+        }
+      });
+      log.debug("new SSM modules retrieved");
+      var secrets = Object.assign(Object.assign({}, localSecrets), newSecrets);
+      saveSecretsLocally(secrets);
+      maskLoggingForSecrets(newSecrets, log);
+      return secrets;
+    });
+  });
+});
+/**
+ * Goes through a set of secrets -- organized by `[module].[name] = secret` --
+ * and masks the values so that they don't leak into the log files.
+ */
+
+var getSecret = _async(function (moduleAndName) {
+  var log = logger().reloadContext();
+  var localSecrets = getLocalSecrets();
+
+  if (!moduleAndName.includes("/")) {
+    throw new Error("When using getSecret() you must state both the module and the NAME of the secret where the two are delimted by a \"/\" character.");
+  }
+
+  var _moduleAndName$split = moduleAndName.split("/"),
+      _moduleAndName$split2 = _slicedToArray(_moduleAndName$split, 2),
+      module = _moduleAndName$split2[0],
+      name = _moduleAndName$split2[1];
+
+  if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
+    log.debug("getSecret(\"".concat(moduleAndName, "\") found secret locally"), {
+      module: module,
+      name: name
+    });
+    return get(localSecrets, "".concat(module, ".").concat(name));
+  } else {
+    log.debug("getSecret(\"".concat(moduleAndName, "\") did not find locally so asking SSM for module \"").concat(module, "\""), {
+      module: module,
+      name: name,
+      localModules: Object.keys(localSecrets)
+    });
+    return _await(getSecrets([module]), function () {
+      if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
+        log.debug("after SSM call for module \"".concat(module, "\" the secret was found"), {
+          module: module,
+          name: name
+        });
+        return get(localSecrets, "".concat(module, ".").concat(name));
+      } else {
+        throw new Error("Even after asking SSM for module \"".concat(module, "\" the secret \"").concat(name, "\" was not found!"));
+      }
+    });
+  }
+});
+var localSecrets = {};
+/**
+ * Saves secrets locally so they can be used rather than
+ * going out to SSM. These secrets will then also be "passed
+ * forward" to any functions which are invoked.
+ */
+
+function saveSecretsLocally(secrets) {
+  localSecrets = secrets;
+}
+/**
+ * Gets the locally stored secrets. The format of the keys in this hash
+ * should be `{ module1: { NAME: value, NAME2: value} }` which cooresponds
+ * to the `aws-ssm` opinion on SSM naming.
+ */
+
+function getLocalSecrets() {
+  return localSecrets;
+}
+function maskLoggingForSecrets(modules, log) {
+  var secretPaths = [];
+  Object.keys(modules).forEach(function (mod) {
+    Object.keys(mod).forEach(function (s) {
+      if (_typeof(s) === "object") {
+        log.addToMaskedValues(modules[mod][s]);
+        secretPaths.push("".concat(mod, "/").concat(s));
+      }
+    });
+  });
+
+  if (secretPaths.length > 0) {
+    log.debug("All secret values [ ".concat(secretPaths.length, " ] have been masked in logging"), {
+      secretPaths: secretPaths
+    });
+  } else {
+    log.debug("No secrets where added in this function's call; no additional log masking needed.");
+  }
+}
+
+/**
+ * Ensures that frontend clients who call Lambda's
+ * will be given a CORs friendly response
+ */
+
+var CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Credentials": true
+};
+var contentType = "application/json";
+var fnHeaders = {};
+function getContentType() {
+  return contentType;
+}
+/**
+ * By passing in all the headers you received in a given
+ * invocation this function will pull out all the headers
+ * which start with `O-S-` (as this is the convention for
+ * secrets passed by `aws-orchestrate`). Each line item in
+ * a header represents a secret name/value pairing. For instance,
+ * A typical header might be keyed with `O-S-firemodel/SERVICE_ACCOUNT`.
+ *
+ * Each header name/value will be parsed and then stored in following format:
+ *
+ * ```typescript
+ * {
+ *    [module1]: {
+ *      secret1: value,
+ *      secret2: value
+ *    },
+ *    [module2]: {
+ *      secret3: value
+ *    }
+ * }
+ * ```
+ *
+ * This format is consistent with the opinionated format established by
+ * the `aws-ssm` library. This data structure can be retrieved at any
+ * point by a call to `getLocalSecrets()`.
+ */
+
+function saveSecretHeaders(headers, log) {
+  var secrets = [];
+  var localSecrets = Object.keys(headers).reduce(function (headerSecrets, key) {
+    if (key.slice(0, 4) === "O-S-") {
+      var _key$slice$split = key.slice(4).split("/"),
+          _key$slice$split2 = _slicedToArray(_key$slice$split, 2),
+          module = _key$slice$split2[0],
+          name = _key$slice$split2[1];
+
+      var dotPath = "".concat(module, ".").concat(name);
+      set(headerSecrets, dotPath, headers[key]);
+      secrets.push(dotPath);
+    }
+
+    return headerSecrets;
+  }, {});
+
+  if (secrets.length > 0) {
+    log.debug("Secrets [ ".concat(secrets.length, " ] from headers were identified"), {
+      secrets: secrets
+    });
+  }
+
+  saveSecretsLocally(localSecrets);
+  return localSecrets;
+}
+/**
+ * Takes all of the saved local secrets and puts them into the right format
+ * for being passed in the header of forwarding invocation.
+ */
+
+function getHeaderSecrets() {
+  var log = logger().reloadContext();
+  var modules = getLocalSecrets();
+  return Object.keys(modules).reduce(function (headerSecrets, mod) {
+    var secrets = modules[mod];
+
+    if (_typeof(secrets) === "object") {
+      Object.keys(secrets).forEach(function (secret) {
+        headerSecrets["O-S-".concat(mod, "/").concat(secret)] = modules[mod][secret];
+      });
+    } else {
+      log.warn("Attempt to generate header secrets but module \"".concat(mod, "\" is not a hash of name/values. Ignoring this module but continuing."), {
+        module: mod,
+        type: _typeof(secrets),
+        localModules: Object.keys(modules)
+      });
+    }
+
+    return headerSecrets;
+  }, {});
+}
+function setContentType(type) {
+  if (!type.includes("/")) {
+    throw new Error("The value sent to setContentType (\"".concat(type, "\") is not valid; it must be a valid MIME type."));
+  }
+
+  contentType = type;
+}
+/**
+ * Get the user/developer defined headers for this function
+ */
+
+function getFnHeaders() {
+  return fnHeaders;
+}
+function setFnHeaders(headers) {
+  if (_typeof(headers) !== "object") {
+    throw new Error("The value sent to setHeaders is not the required type. Was \"".concat(_typeof(headers), "\"; expected \"object\"."));
+  }
+
+  fnHeaders = headers;
+}
+
+function getBaseHeaders(opts) {
+  var _ref;
+
+  var correlationId = getCorrelationId();
+  var sequenceInfo = opts.sequence ? (_ref = {}, _defineProperty(_ref, "O-Sequence-Status", JSON.stringify(sequenceStatus(correlationId)(opts.sequence))), _defineProperty(_ref, "O-Serialized-Sequence", serializeSequence(opts.sequence)), _ref) : {};
+  return Object.assign(Object.assign(Object.assign({}, sequenceInfo), getFnHeaders()), _defineProperty({}, "X-Correlation-Id", correlationId));
+}
+/**
+ * All the HTTP _Response_ headers to send when returning to API Gateway
+ */
+
+
+function getResponseHeaders() {
+  var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  return Object.assign(Object.assign(Object.assign({}, getBaseHeaders(opts)), CORS_HEADERS), {
+    "Content-Type": getContentType()
+  });
+}
+/**
+ * All the HTTP _Request_ headers to send when calling
+ * another function
+ */
+
+function getRequestHeaders() {
+  var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  return Object.assign(Object.assign({}, getHeaderSecrets()), getBaseHeaders(opts));
 }
 
 var LambdaSequence =
@@ -303,6 +675,9 @@ function () {
   function LambdaSequence() {
     _classCallCheck(this, LambdaSequence);
 
+    /**
+     * The steps defined in the sequence
+     */
     this._steps = [];
   }
   /**
@@ -314,7 +689,6 @@ function () {
 
   _createClass(LambdaSequence, [{
     key: "add",
-    // private _isASequence: boolean = true;
 
     /**
      * **add**
@@ -352,41 +726,32 @@ function () {
     /**
      * **next**
      *
-     * Executes the _next_ function in the sequence. It will pass parameters which are a
-     * merge of those set during the original setup (aka, with the `add()` method) and
-     * additional values set here as the optional `additionalParams` value.
+     * Returns the parameters needed to execute the _next_ function in the sequence. The
+     * parameters passed to the next function will be of the format:
      *
-     * If this were not clear from the prior paragraph, it is expected that if a given function
-     * produces meaningful output that it would both _return_ the output (for non-orchestrated
-     * executions) and also add it to the `additionalParams` value in `next()` (for orchestrated
-     * executions)
+     * ```typescript
+     * { body, headers, sequence }
+     * ```
      *
-     * Finally, while this function doesn't _require_ you state the generic type, if you do then
-     * you will get more precise typing for the expected input of the next function
+     * This structure allows the receiving `LambdaSequence.from()` function to peel
+     * off _headers_ and _sequence_ information without any risk of namespace collisions
+     * with the returned request object (aka, `body`).
      */
 
   }, {
     key: "next",
     value: function next() {
-      var _this = this;
+      var currentFnResponse = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var logger$1 = arguments.length > 1 ? arguments[1] : undefined;
 
-      var additionalParams = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      var logger = arguments.length > 1 ? arguments[1] : undefined;
-
-      if (logger) {
-        logger.getContext();
+      if (!logger$1) {
+        logger$1 = logger();
+        logger$1.getContext();
       }
 
       if (this.isDone) {
-        if (logger) {
-          logger.info("The next() function [ ".concat(this.activeFn.arn, " ] was called but we are now done with the sequence so exiting."));
-        }
-
+        logger$1.info("The next() function called on ".concat(this.activeFn.arn, " was called but we are now done with the sequence so exiting."));
         return;
-      }
-
-      if (logger) {
-        logger.info("the next() function is ".concat(this.nextFn.arn), this.toJSON());
       }
       /**
        * if there is an active function, set it to completed
@@ -395,26 +760,44 @@ function () {
 
 
       if (this.activeFn) {
-        var results = additionalParams;
+        var results = currentFnResponse;
         delete results._sequence;
-        this.activeFn.results = results;
+        this._responses[this.activeFn.arn] = results;
         this.activeFn.status = "completed";
-      } // resolve dynamic props in next function
+      }
 
+      var body = this.resolveRequestProperties(this.nextFn);
+      var sequence = this.toObject();
+      var headers = getRequestHeaders();
+      logger$1.debug("LambdaSequence.next(): the \"".concat(this.activeFn ? "\"".concat(this.activeFn.arn, "\" function") : "sequence Conductor", "\" will be calling \"").concat(this.nextFn.arn, "\" in a moment"), {
+        fn: this.nextFn.arn,
+        request: {
+          type: "orchestrated-message-body",
+          body: body,
+          sequence: sequence,
+          headers: headers
+        }
+      }); // compress if large
 
-      this._steps = this._steps.map(function (i) {
-        return i.arn === _this.nextFn.arn ? Object.assign(Object.assign({}, i), {
-          params: _this.resolveDynamicProperties(_this.nextFn.params, additionalParams)
-        }) : i;
-      });
-      var nextFunctionTuple = [// the arn
+      body = compress(body, 4096);
+      sequence = compress(sequence, 4096);
+      headers = compress(headers, 4096);
+      /**
+       * The parameters needed to pass into `aws-log`'s
+       * invoke() function
+       */
+
+      var invokeParams = [// the arn
       this.nextFn.arn, // the params passed forward
-      Object.assign(Object.assign({}, this.nextFn.params), {
-        _sequence: this.steps
-      })]; // set the next function to active
+      {
+        type: "orchestrated-message-body",
+        sequence: sequence,
+        body: body,
+        headers: headers
+      }]; // set the next function to active
 
       this.nextFn.status = "active";
-      return nextFunctionTuple;
+      return invokeParams;
     }
     /**
      * **from**
@@ -424,41 +807,43 @@ function () {
 
   }, {
     key: "from",
-    value: function from(event, logger) {
+    value: function from(event, logger$1) {
       var apiGateway;
       var headers = {};
       var sequence;
       var request;
 
+      if (!logger$1) {
+        logger$1 = logger();
+        logger$1.getContext();
+      }
+
       if (isLambdaProxyRequest(event)) {
         apiGateway = event;
-        headers = event.headers;
+        headers = apiGateway.headers;
         delete apiGateway.headers;
         request = getBodyFromPossibleLambdaProxyRequest(event);
         sequence = LambdaSequence.notASequence();
         delete apiGateway.body;
-      } else if (isOrchestratedMessageBody(event)) {
-        headers = event.headers;
-        request = event.body;
+      } else if (isOrchestratedRequest(event)) {
+        headers = decompress(event.headers);
+        request = decompress(event.body);
+        console.log(decompress(event.sequence));
+        sequence = LambdaSequence.deserialize(decompress(event.sequence));
+      } else if (isBareRequest(event)) {
+        headers = {};
+        sequence = _typeof(event) === "object" && event._sequence ? this.ingestSteps(event, event._sequence) : LambdaSequence.notASequence();
+        request = _typeof(event) === "object" && event._sequence ? Object.keys(event).reduce(function (props, prop) {
+          if (prop !== "_sequence") {
+            props[prop] = event[prop];
+          }
 
-        if (event.sequenceSteps) {
-          this.ingestSteps(request, event.sequenceSteps);
-          sequence = this;
-        } else {
-          sequence = LambdaSequence.notASequence();
-        }
-      } else if (event._sequence) {
+          return props;
+        }, {}) : event;
         var e = new Error();
-        console.log({
-          message: "Deprecated: a Lambda event received the property \"_sequence\" which is an OLD way of passing sequence data to other functions. This technique will be removed in the future.",
+        logger$1.warn("Deprecated message format. Bare messages -- where the property \"_sequence\" is used to convey sequence passing -- has been replaced with the IOrchestratedRequest message body. This technique will be removed in the future.", {
           stack: e.stack
         });
-        request = Object.assign({}, event);
-        delete request._sequence;
-        this.ingestSteps(request, event._sequence);
-        sequence = this;
-      } else {
-        sequence = LambdaSequence.notASequence();
       } // The active function's output is sent into the params
 
 
@@ -490,7 +875,7 @@ function () {
      * array of steps.
      */
     value: function ingestSteps(request, steps) {
-      var _this2 = this;
+      var _this = this;
 
       if (typeof steps === "string") {
         steps = JSON.parse(steps);
@@ -512,10 +897,11 @@ function () {
        */
 
       this._steps = this._steps.map(function (s) {
-        return _this2.activeFn && s.arn === _this2.activeFn.arn ? Object.assign(Object.assign({}, s), {
+        return _this.activeFn && s.arn === _this.activeFn.arn ? Object.assign(Object.assign({}, s), {
           params: transformedRequest
         }) : s;
       });
+      return this;
     }
     /**
      * **dynamicProperties**
@@ -526,6 +912,22 @@ function () {
      */
 
   }, {
+    key: "deserialize",
+
+    /**
+     * Takes a serialized state of a sequence and returns
+     * a `LambdaSequence` which represents this state.
+     */
+    value: function deserialize(s) {
+      if (!s.isSequence) {
+        return LambdaSequence.notASequence();
+      }
+
+      this._steps = s.steps;
+      this._responses = s.responses;
+      return this;
+    }
+  }, {
     key: "toString",
     value: function toString() {
       return JSON.stringify(this.toObject(), null, 2);
@@ -534,10 +936,10 @@ function () {
     key: "toObject",
     value: function toObject() {
       var obj = {
-        isASequence: this.isSequence
+        isSequence: this.isSequence
       };
 
-      if (this.isSequence) {
+      if (obj.isSequence) {
         obj.totalSteps = this.steps.length;
         obj.completedSteps = this.completed.length;
 
@@ -545,7 +947,7 @@ function () {
           obj.activeFn = this.activeFn ? {
             arn: this.activeFn.arn,
             params: this.activeFn.params
-          } : {};
+          } : undefined;
         }
 
         if (this.completed) {
@@ -560,14 +962,8 @@ function () {
           });
         }
 
-        obj.results = this.completed.reduce(function (acc, curr) {
-          var objSize = size(curr.results);
-          acc[curr.arn] = objSize < 4096 ? curr.results : {
-            message: "truncated due to size [ ".concat(objSize, " ]"),
-            properties: Object.keys(curr.results)
-          };
-          return acc;
-        }, {});
+        obj.steps = this._steps;
+        obj.responses = this._responses || {};
       }
 
       return obj;
@@ -577,51 +973,43 @@ function () {
     value: function toJSON() {
       return this.toObject();
     }
+    /**
+     * Determine the request data to pass to the handler function:
+     *
+     * - Resolve _dynamic_ properties added by Conductor into static values
+     * - Add _static_ properties passed in from Conductor
+     *
+     */
+
   }, {
-    key: "resolveDynamicProperties",
-    value: function resolveDynamicProperties(conductorParams, priorFnResults) {
-      var _this3 = this;
+    key: "resolveRequestProperties",
+    value: function resolveRequestProperties(fn) {
+      var _this2 = this;
 
-      /**
-       * Properties on `priorFnResults` which have been remapped by dyamic properties.
-       * Note that this only takes place when the conductor's dynamic property is for
-       * "last" function's result. If it is from prior results then it these will be considered
-       * additive properties and _remapped_ properties
-       */
-      var remappedProps = [];
-      Object.keys(conductorParams).forEach(function (key) {
-        var value = conductorParams[key];
+      return Object.keys(fn.params).reduce(function (props, key) {
+        var value = fn.params[key];
 
-        if (typeof value === "string" && value.slice(0, 1) === ":") {
-          var lookup = value.slice(1);
-          var isFromLastFn = !lookup.includes(".");
+        if (isDynamic(value)) {
+          value = get(_this2._responses, value.lookup, undefined);
 
-          if (isFromLastFn) {
-            remappedProps.push(lookup);
-            conductorParams[key] = priorFnResults[lookup];
-          } else {
-            var _lookup$split = lookup.split("."),
-                _lookup$split2 = _slicedToArray(_lookup$split, 2),
-                fnLookup = _lookup$split2[0],
-                fnProp = _lookup$split2[1];
-
-            var relevantStep = _this3.steps.find(function (i) {
-              return i.arn === fnLookup;
-            });
-
-            conductorParams[key] = relevantStep.results[fnProp];
+          if (_typeof(value) === undefined) {
+            throw new Error("The property \"".concat(key, "\" was set as a dynamic property by the Orchestrator but it was dependant on getting a value from ").concat(fn.params[key], " which could not be found."));
           }
         }
-      });
-      return Object.assign(Object.assign({}, Object.keys(priorFnResults).reduce(function (agg, curr) {
-        return !remappedProps.includes(curr) ? Object.assign(Object.assign({}, agg), _defineProperty({}, curr, priorFnResults[curr])) : agg;
-      }, {})), conductorParams);
+
+        var ValueNow = function ValueNow(key, value) {
+          return value;
+        };
+
+        props[key] = ValueNow(key, value);
+        return props;
+      }, {});
     }
   }, {
     key: "isSequence",
     get: function get() {
       // return this._isASequence;
-      return this._steps.length > 0;
+      return this._steps && this._steps.length > 0;
     }
   }, {
     key: "isDone",
@@ -637,18 +1025,18 @@ function () {
   }, {
     key: "remaining",
     get: function get() {
-      return this._steps.filter(function (s) {
+      return this._steps ? this._steps.filter(function (s) {
         return s.status === "assigned";
-      });
+      }) : [];
     }
     /** the tasks which have been completed */
 
   }, {
     key: "completed",
     get: function get() {
-      return this._steps.filter(function (s) {
+      return this._steps ? this._steps.filter(function (s) {
         return s.status === "completed";
-      });
+      }) : [];
     }
     /** the total number of _steps_ in the sequence */
 
@@ -683,44 +1071,13 @@ function () {
 
       return active.length > 0 ? active[0] : undefined;
     }
-    /**
-     * Provides a dictionary of of **results** from the functions prior to it.
-     * The dictionary is two levels deep and will look like this:
-     *
-    ```javascript
-    {
-    [fnName]: {
-      prop1: value,
-      prop2: value
-    },
-    [fn2Name]: {
-      prop1: value
-    }
-    }
-    ```
-     */
-
-  }, {
-    key: "allHistoricResults",
-    get: function get() {
-      var completed = this._steps.filter(function (s) {
-        return s.status === "completed";
-      });
-
-      var result = {};
-      completed.forEach(function (s) {
-        var fn = s.arn;
-        result[fn] = s.results;
-      });
-      return result;
-    }
   }, {
     key: "dynamicProperties",
     get: function get() {
-      var _this4 = this;
+      var _this3 = this;
 
       return Object.keys(this.activeFn ? this.activeFn.params : {}).reduce(function (prev, key) {
-        var currentValue = _this4.activeFn.params[key];
+        var currentValue = _this3.activeFn.params[key];
         var valueIsDynamic = String(currentValue).slice(0, 1) === ":";
         return valueIsDynamic ? prev.concat({
           key: key,
@@ -772,6 +1129,17 @@ function () {
       return obj.from(event, logger);
     }
     /**
+     * Takes a serialized sequence and brings it back to a `LambdaSequence` class.
+     */
+
+  }, {
+    key: "deserialize",
+    value: function deserialize(s) {
+      var obj = new LambdaSequence();
+      obj.deserialize(s);
+      return obj;
+    }
+    /**
      * instantiate a sequence with no steps;
      * this is considered a _non_-sequence (aka.,
      * it is `LambdaSequence` class but until it
@@ -783,8 +1151,7 @@ function () {
     key: "notASequence",
     value: function notASequence() {
       var obj = new LambdaSequence();
-      obj._steps = []; // obj._isASequence = false;
-
+      obj._steps = [];
       return obj;
     }
   }]);
@@ -967,6 +1334,11 @@ function () {
 
       return this;
     }
+    /**
+     * States how to deal with the default error handling. Default
+     * error handling is used once all "known errors" have been exhausted.
+     */
+
   }, {
     key: "toString",
     value: function toString() {
@@ -1009,6 +1381,12 @@ function () {
           prop: "_defaultError"
         };
       }
+
+      return {
+        type: "default",
+        code: this.defaultErrorCode,
+        prop: "_default"
+      };
     }
     /**
      * The default code for unhandled errors.
@@ -1175,175 +1553,6 @@ function findError(e, expectedErrors) {
   return found;
 }
 
-/**
- * Allows getting a single secret out of either _locally_ stored secrets -- or
- * if not found -- going to **SSM** and pulling the module containing this secret.
- */
-function _await(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-/**
- * **getSecrets**
- *
- * Gets the needed secrets for this function -- using locally available information
- * if available (_params_ and/or _cached_ values from prior calls) -- otherwise
- * goes out **SSM** to get it.
- *
- * In addition, all secrets requested (within the given function as well as
- * _prior_ function's secrets in a sequence) will be auto-forwarded to subsequent
- * functions in the currently executing sequence. Secrets _will not_ be passed back
- * in the function's response.
- *
- * @param modules the modules which are have secrets that are needed
- */
-
-
-function _async(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var getSecrets = _async(function (modules) {
-  var log = logger().reloadContext();
-  var localSecrets = getLocalSecrets();
-
-  if (modules.every(function (i) {
-    return Object.keys(localSecrets).includes(i);
-  })) {
-    // everything found in local secrets
-    log.debug("Call to getSecrets() resulted in 100% hit rate for modules locally", {
-      modules: modules
-    });
-    return modules.reduce(function (secrets, mod) {
-      secrets[mod] = localSecrets[mod];
-      return secrets;
-    }, {});
-  } // at least SOME modules are NOT stored locally, the latency of getting some
-  // versus getting them all is negligible so we'll get them all from SSM
-
-
-  log.debug("Some modules requested were not found locally, requesting from SSM.", {
-    modules: modules
-  });
-  return _await(import('aws-ssm'), function (_temp) {
-    var SSM = _temp.SSM;
-    return _await(SSM.modules(modules), function (newSecrets) {
-      modules.forEach(function (m) {
-        if (!newSecrets[m]) {
-          throw new Error("Failure to retrieve the SSM module \"".concat(m, "\""));
-        }
-
-        if (Object.keys(newSecrets[m]).length === 0) {
-          log.warn("Attempt to retrieve module \"".concat(m, "\" returned but had no "));
-        }
-      });
-      log.debug("new SSM modules retrieved");
-      var secrets = Object.assign(Object.assign({}, localSecrets), newSecrets);
-      saveSecretsLocally(secrets);
-      maskLoggingForSecrets(newSecrets, log);
-      return secrets;
-    });
-  });
-});
-/**
- * Goes through a set of secrets -- organized by `[module].[name] = secret` --
- * and masks the values so that they don't leak into the log files.
- */
-
-var getSecret = _async(function (moduleAndName) {
-  var log = logger().reloadContext();
-  var localSecrets = getLocalSecrets();
-
-  if (!moduleAndName.includes("/")) {
-    throw new Error("When using getSecret() you must state both the module and the NAME of the secret where the two are delimted by a \"/\" character.");
-  }
-
-  var _moduleAndName$split = moduleAndName.split("/"),
-      _moduleAndName$split2 = _slicedToArray(_moduleAndName$split, 2),
-      module = _moduleAndName$split2[0],
-      name = _moduleAndName$split2[1];
-
-  if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
-    log.debug("getSecret(\"".concat(moduleAndName, "\") found secret locally"), {
-      module: module,
-      name: name
-    });
-    return get(localSecrets, "".concat(module, ".").concat(name));
-  } else {
-    log.debug("getSecret(\"".concat(moduleAndName, "\") did not find locally so asking SSM for module \"").concat(module, "\""), {
-      module: module,
-      name: name,
-      localModules: Object.keys(localSecrets)
-    });
-    return _await(getSecrets([module]), function () {
-      if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
-        log.debug("after SSM call for module \"".concat(module, "\" the secret was found"), {
-          module: module,
-          name: name
-        });
-        return get(localSecrets, "".concat(module, ".").concat(name));
-      } else {
-        throw new Error("Even after asking SSM for module \"".concat(module, "\" the secret \"").concat(name, "\" was not found!"));
-      }
-    });
-  }
-});
-var localSecrets = {};
-/**
- * Saves secrets locally so they can be used rather than
- * going out to SSM. These secrets will then also be "passed
- * forward" to any functions which are invoked.
- */
-
-function saveSecretsLocally(secrets) {
-  localSecrets = secrets;
-}
-/**
- * Gets the locally stored secrets. The format of the keys in this hash
- * should be `{ module1: { NAME: value, NAME2: value} }` which cooresponds
- * to the `aws-ssm` opinion on SSM naming.
- */
-
-function getLocalSecrets() {
-  return localSecrets;
-}
-function maskLoggingForSecrets(modules, log) {
-  var secretPaths = [];
-  Object.keys(modules).forEach(function (mod) {
-    Object.keys(mod).forEach(function (s) {
-      if (_typeof(s) === "object") {
-        log.addToMaskedValues(modules[mod][s]);
-        secretPaths.push("".concat(mod, "/").concat(s));
-      }
-    });
-  });
-
-  if (secretPaths.length > 0) {
-    log.debug("All secret values [ ".concat(secretPaths.length, " ] have been masked in logging"), {
-      secretPaths: secretPaths
-    });
-  } else {
-    log.debug("No secrets where added in this function's call; no additional log masking needed.");
-  }
-}
-
 function _async$1(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
@@ -1389,131 +1598,6 @@ function registerSequence(log, context) {
 
 function getNewSequence() {
   return newSequence;
-}
-
-var correlationId;
-/**
- * Saves the `correlationId` for easy retrieval across various functions
- */
-
-function setCorrelationId(id) {
-  correlationId = id;
-}
-/**
- * Gets the `correlationId` for a running sequence (or an
- * API Gateway request where the client sent in one)
- */
-
-function getCorrelationId() {
-  return correlationId;
-}
-
-/**
- * Ensures that frontend clients who call Lambda's
- * will be given a CORs friendly response
- */
-
-var CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Credentials": true
-};
-var contentType = "application/json";
-var fnHeaders = {};
-function getContentType() {
-  return contentType;
-}
-/**
- * By passing in all the headers you received in a given
- * invocation this function will pull out all the headers
- * which start with `O-S-` (as this is the convention for
- * secrets passed by `aws-orchestrate`). Each line item in
- * a header represents a secret name/value pairing. For instance,
- * A typical header might be keyed with `O-S-firemodel/SERVICE_ACCOUNT`.
- *
- * Each header name/value will be parsed and then stored in following format:
- *
- * ```typescript
- * {
- *    [module1]: {
- *      secret1: value,
- *      secret2: value
- *    },
- *    [module2]: {
- *      secret3: value
- *    }
- * }
- * ```
- *
- * This format is consistent with the opinionated format established by
- * the `aws-ssm` library. This data structure can be retrieved at any
- * point by a call to `getLocalSecrets()`.
- */
-
-function saveSecretHeaders(headers, log) {
-  var secrets = [];
-  var localSecrets = Object.keys(headers).reduce(function (headerSecrets, key) {
-    if (key.slice(0, 4) === "O-S-") {
-      var _key$slice$split = key.slice(4).split("/"),
-          _key$slice$split2 = _slicedToArray(_key$slice$split, 2),
-          module = _key$slice$split2[0],
-          name = _key$slice$split2[1];
-
-      var dotPath = "".concat(module, ".").concat(name);
-      set(headerSecrets, dotPath, headers[key]);
-      secrets.push(dotPath);
-    }
-
-    return headerSecrets;
-  }, {});
-
-  if (secrets.length > 0) {
-    log.debug("Secrets [ ".concat(secrets.length, " ] from headers were identified"), {
-      secrets: secrets
-    });
-  }
-
-  saveSecretsLocally(localSecrets);
-  return localSecrets;
-}
-function setContentType(type) {
-  if (!type.includes("/")) {
-    throw new Error("The value sent to setContentType (\"".concat(type, "\") is not valid; it must be a valid MIME type."));
-  }
-
-  contentType = type;
-}
-/**
- * Get the user/developer defined headers for this function
- */
-
-function getFnHeaders() {
-  return fnHeaders;
-}
-function setFnHeaders(headers) {
-  if (_typeof(headers) !== "object") {
-    throw new Error("The value sent to setHeaders is not the required type. Was \"".concat(_typeof(headers), "\"; expected \"object\"."));
-  }
-
-  fnHeaders = headers;
-}
-
-function getBaseHeaders(opts) {
-  var _ref;
-
-  var correlationId = getCorrelationId();
-  var sequenceInfo = opts.sequence ? (_ref = {}, _defineProperty(_ref, "O-Sequence-Status", JSON.stringify(sequenceStatus(correlationId)(opts.sequence))), _defineProperty(_ref, "O-Serialized-Sequence", serializeSequence(opts.sequence)), _ref) : {};
-  return Object.assign(Object.assign(Object.assign({}, sequenceInfo), getFnHeaders()), _defineProperty({}, "X-Correlation-Id", correlationId));
-}
-/**
- * All the HTTP _Response_ headers to send when returning to API Gateway
- */
-
-
-function getResponseHeaders() {
-  var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-  return Object.assign(Object.assign(Object.assign({}, getBaseHeaders(opts)), CORS_HEADERS), {
-    "Content-Type": getContentType()
-  });
 }
 
 function _await$1(value, then, direct) {
@@ -1617,7 +1701,7 @@ var loggedMessages = function loggedMessages(log) {
   return {
     /** a handler function just started executing */
     start: function start(request, headers, context, sequence, apiGateway) {
-      log.info("The handler function \"".concat(context.functionName, "\" has started execution.  ").concat(sequence.isSequence ? "This handler is part of a sequence [".concat(log.getCorrelationId(), " ].") : "This handler was not triggered as part of a sequence."), {
+      log.info("The handler function ".concat(context.functionName, " has started.  ").concat(sequence.isSequence ? " [ ".concat(log.getCorrelationId(), " ].") : " [ not part of sequence ]."), {
         request: request,
         sequence: sequence.toObject(),
         headers: headers,
@@ -1625,12 +1709,14 @@ var loggedMessages = function loggedMessages(log) {
       });
     },
     sequenceStarting: function sequenceStarting() {
-      log.debug("The new sequence this function registered is being started/invoked", {
-        sequence: getNewSequence().toObject()
+      var s = getNewSequence();
+      log.debug("The NEW sequence this function/conductor registered is about to be invoked", {
+        sequence: s.toObject(),
+        headersForwarded: Object.keys(getRequestHeaders())
       });
     },
     sequenceStarted: function sequenceStarted(seqResponse) {
-      log.debug("The new sequence this function registered was successfully started", {
+      log.debug("The NEW sequence this function registered was successfully invoked", {
         seqResponse: seqResponse
       });
     },
@@ -1688,8 +1774,9 @@ function convertToApiGatewayError(e) {
  * A higher order function which wraps a serverless _handler_-function with the aim of providing
  * a better typing, logging, and orchestration experience.
  *
- * @param event will be either the body of the request or the hash passed in by API Gateway
- * @param context the contextual props and functions which AWS provides
+ * @param req a strongly typed request object that is defined by the `<I>` generic
+ * @param context the contextual props and functions which AWS provides plus additional
+ * features brought in by the wrapper function
  */
 
 function _await$2(value, then, direct) {
@@ -1974,6 +2061,8 @@ function _async$3(f) {
 
 var wrapper = function wrapper(fn) {
   var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+  /** this is the core Lambda event which the wrapper takes as an input */
   return _async$3(function (event, context) {
     var result;
     var workflowStatus;
@@ -1992,9 +2081,9 @@ var wrapper = function wrapper(fn) {
           apiGateway = _LambdaSequence$from.apiGateway,
           headers = _LambdaSequence$from.headers;
 
+      msg.start(request, headers, context, sequence, apiGateway);
       saveSecretHeaders(headers, log);
-      maskLoggingForSecrets(getLocalSecrets(), log);
-      msg.start(request, headers, context, sequence, apiGateway); //#region PREP
+      maskLoggingForSecrets(getLocalSecrets(), log); //#region PREP
 
       workflowStatus = "prep-starting";
       var status = sequenceStatus(log.getCorrelationId());
@@ -2020,16 +2109,18 @@ var wrapper = function wrapper(fn) {
       workflowStatus = "running-function";
       return _await$2(fn(request, handlerContext), function (_fn) {
         result = _fn;
-        log.debug("handler function returned successfully; wrapper continuing ...");
+        log.debug("handler function returned to wrapper function", {
+          result: result
+        });
         workflowStatus = "function-complete"; //#endregion
         //region SEQUENCE (next)
 
         return _invoke$1(function () {
           if (sequence.isSequence && !sequence.isDone) {
             workflowStatus = "invoke-started";
-            return _await$2(invoke.apply(void 0, _toConsumableArray(sequence.next(result))), function () {
+            return _await$2(invoke.apply(void 0, _toConsumableArray(sequence.next(result))), function (invokeParams) {
               log.debug("finished invoking the next function in the sequence", {
-                sequence: sequence
+                invokeParams: invokeParams
               });
               workflowStatus = "invoke-complete";
             });
@@ -2043,9 +2134,6 @@ var wrapper = function wrapper(fn) {
               msg.sequenceStarting();
               return _await$2(invokeNewSequence(result, log), function (seqResponse) {
                 msg.sequenceStarted(seqResponse);
-                log.debug("kicked off the new sequence defined in this function", {
-                  sequence: getNewSequence()
-                });
                 workflowStatus = "sequence-started";
               });
             } else {

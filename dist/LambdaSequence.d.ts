@@ -1,15 +1,12 @@
-import { IAWSLambdaProxyIntegrationRequest, IDictionary } from "common-types";
-import { ILambdaFunctionType, ILambdaSequenceStep, ILambdaSequenceNextTuple, ILambaSequenceFromResponse, IOrchestratedMessageBody } from "./@types";
-export declare type IPropertyOrDynamicReference<T> = {
-    [P in keyof T]: T[P] | string;
-};
+import { IDictionary } from "common-types";
+import { ILambdaFunctionType, ILambdaSequenceStep, ILambdaSequenceNextTuple, ILambaSequenceFromResponse, ISerializedSequence, IOrchestratedProperties, IOrchestrationRequestTypes } from "./@types";
 export declare class LambdaSequence {
     /**
      * **add** (static initializer)
      *
      * Instantiates a `LambdaSequence` object and then adds a task to the sequence
      */
-    static add<T extends IDictionary = IDictionary>(arn: string, params?: Partial<IPropertyOrDynamicReference<T>>, type?: ILambdaFunctionType): LambdaSequence;
+    static add<T extends IDictionary = IDictionary>(arn: string, params?: Partial<IOrchestratedProperties<T>>, type?: ILambdaFunctionType): LambdaSequence;
     /**
      * **from**
      *
@@ -37,7 +34,11 @@ export declare class LambdaSequence {
      * **Note:** if you are using the `wrapper` function then the primary use of this
      * function will have already been done for you by the _wrapper_.
      */
-    static from<T extends IDictionary = IDictionary>(event: T | IAWSLambdaProxyIntegrationRequest, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
+    static from<T extends IDictionary = IDictionary>(event: IOrchestrationRequestTypes<T>, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
+    /**
+     * Takes a serialized sequence and brings it back to a `LambdaSequence` class.
+     */
+    static deserialize<T>(s: ISerializedSequence): LambdaSequence;
     /**
      * instantiate a sequence with no steps;
      * this is considered a _non_-sequence (aka.,
@@ -46,7 +47,14 @@ export declare class LambdaSequence {
      * it is NOT a sequence)
      */
     static notASequence(): LambdaSequence;
+    /**
+     * The steps defined in the sequence
+     */
     private _steps;
+    /**
+     * The responses from completed functions in a sequence
+     */
+    private _responses;
     /**
      * **add**
      *
@@ -67,29 +75,30 @@ export declare class LambdaSequence {
      * These should relatively static and therefore should be placed in your `env.yml` file if
      * you're using the Serverless framework.
      */
-    add<T extends IDictionary = IDictionary>(arn: string, params?: Partial<IPropertyOrDynamicReference<T>>, type?: ILambdaFunctionType): this;
+    add<T extends IDictionary = IDictionary>(arn: string, params?: Partial<IOrchestratedProperties<T>>, type?: ILambdaFunctionType): this;
     /**
      * **next**
      *
-     * Executes the _next_ function in the sequence. It will pass parameters which are a
-     * merge of those set during the original setup (aka, with the `add()` method) and
-     * additional values set here as the optional `additionalParams` value.
+     * Returns the parameters needed to execute the _next_ function in the sequence. The
+     * parameters passed to the next function will be of the format:
      *
-     * If this were not clear from the prior paragraph, it is expected that if a given function
-     * produces meaningful output that it would both _return_ the output (for non-orchestrated
-     * executions) and also add it to the `additionalParams` value in `next()` (for orchestrated
-     * executions)
+     * ```typescript
+     * { body, headers, sequence }
+     * ```
      *
-     * Finally, while this function doesn't _require_ you state the generic type, if you do then
-     * you will get more precise typing for the expected input of the next function
+     * This structure allows the receiving `LambdaSequence.from()` function to peel
+     * off _headers_ and _sequence_ information without any risk of namespace collisions
+     * with the returned request object (aka, `body`).
      */
-    next<T extends IDictionary = IDictionary>(additionalParams?: Partial<T>, logger?: import("aws-log").ILoggerApi): ILambdaSequenceNextTuple<T>;
+    next<T extends IDictionary>(
+    /** the _current_ function's response */
+    currentFnResponse?: Partial<T>, logger?: import("aws-log").ILoggerApi): ILambdaSequenceNextTuple<T>;
     /**
      * **from**
      *
      * unboxes `request`, `sequence`, `apiGateway`, and `headers` data structures
      */
-    from<T extends IDictionary = IDictionary>(event: T | IAWSLambdaProxyIntegrationRequest | IOrchestratedMessageBody<T>, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
+    from<T>(event: IOrchestrationRequestTypes<T>, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
     /**
      * boolean flag which indicates whether the current execution of the function
      * is part of a _sequence_.
@@ -116,23 +125,6 @@ export declare class LambdaSequence {
     readonly nextFn: ILambdaSequenceStep<IDictionary<any>>;
     readonly activeFn: ILambdaSequenceStep<IDictionary<any>>;
     /**
-     * Provides a dictionary of of **results** from the functions prior to it.
-     * The dictionary is two levels deep and will look like this:
-     *
-  ```javascript
-  {
-    [fnName]: {
-      prop1: value,
-      prop2: value
-    },
-    [fn2Name]: {
-      prop1: value
-    }
-  }
-  ```
-     */
-    readonly allHistoricResults: IDictionary<any>;
-    /**
      * Ingests a set of steps into the current sequence; resolving
      * dynamic properties into real values at the same time.
      *
@@ -142,7 +134,7 @@ export declare class LambdaSequence {
      * **Note:** you can pass in either a serialized string or the actual
      * array of steps.
      */
-    ingestSteps(request: any, steps: string | ILambdaSequenceStep[]): void;
+    ingestSteps(request: any, steps: string | ILambdaSequenceStep[]): this;
     /**
      * **dynamicProperties**
      *
@@ -154,8 +146,20 @@ export declare class LambdaSequence {
         key: string;
         from: string;
     }>;
+    /**
+     * Takes a serialized state of a sequence and returns
+     * a `LambdaSequence` which represents this state.
+     */
+    deserialize(s: ISerializedSequence): LambdaSequence;
     toString(): string;
-    toObject(): IDictionary<any>;
-    toJSON(): IDictionary<any>;
-    private resolveDynamicProperties;
+    toObject(): ISerializedSequence;
+    toJSON(): ISerializedSequence;
+    /**
+     * Determine the request data to pass to the handler function:
+     *
+     * - Resolve _dynamic_ properties added by Conductor into static values
+     * - Add _static_ properties passed in from Conductor
+     *
+     */
+    private resolveRequestProperties;
 }

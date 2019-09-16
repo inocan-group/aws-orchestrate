@@ -3113,6 +3113,13 @@ common-types@^1.11.14, common-types@^1.11.15, common-types@^1.11.18, common-type
   dependencies:
     "@types/json-schema" "^7.0.3"
 
+common-types@^1.12.2:
+  version "1.12.2"
+  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.12.2.tgz#20da7653e413df56b82b48c23c022e196a58b16a"
+  integrity sha512-cZ90lB2p2peDi0fOC9IcFilRJYokDDAtM5uxZPcYjBmXEwmTS0n0mf5+VaCtzsKeR9ycd6kQdHwqMVfCEeghbA==
+  dependencies:
+    "@types/json-schema" "^7.0.3"
+
 commondir@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/commondir/-/commondir-1.0.1.tgz#ddd800da0c66127393cca5950ea968a3aaf1253b"
@@ -6900,6 +6907,11 @@ lru-cache@^5.0.0, lru-cache@^5.1.1:
   integrity sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==
   dependencies:
     yallist "^3.0.2"
+
+lzutf8@^0.5.5:
+  version "0.5.5"
+  resolved "https://registry.yarnpkg.com/lzutf8/-/lzutf8-0.5.5.tgz#3f677ef865eae628fca5f8c6a423ae631371a71c"
+  integrity sha512-x4AdRtP0ETRe0BW8V+TfW+8rOF5t3vWU/Z52twUqDRf0OiEuXiLvXNN6Zm8biFCTI9ffXBZb++THAjfkJ559Nw==
 
 magic-string@^0.22.4:
   version "0.22.5"

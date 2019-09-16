@@ -3,6 +3,7 @@ import { ILoggerApi } from "aws-log";
 import { IErrorClass, IApiGateway } from "../@types";
 import { getNewSequence } from "./sequences";
 import { LambdaSequence } from "../index";
+import { getRequestHeaders } from "./headers";
 
 /**
  * A collection of log messages that the wrapper function will emit
@@ -17,10 +18,10 @@ export const loggedMessages = (log: ILoggerApi) => ({
     apiGateway: IApiGateway
   ) {
     log.info(
-      `The handler function "${context.functionName}" has started execution.  ${
+      `The handler function ${context.functionName} has started.  ${
         sequence.isSequence
-          ? `This handler is part of a sequence [${log.getCorrelationId()} ].`
-          : "This handler was not triggered as part of a sequence."
+          ? ` [ ${log.getCorrelationId()} ].`
+          : " [ not part of sequence ]."
       }`,
       {
         request,
@@ -32,15 +33,19 @@ export const loggedMessages = (log: ILoggerApi) => ({
   },
 
   sequenceStarting() {
+    const s = getNewSequence();
     log.debug(
-      `The new sequence this function registered is being started/invoked`,
-      { sequence: getNewSequence().toObject() }
+      `The NEW sequence this function/conductor registered is about to be invoked`,
+      {
+        sequence: s.toObject(),
+        headersForwarded: Object.keys(getRequestHeaders())
+      }
     );
   },
 
   sequenceStarted(seqResponse: any) {
     log.debug(
-      `The new sequence this function registered was successfully started`,
+      `The NEW sequence this function registered was successfully invoked`,
       { seqResponse }
     );
   },
