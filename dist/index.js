@@ -326,6 +326,12 @@ var sequenceStatus = function sequenceStatus(correlationId) {
  * as the property `foo`. If you pass in a generic type to `dynamic` it will enforce
  * the property name is indeed a response property for the given function.
  */
+function dynamic(fn, prop) {
+  return {
+    type: "orchestrated-dynamic-property",
+    lookup: "fn".concat(prop ? ":".concat(prop) : "")
+  };
+}
 function isDynamic(obj) {
   return obj.type === "orchestrated-dynamic-property" && obj.lookup ? true : false;
 }
@@ -2238,7 +2244,7 @@ var wrapper = function wrapper(fn) {
           });
         } else {
           // UNFOUND ERROR
-          log.debug("An unexpected error is being processed by the default handling mechanism", {
+          log.debug("An error is being processed by the default handling mechanism", {
             defaultHandling: errorMeta.defaultHandling,
             errorMessage: e.message,
             stack: e.stack
@@ -2260,7 +2266,7 @@ var wrapper = function wrapper(fn) {
               var passed = handling.defaultHandlerFn(e);
 
               if (passed === true) {
-                log.debug("The error was fully handled by the handling function/callback; resulting in a successful condition.");
+                log.debug("The error was fully handled by the handling function/callback; resulting in a successful condition [ ".concat(result ? commonTypes.HttpStatusCodes.Success : commonTypes.HttpStatusCodes.NoContent, " ]."));
 
                 if (isApiGatewayRequest) {
                   return {
@@ -2276,11 +2282,6 @@ var wrapper = function wrapper(fn) {
               }
             } catch (e2) {
               // handler threw an error
-              log.debug("the handler function threw an error: ".concat(e2.message), {
-                messsage: e2.message,
-                stack: e2.stack
-              });
-
               if (isApiGatewayRequest) {
                 return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
               }
@@ -2310,7 +2311,11 @@ var wrapper = function wrapper(fn) {
             return "default";
           }, function () {
             //#region default
-            log.debug("Error handled by default unknown policy");
+            log.debug("Error handled by default policy", {
+              code: errorMeta.defaultErrorCode,
+              message: e.message,
+              stack: e.stack
+            });
 
             if (isApiGatewayRequest) {
               return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
@@ -2332,4 +2337,12 @@ var wrapper = function wrapper(fn) {
 
 exports.LambdaEventParser = LambdaEventParser;
 exports.LambdaSequence = LambdaSequence;
+exports.compress = compress;
+exports.decompress = decompress;
+exports.dynamic = dynamic;
+exports.isBareRequest = isBareRequest;
+exports.isDynamic = isDynamic;
+exports.isOrchestratedRequest = isOrchestratedRequest;
+exports.sequenceStatus = sequenceStatus;
+exports.serializeSequence = serializeSequence;
 exports.wrapper = wrapper;

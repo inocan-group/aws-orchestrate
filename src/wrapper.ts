@@ -196,7 +196,7 @@ export const wrapper = function<I, O>(
       } else {
         // UNFOUND ERROR
         log.debug(
-          `An unexpected error is being processed by the default handling mechanism`,
+          `An error is being processed by the default handling mechanism`,
           {
             defaultHandling: errorMeta.defaultHandling,
             errorMessage: e.message,
@@ -218,7 +218,9 @@ export const wrapper = function<I, O>(
               const passed = handling.defaultHandlerFn(e);
               if (passed === true) {
                 log.debug(
-                  `The error was fully handled by the handling function/callback; resulting in a successful condition.`
+                  `The error was fully handled by the handling function/callback; resulting in a successful condition [ ${
+                    result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent
+                  } ].`
                 );
                 if (isApiGatewayRequest) {
                   return {
@@ -238,10 +240,6 @@ export const wrapper = function<I, O>(
               }
             } catch (e2) {
               // handler threw an error
-              log.debug(`the handler function threw an error: ${e2.message}`, {
-                messsage: e2.message,
-                stack: e2.stack
-              });
               if (isApiGatewayRequest) {
                 return convertToApiGatewayError(
                   new UnhandledError(errorMeta.defaultErrorCode, e)
@@ -275,7 +273,11 @@ export const wrapper = function<I, O>(
 
           case "default":
             //#region default
-            log.debug(`Error handled by default unknown policy`);
+            log.debug(`Error handled by default policy`, {
+              code: errorMeta.defaultErrorCode,
+              message: e.message,
+              stack: e.stack
+            });
             if (isApiGatewayRequest) {
               return convertToApiGatewayError(
                 new UnhandledError(errorMeta.defaultErrorCode, e)
