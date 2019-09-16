@@ -10,7 +10,11 @@ import { logger, invoke } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
 import { LambdaSequence } from "./LambdaSequence";
 import { UnhandledError } from "./errors/UnhandledError";
-import { IHandlerContext, IWrapperOptions } from "./@types";
+import {
+  IHandlerContext,
+  IWrapperOptions,
+  IOrchestrationRequestTypes
+} from "./@types";
 import { HandledError } from "./errors/HandledError";
 import {
   registerSequence as register,
@@ -38,15 +42,17 @@ import { sequenceStatus } from "./sequences";
  * A higher order function which wraps a serverless _handler_-function with the aim of providing
  * a better typing, logging, and orchestration experience.
  *
- * @param event will be either the body of the request or the hash passed in by API Gateway
- * @param context the contextual props and functions which AWS provides
+ * @param req a strongly typed request object that is defined by the `<I>` generic
+ * @param context the contextual props and functions which AWS provides plus additional
+ * features brought in by the wrapper function
  */
 export const wrapper = function<I, O>(
-  fn: (event: I, context: IHandlerContext<I>) => Promise<O>,
+  fn: (req: I, context: IHandlerContext) => Promise<O>,
   options: IWrapperOptions = {}
 ) {
+  /** this is the core Lambda event which the wrapper takes as an input */
   return async function(
-    event: IAwsLambdaEvent<I>,
+    event: IOrchestrationRequestTypes<I>,
     context: IAWSLambaContext
   ): Promise<O | IApiGatewayResponse | IApiGatewayErrorResponse> {
     let result: O;
@@ -72,7 +78,7 @@ export const wrapper = function<I, O>(
     try {
       workflowStatus = "starting-try-catch";
       setCorrelationId(log.getCorrelationId());
-      const { request, sequence, apiGateway, headers } = LambdaSequence.from(
+      const { request, sequence, apiGateway, headers } = LambdaSequence.from<I>(
         event
       );
       msg.start(request, headers, context, sequence, apiGateway);
@@ -105,6 +111,7 @@ export const wrapper = function<I, O>(
       //#region CALL the HANDLER FUNCTION
       workflowStatus = "running-function";
       result = await fn(request, handlerContext);
+
       log.debug(`handler function returned to wrapper function`, { result });
       workflowStatus = "function-complete";
       //#endregion

@@ -70,4 +70,4 @@ export declare type ISequenceTrackerStatus = ISequenceTrackerStatusSuccess | ISe
  * For more information see the docs at:
  * [SequenceTracker](aws-orchestrate.netlify.com/transaction#SequenceTracker)
  */
-export declare const SequenceTracker: (event: import("common-types").IAwsLambdaEvent<ISequenceTrackerRequest>, context: import("common-types").IAWSLambaContext) => Promise<ISequenceTrackerStatusSuccess | ISequenceTrackerStatusError | ISequenceTrackerStatusRunning | import("common-types").IApiGatewayResponse | import("common-types").IApiGatewayErrorResponse<any>>;
+export declare const SequenceTracker: (event: import("../@types").IOrchestrationRequestTypes<ISequenceTrackerRequest>, context: import("common-types").IAWSLambaContext) => Promise<ISequenceTrackerStatusSuccess | ISequenceTrackerStatusError | ISequenceTrackerStatusRunning | import("common-types").IApiGatewayResponse | import("common-types").IApiGatewayErrorResponse<any>>;

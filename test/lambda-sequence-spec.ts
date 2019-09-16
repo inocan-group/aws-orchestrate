@@ -1,7 +1,7 @@
 import chai from "chai";
 import { LambdaSequence } from "../src/LambdaSequence";
-import { Sequence } from "../src";
 import { IDictionary } from "common-types";
+import { dynamic } from "../src/sequences";
 
 const expect = chai.expect;
 
@@ -22,8 +22,8 @@ describe("Lambda Sequence => ", () => {
     expect(sequence.isSequence).to.equal(false);
   });
 
-  it("from() returns proper properties when sequence but no proxy request", async () => {
-    const event: Sequence<{ foo: number; bar: number }> = {
+  it("from() handles deprecated sequence being passed into event", async () => {
+    const event: IDictionary = {
       foo: 1,
       bar: 2,
       _sequence: [
@@ -42,12 +42,9 @@ describe("Lambda Sequence => ", () => {
       ]
     };
     const { request, sequence, apiGateway } = LambdaSequence.from(event);
-    // the returned request should NOT have a "sequence" property
-    const eventTransform = { ...event, ...{} };
-    delete eventTransform._sequence;
-    expect(JSON.stringify(request)).to.equal(JSON.stringify(eventTransform));
     expect(apiGateway).to.equal(undefined);
     expect(sequence).to.not.equal(undefined);
+    expect(sequence).to.be.an.instanceOf(LambdaSequence);
     // after calling "from" the sequence is reduced from 2 to 1
     expect(sequence.remaining.length).to.equal(1);
     sequence.steps.map(step => {
@@ -147,11 +144,15 @@ describe("Lambda Sequence => ", () => {
     expect(req2).not.haveOwnProperty("data");
   });
 
-  it("Full sequence test produces correct results throughout", () => {
+  it("Running sequence's next() and from() method works with modern IOrchestrateMessageBody", () => {
     // Sequence defined
     const sequenceDefn = LambdaSequence.add("fn1", { a: 1, b: 2, c: "see" })
-      .add("fn2", { c: 3, temperature: ":data" })
-      .add("fn3", { d: 4, func1: ":fn1.data", func2: ":fn2.data" });
+      .add("fn2", { c: 3, temperature: dynamic("fn1", "data") })
+      .add("fn3", {
+        d: 4,
+        func1: dynamic("fn1", "data"),
+        func2: dynamic("fn2", "data")
+      });
 
     expect(sequenceDefn.steps.length).to.equal(sequenceDefn.remaining.length);
 
@@ -161,12 +162,11 @@ describe("Lambda Sequence => ", () => {
     });
 
     expect(fn).to.equal("fn1");
-    expect(sequenceDefn.dynamicProperties.length).to.equal(0);
     expect(Object.keys(params)).to.include("a");
     expect(Object.keys(params)).to.include("b");
     expect(Object.keys(params)).to.include("c");
     expect(Object.keys(params)).to.include("data");
-    expect(Object.keys(params.data)).to.include("foo");
+    // expect(Object.keys(params.data)).to.include("foo");
 
     // retrieve sequence in first function after conductor; data passed by conductor should be part of params
     const { request, sequence: sequence1 } = LambdaSequence.from(params);

@@ -24,6 +24,7 @@ function _interopNamespace(e) {
 }
 
 var commonTypes = require('common-types');
+var lzutf8 = require('lzutf8');
 var awsLog = require('aws-log');
 var get = _interopDefault(require('lodash.get'));
 var set = _interopDefault(require('lodash.set'));
@@ -260,7 +261,7 @@ function _nonIterableRest() {
  * detects if the given structure is of type <T> or
  * has been boxed into an `IOrchestratedMessageBody`
  */
-function isOrchestratedMessageBody(msg) {
+function isOrchestratedRequest(msg) {
   return _typeof(msg) === "object" && msg.type === "orchestrated-message-body" ? true : false;
 }
 
@@ -327,6 +328,41 @@ var sequenceStatus = function sequenceStatus(correlationId) {
  */
 function isDynamic(obj) {
   return obj.type === "orchestrated-dynamic-property" && obj.lookup ? true : false;
+}
+
+/**
+ * compresses large payloads larger than 4k (or whatever size
+ * you state in the second parameter)
+ */
+
+function compress(data, ifLargerThan) {
+  var payload;
+
+  if (typeof data !== "string") {
+    payload = JSON.stringify(data);
+  }
+
+  if (payload.length > (ifLargerThan || 4096)) {
+    return {
+      compressed: true,
+      data: lzutf8.compress(payload)
+    };
+  } else {
+    return data;
+  }
+}
+function decompress(data) {
+  var parse = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
+  if (_typeof(data) === "object" && data.compressed === true) {
+    return parse ? JSON.parse(lzutf8.decompress(data)) : lzutf8.decompress(data);
+  }
+
+  return data;
+}
+
+function isBareRequest(event) {
+  return !commonTypes.isLambdaProxyRequest(event) && !isOrchestratedRequest(event) ? true : false;
 }
 
 var correlationId;
@@ -730,25 +766,17 @@ function () {
   }, {
     key: "next",
     value: function next() {
-      var additionalParams = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var currentFnResponse = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var logger = arguments.length > 1 ? arguments[1] : undefined;
 
-      if (logger) {
+      if (!logger) {
+        logger = awsLog.logger();
         logger.getContext();
       }
 
       if (this.isDone) {
-        if (logger) {
-          logger.info("The next() function by ".concat(this.activeFn.arn, " was called but we are now done with the sequence so exiting."));
-        }
-
+        logger.info("The next() function called on ".concat(this.activeFn.arn, " was called but we are now done with the sequence so exiting."));
         return;
-      }
-
-      if (logger) {
-        logger.info("the next() function is ".concat(this.nextFn.arn), {
-          nextFunction: this.nextFn.arn
-        });
       }
       /**
        * if there is an active function, set it to completed
@@ -757,25 +785,28 @@ function () {
 
 
       if (this.activeFn) {
-        var results = additionalParams;
+        var results = currentFnResponse;
         delete results._sequence;
         this._responses[this.activeFn.arn] = results;
         this.activeFn.status = "completed";
-      } // resolve dynamic props in next function
-      // this._steps = this._steps.map(i =>
-      //   i.arn === this.nextFn.arn
-      //     ? {
-      //         ...i,
-      //         params: this.resolveRequestProperties(
-      //           this.nextFn.params,
-      //           additionalParams
-      //         )
-      //       }
-      //     : i
-      // );
+      }
 
+      var body = this.resolveRequestProperties(this.nextFn);
+      var sequence = this.toObject();
+      var headers = getRequestHeaders();
+      logger.debug("LambdaSequence.next(): the \"".concat(this.activeFn ? "\"".concat(this.activeFn.arn, "\" function") : "sequence Conductor", "\" will be calling \"").concat(this.nextFn.arn, "\" in a moment"), {
+        fn: this.nextFn.arn,
+        request: {
+          type: "orchestrated-message-body",
+          body: body,
+          sequence: sequence,
+          headers: headers
+        }
+      }); // compress if large
 
-      var requestParams = this.resolveRequestProperties(this.nextFn);
+      body = compress(body, 4096);
+      sequence = compress(sequence, 4096);
+      headers = compress(headers, 4096);
       /**
        * The parameters needed to pass into `aws-log`'s
        * invoke() function
@@ -785,9 +816,9 @@ function () {
       this.nextFn.arn, // the params passed forward
       {
         type: "orchestrated-message-body",
-        sequence: this.toObject(),
-        body: additionalParams,
-        headers: getRequestHeaders()
+        sequence: sequence,
+        body: body,
+        headers: headers
       }]; // set the next function to active
 
       this.nextFn.status = "active";
@@ -807,6 +838,11 @@ function () {
       var sequence;
       var request;
 
+      if (!logger) {
+        logger = awsLog.logger();
+        logger.getContext();
+      }
+
       if (commonTypes.isLambdaProxyRequest(event)) {
         apiGateway = event;
         headers = apiGateway.headers;
@@ -814,22 +850,25 @@ function () {
         request = commonTypes.getBodyFromPossibleLambdaProxyRequest(event);
         sequence = LambdaSequence.notASequence();
         delete apiGateway.body;
-      } else if (isOrchestratedMessageBody(event)) {
-        headers = event.headers;
-        request = event.body;
-        sequence = LambdaSequence.deserialize(event.sequence);
-      } else if (event._sequence) {
+      } else if (isOrchestratedRequest(event)) {
+        headers = decompress(event.headers);
+        request = decompress(event.body);
+        console.log(decompress(event.sequence));
+        sequence = LambdaSequence.deserialize(decompress(event.sequence));
+      } else if (isBareRequest(event)) {
+        headers = {};
+        sequence = _typeof(event) === "object" && event._sequence ? this.ingestSteps(event, event._sequence) : LambdaSequence.notASequence();
+        request = _typeof(event) === "object" && event._sequence ? Object.keys(event).reduce(function (props, prop) {
+          if (prop !== "_sequence") {
+            props[prop] = event[prop];
+          }
+
+          return props;
+        }, {}) : event;
         var e = new Error();
-        console.log({
-          message: "Deprecated: a Lambda event received the property \"_sequence\" which is an OLD way of passing sequence data to other functions. This technique will be removed in the future.",
+        logger.warn("Deprecated message format. Bare messages -- where the property \"_sequence\" is used to convey sequence passing -- has been replaced with the IOrchestratedRequest message body. This technique will be removed in the future.", {
           stack: e.stack
         });
-        request = Object.assign({}, event);
-        delete request._sequence;
-        this.ingestSteps(request, event._sequence);
-        sequence = this;
-      } else {
-        sequence = LambdaSequence.notASequence();
       } // The active function's output is sent into the params
 
 
@@ -887,6 +926,7 @@ function () {
           params: transformedRequest
         }) : s;
       });
+      return this;
     }
     /**
      * **dynamicProperties**
@@ -947,7 +987,8 @@ function () {
           });
         }
 
-        obj.responses = this._responses;
+        obj.steps = this._steps;
+        obj.responses = this._responses || {};
       }
 
       return obj;
@@ -993,7 +1034,7 @@ function () {
     key: "isSequence",
     get: function get() {
       // return this._isASequence;
-      return this._steps.length > 0;
+      return this._steps && this._steps.length > 0;
     }
   }, {
     key: "isDone",
@@ -1009,18 +1050,18 @@ function () {
   }, {
     key: "remaining",
     get: function get() {
-      return this._steps.filter(function (s) {
+      return this._steps ? this._steps.filter(function (s) {
         return s.status === "assigned";
-      });
+      }) : [];
     }
     /** the tasks which have been completed */
 
   }, {
     key: "completed",
     get: function get() {
-      return this._steps.filter(function (s) {
+      return this._steps ? this._steps.filter(function (s) {
         return s.status === "completed";
-      });
+      }) : [];
     }
     /** the total number of _steps_ in the sequence */
 
@@ -1135,8 +1176,7 @@ function () {
     key: "notASequence",
     value: function notASequence() {
       var obj = new LambdaSequence();
-      obj._steps = []; // obj._isASequence = false;
-
+      obj._steps = [];
       return obj;
     }
   }]);
@@ -1319,6 +1359,11 @@ function () {
 
       return this;
     }
+    /**
+     * States how to deal with the default error handling. Default
+     * error handling is used once all "known errors" have been exhausted.
+     */
+
   }, {
     key: "toString",
     value: function toString() {
@@ -1361,6 +1406,12 @@ function () {
           prop: "_defaultError"
         };
       }
+
+      return {
+        type: "default",
+        code: this.defaultErrorCode,
+        prop: "_default"
+      };
     }
     /**
      * The default code for unhandled errors.
@@ -1748,8 +1799,9 @@ function convertToApiGatewayError(e) {
  * A higher order function which wraps a serverless _handler_-function with the aim of providing
  * a better typing, logging, and orchestration experience.
  *
- * @param event will be either the body of the request or the hash passed in by API Gateway
- * @param context the contextual props and functions which AWS provides
+ * @param req a strongly typed request object that is defined by the `<I>` generic
+ * @param context the contextual props and functions which AWS provides plus additional
+ * features brought in by the wrapper function
  */
 
 function _await$2(value, then, direct) {
@@ -2034,6 +2086,8 @@ function _async$3(f) {
 
 var wrapper = function wrapper(fn) {
   var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+  /** this is the core Lambda event which the wrapper takes as an input */
   return _async$3(function (event, context) {
     var result;
     var workflowStatus;

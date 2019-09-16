@@ -100,9 +100,9 @@ export interface ISerializedSequenceTrue {
  * if the `body` is greater than **4k** then it will be
  * compressed when sent over the wire
  */
-export interface ICompressedBody {
+export interface ICompressedSection {
     compressed: true;
-    body: string;
+    data: string;
 }
 /**
  * **IOrchestratedMessageBody**
@@ -116,12 +116,19 @@ export interface ICompressedBody {
  * experience provided by the `wrapper` function as well providing strong typing
  * throughout.
  */
-export interface IOrchestratedMessageBody<T> {
+export interface IOrchestratedRequest<T> {
     type: "orchestrated-message-body";
-    sequence: ISerializedSequence;
-    headers: IWrapperResponseHeaders;
-    body: T | ICompressedBody;
+    sequence: ISerializedSequence | ICompressedSection;
+    headers: IWrapperResponseHeaders | ICompressedSection;
+    body: T | ICompressedSection;
 }
+/**
+ * This is a antiquated request form which should not be used anymore
+ */
+export declare type IBareRequest<T> = T & {
+    _sequence?: ILambdaSequenceStep[];
+};
+export declare type IOrchestrationRequestTypes<T> = IOrchestratedRequest<T> | IBareRequest<T> | IAWSLambdaProxyIntegrationRequest;
 /**
  * **ILambdaSequenceStep**
  *
@@ -150,7 +157,7 @@ export interface ILambaSequenceFromResponse<T> {
  * to it. Within these parameters it also includes the
  * `_sequence` property to pass along the sequence meta-data
  */
-export declare type ILambdaSequenceNextTuple<T> = [string, IOrchestratedMessageBody<T>];
+export declare type ILambdaSequenceNextTuple<T> = [string, IOrchestratedRequest<T>];
 /**
  * Configure how an error should be identified; typically you would only
  * use one condition but if multiple are used they are considered an `AND`
@@ -307,9 +314,6 @@ export interface IDefaultHandlingDefault extends IDefaultHandlingBase {
     type: "default";
 }
 export declare type IDefaultHandling = IDefaultHandlingForwarding | IDefaultHandlingError | IDefaultHandlingCallback | IDefaultHandlingDefault;
-export declare type WithBodySequence<T> = T & {
-    _sequence: string;
-};
 /**
  * Allows an Orchestrator to state a property that came from a previously
  * function execution.

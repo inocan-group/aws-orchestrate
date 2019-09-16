@@ -1,5 +1,5 @@
-import { IAWSLambdaProxyIntegrationRequest, IDictionary } from "common-types";
-import { ILambdaFunctionType, ILambdaSequenceStep, ILambdaSequenceNextTuple, ILambaSequenceFromResponse, IOrchestratedMessageBody, ISerializedSequence, IOrchestratedProperties } from "./@types";
+import { IDictionary } from "common-types";
+import { ILambdaFunctionType, ILambdaSequenceStep, ILambdaSequenceNextTuple, ILambaSequenceFromResponse, ISerializedSequence, IOrchestratedProperties, IOrchestrationRequestTypes } from "./@types";
 export declare class LambdaSequence {
     /**
      * **add** (static initializer)
@@ -34,7 +34,7 @@ export declare class LambdaSequence {
      * **Note:** if you are using the `wrapper` function then the primary use of this
      * function will have already been done for you by the _wrapper_.
      */
-    static from<T extends IDictionary = IDictionary>(event: T | IAWSLambdaProxyIntegrationRequest, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
+    static from<T extends IDictionary = IDictionary>(event: IOrchestrationRequestTypes<T>, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
     /**
      * Takes a serialized sequence and brings it back to a `LambdaSequence` class.
      */
@@ -90,13 +90,15 @@ export declare class LambdaSequence {
      * off _headers_ and _sequence_ information without any risk of namespace collisions
      * with the returned request object (aka, `body`).
      */
-    next<T extends IDictionary>(additionalParams?: Partial<T>, logger?: import("aws-log").ILoggerApi): ILambdaSequenceNextTuple<T>;
+    next<T extends IDictionary>(
+    /** the _current_ function's response */
+    currentFnResponse?: Partial<T>, logger?: import("aws-log").ILoggerApi): ILambdaSequenceNextTuple<T>;
     /**
      * **from**
      *
      * unboxes `request`, `sequence`, `apiGateway`, and `headers` data structures
      */
-    from<T extends IDictionary = IDictionary>(event: T | IAWSLambdaProxyIntegrationRequest | IOrchestratedMessageBody<T>, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
+    from<T>(event: IOrchestrationRequestTypes<T>, logger?: import("aws-log").ILoggerApi): ILambaSequenceFromResponse<T>;
     /**
      * boolean flag which indicates whether the current execution of the function
      * is part of a _sequence_.
@@ -132,7 +134,7 @@ export declare class LambdaSequence {
      * **Note:** you can pass in either a serialized string or the actual
      * array of steps.
      */
-    ingestSteps(request: any, steps: string | ILambdaSequenceStep[]): void;
+    ingestSteps(request: any, steps: string | ILambdaSequenceStep[]): this;
     /**
      * **dynamicProperties**
      *
