@@ -377,7 +377,6 @@ export function handler(event, context, callback) {
     }
 
     this._steps = steps;
-    // this._isASequence = true;
     const activeFnParams =
       this.activeFn && this.activeFn.params ? this.activeFn.params : {};
     const transformedRequest =
