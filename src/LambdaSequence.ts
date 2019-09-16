@@ -14,13 +14,13 @@ import {
   WithBodySequence,
   IWrapperRequestHeaders,
   ISerializedSequence,
-  ICompressedBody,
+  ICompressedSection,
   IOrchestratedDynamicProperty,
   IOrchestratedProperties
 } from "./@types";
 import { isOrchestratedMessageBody } from "./sequences/isOrchestratedMessageBody";
 import { getRequestHeaders } from "./wrapper-fn/headers";
-import { isDynamic } from "./sequences";
+import { isDynamic, compress, decompress } from "./sequences";
 import get from "lodash.get";
 
 function size(obj: IDictionary) {
@@ -193,20 +193,9 @@ export function handler(event, context, callback) {
       this.activeFn.status = "completed";
     }
 
-    // resolve dynamic props in next function
-    // this._steps = this._steps.map(i =>
-    //   i.arn === this.nextFn.arn
-    //     ? {
-    //         ...i,
-    //         params: this.resolveRequestProperties(
-    //           this.nextFn.params,
-    //           additionalParams
-    //         )
-    //       }
-    //     : i
-    // );
-
-    const requestParams = this.resolveRequestProperties<T>(this.nextFn);
+    const body = compress(this.resolveRequestProperties<T>(this.nextFn), 4096);
+    const sequence = compress(this.toObject(), 4096);
+    const headers = compress(getRequestHeaders(), 4096);
 
     /**
      * The parameters needed to pass into `aws-log`'s
@@ -218,9 +207,9 @@ export function handler(event, context, callback) {
       // the params passed forward
       {
         type: "orchestrated-message-body",
-        sequence: this.toObject(),
-        body: additionalParams as T,
-        headers: getRequestHeaders()
+        sequence,
+        body,
+        headers
       }
     ];
 
@@ -252,9 +241,9 @@ export function handler(event, context, callback) {
       sequence = LambdaSequence.notASequence();
       delete apiGateway.body;
     } else if (isOrchestratedMessageBody(event)) {
-      headers = (event as IOrchestratedMessageBody<T>).headers;
-      request = event.body;
-      sequence = LambdaSequence.deserialize<T>(event.sequence);
+      headers = decompress((event as IOrchestratedMessageBody<T>).headers);
+      request = decompress(event.body);
+      sequence = LambdaSequence.deserialize<T>(decompress(event.sequence));
     } else if ((event as WithBodySequence<T>)._sequence) {
       const e = new Error();
       console.log({

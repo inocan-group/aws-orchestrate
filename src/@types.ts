@@ -127,9 +127,9 @@ export interface ISerializedSequenceTrue {
  * if the `body` is greater than **4k** then it will be
  * compressed when sent over the wire
  */
-export interface ICompressedBody {
+export interface ICompressedSection {
   compressed: true;
-  body: string;
+  data: string;
 }
 
 /**
@@ -146,9 +146,9 @@ export interface ICompressedBody {
  */
 export interface IOrchestratedMessageBody<T> {
   type: "orchestrated-message-body";
-  sequence: ISerializedSequence;
-  headers: IWrapperResponseHeaders;
-  body: T | ICompressedBody;
+  sequence: ISerializedSequence | ICompressedSection;
+  headers: IWrapperResponseHeaders | ICompressedSection;
+  body: T | ICompressedSection;
 }
 
 /**
