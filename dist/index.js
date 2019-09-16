@@ -2126,7 +2126,7 @@ var wrapper = function wrapper(fn) {
         apiGateway: apiGateway,
         getSecret: getSecret,
         getSecrets: getSecrets,
-        isApiGatewayRequest: apiGateway && apiGateway.resource ? true : false,
+        isApiGatewayRequest: commonTypes.isLambdaProxyRequest(event),
         errorMgmt: errorMeta
       }); //#endregion
       //#region CALL the HANDLER FUNCTION
@@ -2168,7 +2168,7 @@ var wrapper = function wrapper(fn) {
             //#endregion
             //#region SEQUENCE (send to tracker)
             return _invoke$1(function () {
-              if (options.sequenceTracker || sequence.isSequence) {
+              if (options.sequenceTracker && sequence.isSequence) {
                 workflowStatus = "sequence-tracker-starting";
                 msg.sequenceTracker(options.sequenceTracker, workflowStatus);
                 return _invokeIgnored(function () {
@@ -2205,7 +2205,7 @@ var wrapper = function wrapper(fn) {
     }, function (e) {
       msg.processingError(e, workflowStatus);
       var found = findError(e, errorMeta);
-      var isApiGatewayRequest = _typeof(event) === "object" && event.headers ? true : false;
+      var isApiGatewayRequest = commonTypes.isLambdaProxyRequest(event);
       return function () {
         if (found) {
           if (found.handling.callback) {

@@ -1,10 +1,10 @@
 import {
   IAWSLambaContext,
-  IAwsLambdaEvent,
   IAWSLambdaProxyIntegrationRequest,
   IApiGatewayErrorResponse,
   HttpStatusCodes,
-  IApiGatewayResponse
+  IApiGatewayResponse,
+  isLambdaProxyRequest
 } from "common-types";
 import { logger, invoke } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
@@ -103,7 +103,7 @@ export const wrapper = function<I, O>(
         apiGateway,
         getSecret,
         getSecrets,
-        isApiGatewayRequest: apiGateway && apiGateway.resource ? true : false,
+        isApiGatewayRequest: isLambdaProxyRequest(event),
         errorMgmt: errorMeta
       };
       //#endregion
@@ -140,7 +140,7 @@ export const wrapper = function<I, O>(
       //#endregion
 
       //#region SEQUENCE (send to tracker)
-      if (options.sequenceTracker || sequence.isSequence) {
+      if (options.sequenceTracker && sequence.isSequence) {
         workflowStatus = "sequence-tracker-starting";
         msg.sequenceTracker(options.sequenceTracker, workflowStatus);
         if (sequence.isDone) {
@@ -170,11 +170,7 @@ export const wrapper = function<I, O>(
       msg.processingError(e, workflowStatus);
 
       const found = findError(e, errorMeta);
-      const isApiGatewayRequest: boolean =
-        typeof event === "object" &&
-        (event as IAWSLambdaProxyIntegrationRequest).headers
-          ? true
-          : false;
+      const isApiGatewayRequest: boolean = isLambdaProxyRequest(event);
 
       if (found) {
         if (found.handling.callback) {
