@@ -267,8 +267,6 @@ export function handler(event, context, callback) {
     } else if (isOrchestratedRequest(event)) {
       headers = decompress((event as IOrchestratedRequest<T>).headers);
       request = decompress(event.body);
-      console.log(decompress(event.sequence));
-
       sequence = LambdaSequence.deserialize<T>(decompress(event.sequence));
     } else if (isBareRequest(event)) {
       headers = {};
@@ -491,9 +489,10 @@ export function handler(event, context, callback) {
             );
           }
         }
-        const ValueNow = (key: keyof T & string, value: any) =>
+        const valueNow = (key: keyof T & string, value: any) =>
           value as T[typeof key];
-        (props as T)[key] = ValueNow(key, value);
+
+        (props as T)[key] = valueNow(key, value);
 
         return props;
       },

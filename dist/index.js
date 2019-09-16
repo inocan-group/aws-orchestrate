@@ -865,7 +865,6 @@ function () {
       } else if (isOrchestratedRequest(event)) {
         headers = decompress(event.headers);
         request = decompress(event.body);
-        console.log(decompress(event.sequence));
         sequence = LambdaSequence.deserialize(decompress(event.sequence));
       } else if (isBareRequest(event)) {
         headers = {};
@@ -1034,11 +1033,11 @@ function () {
           }
         }
 
-        var ValueNow = function ValueNow(key, value) {
+        var valueNow = function valueNow(key, value) {
           return value;
         };
 
-        props[key] = ValueNow(key, value);
+        props[key] = valueNow(key, value);
         return props;
       }, {});
     }
