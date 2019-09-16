@@ -345,7 +345,10 @@ function compress(data, ifLargerThan) {
   if (payload.length > (ifLargerThan || 4096)) {
     return {
       compressed: true,
-      data: lzutf8.compress(payload)
+      data: lzutf8.compress(payload, {
+        inputEncoding: "String",
+        outputEncoding: "Base64"
+      })
     };
   } else {
     return data;
@@ -356,6 +359,7 @@ function decompress(data) {
 
   if (_typeof(data) === "object" && data.compressed === true) {
     return parse ? JSON.parse(lzutf8.decompress(data, {
+      inputEncoding: "Base64",
       outputEncoding: "String"
     })) : lzutf8.decompress(data);
   }
