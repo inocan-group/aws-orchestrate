@@ -32,7 +32,9 @@ export function decompress<T = any>(
     typeof data === "object" &&
     (data as ICompressedSection).compressed === true
   ) {
-    return parse ? (JSON.parse(d(data)) as T) : (d(data) as T);
+    return parse
+      ? (JSON.parse(d(data, { outputEncoding: "String" })) as T)
+      : (d(data) as T);
   }
 
   return data as T;

@@ -330,7 +330,9 @@ function decompress(data) {
   var parse = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
 
   if (_typeof(data) === "object" && data.compressed === true) {
-    return parse ? JSON.parse(decompress$1(data)) : decompress$1(data);
+    return parse ? JSON.parse(decompress$1(data, {
+      outputEncoding: "String"
+    })) : decompress$1(data);
   }
 
   return data;
