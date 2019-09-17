@@ -173,7 +173,9 @@ export function handler(event, context, callback) {
     }
     if (this.isDone) {
       logger.info(
-        `The next() function called on ${this.activeFn.arn} was called but we are now done with the sequence so exiting.`
+        `The next() function called on ${
+          this.activeFn && this.activeFn.arn ? this.activeFn.arn : "unknown"
+        } was called but we are now done with the sequence so exiting.`
       );
       return;
     }
@@ -351,7 +353,9 @@ export function handler(event, context, callback) {
   }
 
   public get activeFn() {
-    const active = this._steps.filter(s => s.status === "active");
+    const active = this._steps
+      ? this._steps.filter(s => s.status === "active")
+      : [];
     return active.length > 0 ? active[0] : undefined;
   }
 
