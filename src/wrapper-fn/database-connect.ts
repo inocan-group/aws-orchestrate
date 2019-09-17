@@ -42,7 +42,10 @@ export const database = async (config?: IFirebaseConfig) => {
         log.debug(
           `The Firebase service account has been retrieved from SSM and will be used.`
         );
-        config = firebase.SERVICE_ACCOUNT;
+        config = {
+          serviceAccount: firebase.SERVICE_ACCOUNT,
+          databaseUrl: firebase.DATABASE_URL
+        };
       }
     }
 

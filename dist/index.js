@@ -1148,7 +1148,7 @@ function () {
       }
 
       if (this.isDone) {
-        logger.info("The next() function called on ".concat(this.activeFn.arn, " was called but we are now done with the sequence so exiting."));
+        logger.info("The next() function called on ".concat(this.activeFn && this.activeFn.arn ? this.activeFn.arn : "unknown", " was called but we are now done with the sequence so exiting."));
         return;
       }
       /**
@@ -1461,10 +1461,9 @@ function () {
   }, {
     key: "activeFn",
     get: function get() {
-      var active = this._steps.filter(function (s) {
+      var active = this._steps ? this._steps.filter(function (s) {
         return s.status === "active";
-      });
-
+      }) : [];
       return active.length > 0 ? active[0] : undefined;
     }
   }, {
@@ -1747,7 +1746,10 @@ var database = _async$2(function (config) {
                 }
 
                 log.debug("The Firebase service account has been retrieved from SSM and will be used.");
-                config = firebase.SERVICE_ACCOUNT;
+                config = {
+                  serviceAccount: firebase.SERVICE_ACCOUNT,
+                  databaseUrl: firebase.DATABASE_URL
+                };
               });
             }
           }();
