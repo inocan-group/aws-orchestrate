@@ -24,7 +24,7 @@ import { isOrchestratedRequest } from "./sequences/isOrchestratedMessageBody";
 import { getRequestHeaders } from "./wrapper-fn/headers";
 import { isDynamic, compress, decompress, isBareRequest } from "./sequences";
 import get from "lodash.get";
-import { logger as awsLogger } from "aws-log";
+import { logger as awsLogger, logger } from "aws-log";
 
 function size(obj: IDictionary) {
   let size = 0,
@@ -191,9 +191,15 @@ export function handler(event, context, callback) {
       this.activeFn.status = "completed";
     }
 
+    /**
+     *assign the first
+     */
+
     let body: T | ICompressedSection = this.resolveRequestProperties<T>(
       this.nextFn
     );
+    console.log(this.activeFn);
+
     let sequence: ISerializedSequence | ICompressedSection = this.toObject();
     let headers:
       | IWrapperResponseHeaders
@@ -235,7 +241,6 @@ export function handler(event, context, callback) {
       }
     ];
 
-    // set the next function to active
     this.nextFn.status = "active";
 
     return invokeParams;
@@ -353,9 +358,18 @@ export function handler(event, context, callback) {
   }
 
   public get activeFn() {
+    const log = logger().reloadContext();
     const active = this._steps
       ? this._steps.filter(s => s.status === "active")
       : [];
+
+    if (active.length > 1) {
+      log.warn(
+        `There appears to be more than 1 STEP in the sequence marked as active!`,
+        { steps: this._steps }
+      );
+    }
+
     return active.length > 0 ? active[0] : undefined;
   }
 
@@ -447,10 +461,9 @@ export function handler(event, context, callback) {
     if (obj.isSequence) {
       obj.totalSteps = this.steps.length;
       obj.completedSteps = this.completed.length;
+
       if (this.activeFn) {
-        obj.activeFn = this.activeFn
-          ? { arn: this.activeFn.arn, params: this.activeFn.params }
-          : undefined;
+        obj.activeFn = this.activeFn.arn;
       }
       if (this.completed) {
         obj.completed = this.completed.map(i => i.arn);
@@ -484,6 +497,7 @@ export function handler(event, context, callback) {
             (value as IOrchestratedDynamicProperty).lookup,
             undefined
           );
+
           if (typeof value === undefined) {
             throw new Error(
               `The property "${key}" was set as a dynamic property by the Orchestrator but it was dependant on getting a value from ${

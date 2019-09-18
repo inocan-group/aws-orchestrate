@@ -329,7 +329,7 @@ var sequenceStatus = function sequenceStatus(correlationId) {
 function dynamic(fn, prop) {
   return {
     type: "orchestrated-dynamic-property",
-    lookup: "fn".concat(prop ? ":".concat(prop) : "")
+    lookup: "".concat(fn).concat(prop ? ".".concat(prop) : "")
   };
 }
 function isDynamic(obj) {
@@ -738,23 +738,6 @@ function isBareRequest(event) {
   return !commonTypes.isLambdaProxyRequest(event) && !isOrchestratedRequest(event) ? true : false;
 }
 
-var correlationId;
-/**
- * Saves the `correlationId` for easy retrieval across various functions
- */
-
-function setCorrelationId(id) {
-  correlationId = id;
-}
-/**
- * Gets the `correlationId` for a running sequence (or an
- * API Gateway request where the client sent in one)
- */
-
-function getCorrelationId() {
-  return correlationId;
-}
-
 /**
  * Allows getting a single secret out of either _locally_ stored secrets -- or
  * if not found -- going to **SSM** and pulling the module containing this secret.
@@ -1042,9 +1025,9 @@ function setFnHeaders(headers) {
 function getBaseHeaders(opts) {
   var _ref;
 
-  var correlationId = getCorrelationId();
+  var correlationId = awsLog.getCorrelationId();
   var sequenceInfo = opts.sequence ? (_ref = {}, _defineProperty(_ref, "O-Sequence-Status", JSON.stringify(sequenceStatus(correlationId)(opts.sequence))), _defineProperty(_ref, "O-Serialized-Sequence", serializeSequence(opts.sequence)), _ref) : {};
-  return Object.assign(Object.assign(Object.assign({}, sequenceInfo), getFnHeaders()), _defineProperty({}, "X-Correlation-Id", correlationId));
+  return Object.assign(Object.assign(Object.assign({}, sequenceInfo), getFnHeaders()), _defineProperty({}, "X-Correlation-Id", awsLog.getCorrelationId()));
 }
 /**
  * All the HTTP _Response_ headers to send when returning to API Gateway
@@ -1163,8 +1146,13 @@ function () {
         this._responses[this.activeFn.arn] = results;
         this.activeFn.status = "completed";
       }
+      /**
+       *assign the first
+       */
+
 
       var body = this.resolveRequestProperties(this.nextFn);
+      console.log(this.activeFn);
       var sequence = this.toObject();
       var headers = getRequestHeaders();
       logger.debug("LambdaSequence.next(): the \"".concat(this.activeFn ? "\"".concat(this.activeFn.arn, "\" function") : "sequence Conductor", "\" will be calling \"").concat(this.nextFn.arn, "\" in a moment"), {
@@ -1192,8 +1180,7 @@ function () {
         sequence: sequence,
         body: body,
         headers: headers
-      }]; // set the next function to active
-
+      }];
       this.nextFn.status = "active";
       return invokeParams;
     }
@@ -1340,10 +1327,7 @@ function () {
         obj.completedSteps = this.completed.length;
 
         if (this.activeFn) {
-          obj.activeFn = this.activeFn ? {
-            arn: this.activeFn.arn,
-            params: this.activeFn.params
-          } : undefined;
+          obj.activeFn = this.activeFn.arn;
         }
 
         if (this.completed) {
@@ -1461,9 +1445,17 @@ function () {
   }, {
     key: "activeFn",
     get: function get() {
+      var log = awsLog.logger().reloadContext();
       var active = this._steps ? this._steps.filter(function (s) {
         return s.status === "active";
       }) : [];
+
+      if (active.length > 1) {
+        log.warn("There appears to be more than 1 STEP in the sequence marked as active!", {
+          steps: this._steps
+        });
+      }
+
       return active.length > 0 ? active[0] : undefined;
     }
   }, {
@@ -2132,7 +2124,6 @@ var wrapper = function wrapper(fn) {
     var errorMeta = new ErrorMeta();
     return _catch(function () {
       workflowStatus = "starting-try-catch";
-      setCorrelationId(log.getCorrelationId());
 
       var _LambdaSequence$from = LambdaSequence.from(event),
           request = _LambdaSequence$from.request,

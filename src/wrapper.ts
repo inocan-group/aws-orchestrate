@@ -26,7 +26,6 @@ import {
   setFnHeaders,
   setContentType,
   getResponseHeaders,
-  setCorrelationId,
   saveSecretHeaders,
   loggedMessages,
   getNewSequence,
@@ -77,7 +76,6 @@ export const wrapper = function<I, O>(
     const errorMeta: ErrorMeta = new ErrorMeta();
     try {
       workflowStatus = "starting-try-catch";
-      setCorrelationId(log.getCorrelationId());
       const { request, sequence, apiGateway, headers } = LambdaSequence.from<I>(
         event
       );
