@@ -73,11 +73,11 @@ export interface ISerializedSequenceTrue {
      * the function in the sequence which is now _executing_; returns
      * not only function name but parameters passed
      */
-    activeFn?: IServerlessFunctionSignature;
+    activeFn?: arn;
     /** the _functions_ (names only) in the sequence which have **completed** */
-    completed: string[];
+    completed: arn[];
     /** the _functions_ (names only) in the sequence which have **remain** to be executed */
-    remaining: string[];
+    remaining: arn[];
     /**
      * The **steps** defined in the sequence. This is an _ordered_ array of steps, including
      * their ARN, their input _params_,

@@ -20,7 +20,7 @@ export function dynamic<T = any>(
 ): IOrchestratedDynamicProperty {
   return {
     type: "orchestrated-dynamic-property",
-    lookup: `fn${prop ? `:${prop}` : ""}`
+    lookup: `${fn}${prop ? `.${prop}` : ""}`
   };
 }
 

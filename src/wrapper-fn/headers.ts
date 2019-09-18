@@ -1,10 +1,9 @@
 import { IDictionary, IHttpResponseHeaders } from "common-types";
 import { IWrapperResponseHeaders } from "../@types";
 import { sequenceStatus, serializeSequence } from "../sequences";
-import { getCorrelationId } from "./correlationId";
 import { saveSecretsLocally, getLocalSecrets } from "./secrets";
 import set from "lodash.set";
-import { logger, ILoggerApi } from "aws-log";
+import { logger, ILoggerApi, getCorrelationId } from "aws-log";
 
 /**
  * Ensures that frontend clients who call Lambda's
@@ -140,7 +139,7 @@ function getBaseHeaders(opts: IHttpResponseHeaders) {
   return {
     ...sequenceInfo,
     ...getFnHeaders(),
-    ["X-Correlation-Id"]: correlationId
+    ["X-Correlation-Id"]: getCorrelationId()
   };
 }
 

@@ -1,7 +1,8 @@
 import chai from "chai";
 import { LambdaSequence } from "../src/LambdaSequence";
 import { IDictionary } from "common-types";
-import { dynamic } from "../src/sequences";
+import { dynamic, isCompressedSection, decompress } from "../src/sequences";
+import { ISerializedSequence } from "../src";
 
 const expect = chai.expect;
 
@@ -16,7 +17,7 @@ describe("Lambda Sequence => ", () => {
   it("from() returns proper properties when no sequence or proxy request", async () => {
     const event: { foo: number; bar: number } = { foo: 1, bar: 2 };
     const { request, sequence, apiGateway } = LambdaSequence.from(event);
-    expect(request).to.equal(event);
+    expect(JSON.stringify(request)).to.equal(JSON.stringify(event));
     expect(apiGateway).to.equal(undefined);
     expect(sequence).to.be.instanceOf(LambdaSequence);
     expect(sequence.isSequence).to.equal(false);
@@ -64,84 +65,12 @@ describe("Lambda Sequence => ", () => {
     });
   });
 
-  it("when params are included in steps, those properties are included when using from()", async () => {
-    interface IFakeInput {
-      foo: number;
-      bar: number;
-      baz: string;
-    }
-
-    interface IAnotherFake {
-      width: number;
-      height: number;
-    }
-    const s = LambdaSequence.add<IFakeInput>("fn1", { foo: 1, bar: 2 }).add<
-      IAnotherFake
-    >("fn2", { width: 50 });
-
-    const [fn, event] = s.next({ baz: "hello world" });
-
-    const { request, sequence } = LambdaSequence.from(event);
-
-    expect(request).to.haveOwnProperty("baz");
-    expect(request)
-      .to.haveOwnProperty("foo")
-      .and.equal(1);
-    expect(request)
-      .to.haveOwnProperty("bar")
-      .and.equal(2);
-    expect(sequence.remaining).to.have.lengthOf(1);
-
-    const [fn2, event2] = sequence.next({ height: 25 });
-
-    const secondTime = LambdaSequence.from(event2);
-    expect(secondTime.request)
-      .to.haveOwnProperty("height")
-      .and.equal(25);
-    expect(secondTime.request)
-      .to.haveOwnProperty("width")
-      .and.equal(50);
-    expect(secondTime.sequence.isDone).to.equal(true);
-  });
-
   it("calling next() returns invoke() params", async () => {
     const s = LambdaSequence.add("fn1", { foo: 1, bar: 2 }).add("fn2", {
       width: 50
     });
     const nxt = s.next();
     expect(nxt).to.be.an("array");
-  });
-
-  it('Sequence with dynamic property gets resolved when calling "next()"', async () => {
-    const s = LambdaSequence.add("fn1", { foo: 1, bar: 2 }).add("fn2", {
-      input: ":data"
-    });
-    const [fn, params] = s.next({ baz: 3 });
-    expect(fn)
-      .to.be.a("string")
-      .and.equal("fn1");
-    expect(params).to.be.an("object");
-
-    // fn1 is executing
-    const { request, sequence } = LambdaSequence.from(params);
-    expect(request).haveOwnProperty("foo");
-    expect(request).haveOwnProperty("bar");
-    expect(request).haveOwnProperty("baz");
-    expect(sequence).to.have.lengthOf(2);
-    expect(sequence.remaining.length).to.equal(1);
-    expect(sequence.isDone).to.equal(false);
-
-    const [fn2, p2] = sequence.next({ data: "foobar" });
-    expect(fn2).to.equal("fn2");
-    expect(p2).to.haveOwnProperty("input");
-
-    // fn2 is executing
-    const { request: req2, sequence: seq2 } = LambdaSequence.from(p2);
-
-    expect(req2)
-      .haveOwnProperty("input")
-      .and.equal("foobar");
-    expect(req2).not.haveOwnProperty("data");
   });
 
   it("Running sequence's next() and from() method works with modern IOrchestrateMessageBody", () => {
@@ -157,64 +86,96 @@ describe("Lambda Sequence => ", () => {
     expect(sequenceDefn.steps.length).to.equal(sequenceDefn.remaining.length);
 
     // initiate call to first function in sequence
-    let [fn, params] = sequenceDefn.next<IDictionary>({
+    let [fn, conductorEvent] = sequenceDefn.next<IDictionary>({
       data: { foo: "bar" }
     });
 
+    let { sequence: s, body: b, headers: h } = conductorEvent;
+    // way too small to be compressed
+    expect(isCompressedSection(b)).to.equal(false);
+    const { sequence, body, headers } = {
+      sequence: decompress<ISerializedSequence>(s),
+      headers: decompress<IDictionary>(h),
+      body: decompress<IDictionary>(b)
+    };
+
+    //#region Conductor next()
     expect(fn).to.equal("fn1");
-    expect(Object.keys(params)).to.include("a");
-    expect(Object.keys(params)).to.include("b");
-    expect(Object.keys(params)).to.include("c");
-    expect(Object.keys(params)).to.include("data");
-    // expect(Object.keys(params.data)).to.include("foo");
+    // body tests
+    expect(Object.keys(body)).to.include("a");
+    expect(Object.keys(body)).to.include("b");
+    expect(Object.keys(body)).to.include("c");
+    expect(body.b).to.equal(2);
+    expect(body.c).to.equal("see");
+    // expect(Object.keys(body)).to.include("data");
 
-    // retrieve sequence in first function after conductor; data passed by conductor should be part of params
-    const { request, sequence: sequence1 } = LambdaSequence.from(params);
-    expect(sequence1.isSequence).to.equal(true);
-    expect(sequence1.completed.length).to.equal(0);
-    expect(Object.keys(sequence1.activeFn.params)).to.include("a");
-    expect(Object.keys(sequence1.activeFn.params)).to.include("b");
-    expect(Object.keys(sequence1.activeFn.params)).to.include("c");
-    expect(Object.keys(sequence1.activeFn.params)).to.include("data");
-    expect(Object.keys(request)).to.include("a");
-    expect(Object.keys(request)).to.include("data");
+    // sequence tests
+    expect(sequence.isSequence).to.equal(true);
+    if (sequence.isSequence) {
+      // Function is not made active until ingested with `from()`
+      expect(sequence.activeFn).to.equal(undefined);
+      expect(sequence.totalSteps).to.equal(3);
+      expect(sequence.completedSteps).to.equal(0);
+    }
 
-    // initiate call to second function; which had a dynamic property referencing prior fn
-    [fn, params] = sequence1.next({ data: 45 });
-    expect(fn).to.equal("fn2");
-    expect(params).to.haveOwnProperty("_sequence");
+    // header tests
+    expect(headers["X-Correlation-Id"]).to.be.a("string");
+    //#endregion
 
-    // retrieve sequence in second function after conductor
-    const { request: request2, sequence: sequence2 } = LambdaSequence.from(
-      params
+    //#region Fn1 from()
+    const fn1 = LambdaSequence.from<IDictionary>(conductorEvent);
+
+    expect(fn1.request.a).to.equal(1);
+    expect(fn1.request.b).to.equal(2);
+    expect(fn1.request.c).to.equal("see");
+    expect(fn1.headers["X-Correlation-Id"]).to.equal(
+      headers["X-Correlation-Id"]
     );
+    //#endregion
 
-    expect(sequence2.isSequence).to.equal(true);
-    expect(sequence2.completed.length).to.equal(1);
-    expect(request2).to.haveOwnProperty("c");
-    expect(request2).to.haveOwnProperty("temperature"); // this was mapped to
-    expect(request2).to.not.haveOwnProperty("data"); // this was mapped away from
-    expect(Object.keys(request2)).to.have.lengthOf(2);
-    Object.keys(request2).forEach(key =>
-      expect(sequence2.activeFn.params).to.haveOwnProperty(key)
-    );
+    //#region fn1.next() - aka, moving toward fn2
+    const [fn1NextFn, fn1Event] = fn1.sequence.next({ data: "70 degrees" });
+    expect(fn1NextFn).to.equal("fn2");
 
-    // initiate call to second function; which had a dynamic property
-    // which is NOT the prior function
-    [fn, params] = sequence2.next({ data: "i am a result of fn2" });
-    expect(fn).to.equal("fn3");
-    expect(params).to.haveOwnProperty("_sequence");
+    // body
+    const fn1NextBody = decompress<IDictionary>(fn1Event.body, true);
+    expect(fn1NextBody.c).to.equal(3);
+    expect(fn1NextBody.a).to.be.a("undefined");
+    expect(fn1NextBody.temperature).to.equal("70 degrees");
 
-    // retrieve sequence in second function after conductor
-    const { request: request3, sequence: sequence3 } = LambdaSequence.from(
-      params
-    );
+    // sequence
+    const fn1NextSequence = decompress(fn1Event.sequence, true);
+    expect(fn1NextSequence.isSequence).to.equal(true);
+    if (fn1NextSequence.isSequence) {
+      expect(fn1NextSequence.completedSteps).to.equal(1);
+      // the first function is completed but fn2 has not YET been set to active
+      expect(fn1NextSequence.activeFn).equal(undefined);
+      expect(fn1NextSequence.completed).to.include("fn1");
+      // while we have not yet made 'fn2' active yet, 'fn1' should be marked completed
+      expect(fn1NextSequence.completed).to.include("fn1");
+    }
+    //#endregion
 
-    expect(request3)
-      .to.haveOwnProperty("func1")
-      .and.equal(45);
-    expect(request3)
-      .to.haveOwnProperty("func2")
-      .and.equal("i am a result of fn2");
+    //#region fn2 from()
+    const fn2 = LambdaSequence.from<IDictionary>(fn1Event);
+    expect(fn2.headers).to.haveOwnProperty("X-Correlation-Id");
+    expect(fn2.sequence.activeFn.arn).to.equal("fn2");
+    expect(fn2.request.c).to.equal(3);
+    expect(fn2.request.temperature).to.equal("70 degrees");
+    //#endregion
+
+    //#region fn2.next()
+    const [fn2next, fn2Event] = fn2.sequence.next({ data: "hello world" });
+    expect(fn2next).to.equal("fn3");
+    const fn2Body = decompress<IDictionary>(fn2Event.body);
+    expect(fn2Body.d).equals(4);
+    //##endregion
+
+    //#region fn3.from()
+    const fn3 = LambdaSequence.from<IDictionary>(fn2Event);
+    expect(fn3.request.d).equals(4);
+    expect(fn3.request.func1).equals("70 degrees");
+    expect(fn3.request.func2).equals("hello world");
+    //#endregion
   });
 });

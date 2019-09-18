@@ -102,7 +102,7 @@ describe("Handler Wrapper => ", () => {
 
     const results = await wrapped(simpleEvent, {} as any);
 
-    expect(results).to.haveOwnProperty("event");
+    expect(results).to.haveOwnProperty("request");
     expect(results).to.haveOwnProperty("context");
     expect((results as IResponse).context).to.haveOwnProperty("isSequence");
     expect((results as IResponse).context).to.haveOwnProperty("isDone");
