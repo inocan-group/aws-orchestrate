@@ -810,7 +810,7 @@ var getSecret = _async(function (moduleAndName) {
   var localSecrets = getLocalSecrets();
 
   if (!moduleAndName.includes("/")) {
-    throw new Error("When using getSecret() you must state both the module and the NAME of the secret where the two are delimted by a \"/\" character.");
+    throw new Error("When using getSecret() you must state both the module and the NAME of the secret where the two are delimited by a \"/\" character. Instead \"".concat(moduleAndName, "\" was passed in. If you want to get all the secrets for a given module you should be using getSecrets() instead."));
   }
 
   var _moduleAndName$split = moduleAndName.split("/"),
