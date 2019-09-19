@@ -38,7 +38,7 @@ export async function getSecret(moduleAndName: string) {
   const localSecrets = getLocalSecrets();
   if (!moduleAndName.includes("/")) {
     throw new Error(
-      `When using getSecret() you must state both the module and the NAME of the secret where the two are delimted by a "/" character.`
+      `When using getSecret() you must state both the module and the NAME of the secret where the two are delimited by a \"/\" character. Instead \"${moduleAndName}\" was passed in. If you want to get all the secrets for a given module you should be using getSecrets() instead.`
     );
   }
   const [module, name] = moduleAndName.split("/");
