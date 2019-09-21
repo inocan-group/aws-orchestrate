@@ -125,7 +125,7 @@ describe("Handler Wrapper => ", () => {
     expect(Object.keys(results.context.headers)).has.lengthOf(0);
   });
 
-  it("An orchestrated request works", async () => {
+  it.skip("An orchestrated request works", async () => {
     process.env.AWS_STAGE = "dev";
     process.env.AWS_REGION = "us-west-2";
     process.env.AWS_ACCOUNT = "123456";
