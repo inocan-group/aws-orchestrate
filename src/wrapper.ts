@@ -155,7 +155,7 @@ export const wrapper = function<I, O>(
         const response: IApiGatewayResponse = {
           statusCode: HttpStatusCodes.Success,
           headers: getResponseHeaders(),
-          body: JSON.stringify(result)
+          body: typeof result === "string" ? result : JSON.stringify(result)
         };
         msg.returnToApiGateway(result, getResponseHeaders());
         return response;
