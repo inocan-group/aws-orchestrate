@@ -35,7 +35,7 @@ export declare function getSecret(moduleAndName: string): Promise<any>;
  *
  * @param modules the modules which are have secrets that are needed
  */
-export declare function getSecrets(modules: string[]): Promise<IDictionary<IDictionary>>;
+export declare function getSecrets(...modules: string[]): Promise<IDictionary<IDictionary>>;
 /**
  * Goes through a set of secrets -- organized by `[module].[name] = secret` --
  * and masks the values so that they don't leak into the log files.

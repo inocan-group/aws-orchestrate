@@ -53,7 +53,7 @@ export async function getSecret(moduleAndName: string) {
       `getSecret("${moduleAndName}") did not find locally so asking SSM for module "${module}"`,
       { module, name, localModules: Object.keys(localSecrets) }
     );
-    await getSecrets([module]);
+    await getSecrets(module);
     if (get(localSecrets, `${module}.${name}`, false)) {
       log.debug(`after SSM call for module "${module}" the secret was found`, {
         module,
@@ -83,7 +83,7 @@ export async function getSecret(moduleAndName: string) {
  * @param modules the modules which are have secrets that are needed
  */
 export async function getSecrets(
-  modules: string[]
+  ...modules: string[]
 ): Promise<IDictionary<IDictionary>> {
   const log = logger().reloadContext();
   const localSecrets = getLocalSecrets();
