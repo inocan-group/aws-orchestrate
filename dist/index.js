@@ -27,6 +27,7 @@ var commonTypes = require('common-types');
 var lzutf8 = require('lzutf8');
 var awsLog = require('aws-log');
 var get = _interopDefault(require('lodash.get'));
+var flatten = _interopDefault(require('lodash.flatten'));
 var set = _interopDefault(require('lodash.set'));
 
 function _typeof(obj) {
@@ -496,7 +497,8 @@ function _await(value, then, direct) {
  * functions in the currently executing sequence. Secrets _will not_ be passed back
  * in the function's response.
  *
- * @param modules the modules which are have secrets that are needed
+ * @param modules the modules which are have secrets that are needed; you may add an array
+ * as the first parameter passed in or you can destructure values across the input
  */
 
 
@@ -514,18 +516,23 @@ function _async(f) {
   };
 }
 
-var getSecrets = _async(function (modules) {
+var getSecrets = _async(function () {
+  for (var _len = arguments.length, modules = new Array(_len), _key = 0; _key < _len; _key++) {
+    modules[_key] = arguments[_key];
+  }
+
+  var mods = flatten(modules);
   var log = awsLog.logger().reloadContext();
   var localSecrets = getLocalSecrets();
 
-  if (modules.every(function (i) {
+  if (mods.every(function (i) {
     return Object.keys(localSecrets).includes(i);
   })) {
     // everything found in local secrets
     log.debug("Call to getSecrets() resulted in 100% hit rate for modules locally", {
-      modules: modules
+      modules: mods
     });
-    return modules.reduce(function (secrets, mod) {
+    return mods.reduce(function (secrets, mod) {
       secrets[mod] = localSecrets[mod];
       return secrets;
     }, {});
@@ -534,12 +541,12 @@ var getSecrets = _async(function (modules) {
 
 
   log.debug("Some modules requested were not found locally, requesting from SSM.", {
-    modules: modules
+    modules: mods
   });
   return _await(new Promise(function (resolve) { resolve(_interopNamespace(require('aws-ssm'))); }), function (_temp) {
     var SSM = _temp.SSM;
-    return _await(SSM.modules(modules), function (newSecrets) {
-      modules.forEach(function (m) {
+    return _await(SSM.modules(mods), function (newSecrets) {
+      mods.forEach(function (m) {
         if (!newSecrets[m]) {
           throw new Error("Failure to retrieve the SSM module \"".concat(m, "\""));
         }
@@ -586,7 +593,7 @@ var getSecret = _async(function (moduleAndName) {
       name: name,
       localModules: Object.keys(localSecrets)
     });
-    return _await(getSecrets([module]), function () {
+    return _await(getSecrets(module), function () {
       if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
         log.debug("after SSM call for module \"".concat(module, "\" the secret was found"), {
           module: module,

@@ -1,7 +1,7 @@
 {
   "name": "aws-orchestrate",
   "description": "This library is intended to help projects intending to build a \"micro-service architecture\" to achieve those ambitions with some handy orchestration classes and types.",
-  "version": "0.6.11",
+  "version": "0.6.12",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "typings": "dist/index.d.ts",
@@ -29,6 +29,7 @@
     "aws-log": "^0.9.1",
     "aws-ssm": "^0.3.9",
     "common-types": "^1.12.2",
+    "lodash.flatten": "^4.4.0",
     "lodash.get": "^4.4.2",
     "lodash.set": "^4.3.2",
     "lzutf8": "^0.5.5",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
+    "@types/lodash.flatten": "^4.4.6",
     "@types/lodash.get": "^4.4.6",
     "@types/lodash.set": "^4.3.6",
     "@types/mermaid": "^8.2.0",

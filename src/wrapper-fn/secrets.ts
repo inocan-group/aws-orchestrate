@@ -1,6 +1,7 @@
 import { IDictionary } from "common-types";
 import { logger, ILoggerApi } from "aws-log";
 import get from "lodash.get";
+import flatten from "lodash.flatten";
 
 let localSecrets: IDictionary = {};
 
@@ -53,7 +54,7 @@ export async function getSecret(moduleAndName: string) {
       `getSecret("${moduleAndName}") did not find locally so asking SSM for module "${module}"`,
       { module, name, localModules: Object.keys(localSecrets) }
     );
-    await getSecrets([module]);
+    await getSecrets(module);
     if (get(localSecrets, `${module}.${name}`, false)) {
       log.debug(`after SSM call for module "${module}" the secret was found`, {
         module,
@@ -80,20 +81,22 @@ export async function getSecret(moduleAndName: string) {
  * functions in the currently executing sequence. Secrets _will not_ be passed back
  * in the function's response.
  *
- * @param modules the modules which are have secrets that are needed
+ * @param modules the modules which are have secrets that are needed; you may add an array
+ * as the first parameter passed in or you can destructure values across the input
  */
 export async function getSecrets(
-  modules: string[]
+  ...modules: string[] | string[][]
 ): Promise<IDictionary<IDictionary>> {
+  const mods = flatten(modules);
   const log = logger().reloadContext();
   const localSecrets = getLocalSecrets();
-  if (modules.every(i => Object.keys(localSecrets).includes(i))) {
+  if (mods.every(i => Object.keys(localSecrets).includes(i))) {
     // everything found in local secrets
     log.debug(
       `Call to getSecrets() resulted in 100% hit rate for modules locally`,
-      { modules }
+      { modules: mods }
     );
-    return modules.reduce((secrets: IDictionary, mod: string) => {
+    return mods.reduce((secrets: IDictionary, mod: string) => {
       secrets[mod] = localSecrets[mod];
       return secrets;
     }, {});
@@ -103,11 +106,11 @@ export async function getSecrets(
   // versus getting them all is negligible so we'll get them all from SSM
   log.debug(
     `Some modules requested were not found locally, requesting from SSM.`,
-    { modules }
+    { modules: mods }
   );
   const SSM = (await import("aws-ssm")).SSM;
-  const newSecrets = await SSM.modules(modules);
-  modules.forEach(m => {
+  const newSecrets = await SSM.modules(mods);
+  mods.forEach(m => {
     if (!newSecrets[m]) {
       throw new Error(`Failure to retrieve the SSM module "${m}"`);
     }
