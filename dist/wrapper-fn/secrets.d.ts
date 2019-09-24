@@ -33,9 +33,10 @@ export declare function getSecret(moduleAndName: string): Promise<any>;
  * functions in the currently executing sequence. Secrets _will not_ be passed back
  * in the function's response.
  *
- * @param modules the modules which are have secrets that are needed
+ * @param modules the modules which are have secrets that are needed; you may add an array
+ * as the first parameter passed in or you can destructure values across the input
  */
-export declare function getSecrets(...modules: string[]): Promise<IDictionary<IDictionary>>;
+export declare function getSecrets(...modules: string[] | string[][]): Promise<IDictionary<IDictionary>>;
 /**
  * Goes through a set of secrets -- organized by `[module].[name] = secret` --
  * and masks the values so that they don't leak into the log files.

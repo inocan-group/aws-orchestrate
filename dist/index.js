@@ -23,19 +23,247 @@ function _interopNamespace(e) {
   }
 }
 
-var _rollupPluginBabelHelpers = require('./_rollupPluginBabelHelpers-0ba4bf35.js');
 var commonTypes = require('common-types');
 var lzutf8 = require('lzutf8');
 var awsLog = require('aws-log');
 var get = _interopDefault(require('lodash.get'));
+var flatten = _interopDefault(require('lodash.flatten'));
 var set = _interopDefault(require('lodash.set'));
+
+function _typeof(obj) {
+  if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
+    _typeof = function (obj) {
+      return typeof obj;
+    };
+  } else {
+    _typeof = function (obj) {
+      return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+    };
+  }
+
+  return _typeof(obj);
+}
+
+function _classCallCheck(instance, Constructor) {
+  if (!(instance instanceof Constructor)) {
+    throw new TypeError("Cannot call a class as a function");
+  }
+}
+
+function _defineProperties(target, props) {
+  for (var i = 0; i < props.length; i++) {
+    var descriptor = props[i];
+    descriptor.enumerable = descriptor.enumerable || false;
+    descriptor.configurable = true;
+    if ("value" in descriptor) descriptor.writable = true;
+    Object.defineProperty(target, descriptor.key, descriptor);
+  }
+}
+
+function _createClass(Constructor, protoProps, staticProps) {
+  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+  if (staticProps) _defineProperties(Constructor, staticProps);
+  return Constructor;
+}
+
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
+
+function _inherits(subClass, superClass) {
+  if (typeof superClass !== "function" && superClass !== null) {
+    throw new TypeError("Super expression must either be null or a function");
+  }
+
+  subClass.prototype = Object.create(superClass && superClass.prototype, {
+    constructor: {
+      value: subClass,
+      writable: true,
+      configurable: true
+    }
+  });
+  if (superClass) _setPrototypeOf(subClass, superClass);
+}
+
+function _getPrototypeOf(o) {
+  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
+    return o.__proto__ || Object.getPrototypeOf(o);
+  };
+  return _getPrototypeOf(o);
+}
+
+function _setPrototypeOf(o, p) {
+  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+    o.__proto__ = p;
+    return o;
+  };
+
+  return _setPrototypeOf(o, p);
+}
+
+function isNativeReflectConstruct() {
+  if (typeof Reflect === "undefined" || !Reflect.construct) return false;
+  if (Reflect.construct.sham) return false;
+  if (typeof Proxy === "function") return true;
+
+  try {
+    Date.prototype.toString.call(Reflect.construct(Date, [], function () {}));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function _construct(Parent, args, Class) {
+  if (isNativeReflectConstruct()) {
+    _construct = Reflect.construct;
+  } else {
+    _construct = function _construct(Parent, args, Class) {
+      var a = [null];
+      a.push.apply(a, args);
+      var Constructor = Function.bind.apply(Parent, a);
+      var instance = new Constructor();
+      if (Class) _setPrototypeOf(instance, Class.prototype);
+      return instance;
+    };
+  }
+
+  return _construct.apply(null, arguments);
+}
+
+function _isNativeFunction(fn) {
+  return Function.toString.call(fn).indexOf("[native code]") !== -1;
+}
+
+function _wrapNativeSuper(Class) {
+  var _cache = typeof Map === "function" ? new Map() : undefined;
+
+  _wrapNativeSuper = function _wrapNativeSuper(Class) {
+    if (Class === null || !_isNativeFunction(Class)) return Class;
+
+    if (typeof Class !== "function") {
+      throw new TypeError("Super expression must either be null or a function");
+    }
+
+    if (typeof _cache !== "undefined") {
+      if (_cache.has(Class)) return _cache.get(Class);
+
+      _cache.set(Class, Wrapper);
+    }
+
+    function Wrapper() {
+      return _construct(Class, arguments, _getPrototypeOf(this).constructor);
+    }
+
+    Wrapper.prototype = Object.create(Class.prototype, {
+      constructor: {
+        value: Wrapper,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+    return _setPrototypeOf(Wrapper, Class);
+  };
+
+  return _wrapNativeSuper(Class);
+}
+
+function _assertThisInitialized(self) {
+  if (self === void 0) {
+    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+  }
+
+  return self;
+}
+
+function _possibleConstructorReturn(self, call) {
+  if (call && (typeof call === "object" || typeof call === "function")) {
+    return call;
+  }
+
+  return _assertThisInitialized(self);
+}
+
+function _slicedToArray(arr, i) {
+  return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest();
+}
+
+function _toConsumableArray(arr) {
+  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread();
+}
+
+function _arrayWithoutHoles(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
+
+    return arr2;
+  }
+}
+
+function _arrayWithHoles(arr) {
+  if (Array.isArray(arr)) return arr;
+}
+
+function _iterableToArray(iter) {
+  if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
+}
+
+function _iterableToArrayLimit(arr, i) {
+  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
+    return;
+  }
+
+  var _arr = [];
+  var _n = true;
+  var _d = false;
+  var _e = undefined;
+
+  try {
+    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+      _arr.push(_s.value);
+
+      if (i && _arr.length === i) break;
+    }
+  } catch (err) {
+    _d = true;
+    _e = err;
+  } finally {
+    try {
+      if (!_n && _i["return"] != null) _i["return"]();
+    } finally {
+      if (_d) throw _e;
+    }
+  }
+
+  return _arr;
+}
+
+function _nonIterableSpread() {
+  throw new TypeError("Invalid attempt to spread non-iterable instance");
+}
+
+function _nonIterableRest() {
+  throw new TypeError("Invalid attempt to destructure non-iterable instance");
+}
 
 /**
  * detects if the given structure is of type <T> or
  * has been boxed into an `IOrchestratedMessageBody`
  */
 function isOrchestratedRequest(msg) {
-  return _rollupPluginBabelHelpers._typeof(msg) === "object" && msg.type === "orchestrated-message-body" ? true : false;
+  return _typeof(msg) === "object" && msg.type === "orchestrated-message-body" ? true : false;
 }
 
 /**
@@ -112,7 +340,7 @@ function isDynamic(obj) {
 var UnhandledError =
 /*#__PURE__*/
 function (_Error) {
-  _rollupPluginBabelHelpers._inherits(UnhandledError, _Error);
+  _inherits(UnhandledError, _Error);
 
   /**
    * **Constructor**
@@ -125,15 +353,15 @@ function (_Error) {
   function UnhandledError(errorCode, e, classification) {
     var _this;
 
-    _rollupPluginBabelHelpers._classCallCheck(this, UnhandledError);
+    _classCallCheck(this, UnhandledError);
 
-    _this = _rollupPluginBabelHelpers._possibleConstructorReturn(this, _rollupPluginBabelHelpers._getPrototypeOf(UnhandledError).call(this, e.message));
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(UnhandledError).call(this, e.message));
     _this.stack = e.stack;
     classification = classification || "unhandled-error/".concat(e.name);
     classification = classification.includes("/") ? classification : "unhandled-error/".concat(classification);
 
     var _classification$split = classification.split("/"),
-        _classification$split2 = _rollupPluginBabelHelpers._slicedToArray(_classification$split, 2),
+        _classification$split2 = _slicedToArray(_classification$split, 2),
         type = _classification$split2[0],
         subType = _classification$split2[1];
 
@@ -148,7 +376,7 @@ function (_Error) {
    */
 
 
-  _rollupPluginBabelHelpers._createClass(UnhandledError, null, [{
+  _createClass(UnhandledError, null, [{
     key: "apiGatewayError",
     value: function apiGatewayError(errorCode, e, requestId, classification) {
       var obj = new UnhandledError(errorCode, e, classification);
@@ -177,7 +405,7 @@ function (_Error) {
   }]);
 
   return UnhandledError;
-}(_rollupPluginBabelHelpers._wrapNativeSuper(Error));
+}(_wrapNativeSuper(Error));
 
 /**
  * compresses large payloads larger than 4k (or whatever size
@@ -216,7 +444,7 @@ function compressionHandler(data) {
 }
 
 function isCompressedSection(data) {
-  return _rollupPluginBabelHelpers._typeof(data) === "object" && data.compressed === true ? true : false;
+  return _typeof(data) === "object" && data.compressed === true ? true : false;
 }
 function decompress(data) {
   var parse = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
@@ -269,7 +497,8 @@ function _await(value, then, direct) {
  * functions in the currently executing sequence. Secrets _will not_ be passed back
  * in the function's response.
  *
- * @param modules the modules which are have secrets that are needed
+ * @param modules the modules which are have secrets that are needed; you may add an array
+ * as the first parameter passed in or you can destructure values across the input
  */
 
 
@@ -292,17 +521,18 @@ var getSecrets = _async(function () {
     modules[_key] = arguments[_key];
   }
 
+  var mods = flatten(modules);
   var log = awsLog.logger().reloadContext();
   var localSecrets = getLocalSecrets();
 
-  if (modules.every(function (i) {
+  if (mods.every(function (i) {
     return Object.keys(localSecrets).includes(i);
   })) {
     // everything found in local secrets
     log.debug("Call to getSecrets() resulted in 100% hit rate for modules locally", {
-      modules: modules
+      modules: mods
     });
-    return modules.reduce(function (secrets, mod) {
+    return mods.reduce(function (secrets, mod) {
       secrets[mod] = localSecrets[mod];
       return secrets;
     }, {});
@@ -311,12 +541,12 @@ var getSecrets = _async(function () {
 
 
   log.debug("Some modules requested were not found locally, requesting from SSM.", {
-    modules: modules
+    modules: mods
   });
-  return _await(new Promise(function (resolve) { resolve(require('./index-b620dd08.js')); }), function (_temp) {
+  return _await(new Promise(function (resolve) { resolve(_interopNamespace(require('aws-ssm'))); }), function (_temp) {
     var SSM = _temp.SSM;
-    return _await(SSM.modules(modules), function (newSecrets) {
-      modules.forEach(function (m) {
+    return _await(SSM.modules(mods), function (newSecrets) {
+      mods.forEach(function (m) {
         if (!newSecrets[m]) {
           throw new Error("Failure to retrieve the SSM module \"".concat(m, "\""));
         }
@@ -347,7 +577,7 @@ var getSecret = _async(function (moduleAndName) {
   }
 
   var _moduleAndName$split = moduleAndName.split("/"),
-      _moduleAndName$split2 = _rollupPluginBabelHelpers._slicedToArray(_moduleAndName$split, 2),
+      _moduleAndName$split2 = _slicedToArray(_moduleAndName$split, 2),
       module = _moduleAndName$split2[0],
       name = _moduleAndName$split2[1];
 
@@ -399,7 +629,7 @@ function maskLoggingForSecrets(modules, log) {
   var secretPaths = [];
   Object.keys(modules).forEach(function (mod) {
     Object.keys(mod).forEach(function (s) {
-      if (_rollupPluginBabelHelpers._typeof(s) === "object") {
+      if (_typeof(s) === "object") {
         log.addToMaskedValues(modules[mod][s]);
         secretPaths.push("".concat(mod, "/").concat(s));
       }
@@ -461,7 +691,7 @@ function saveSecretHeaders(headers, log) {
   var localSecrets = Object.keys(headers).reduce(function (headerSecrets, key) {
     if (key.slice(0, 4) === "O-S-") {
       var _key$slice$split = key.slice(4).split("/"),
-          _key$slice$split2 = _rollupPluginBabelHelpers._slicedToArray(_key$slice$split, 2),
+          _key$slice$split2 = _slicedToArray(_key$slice$split, 2),
           module = _key$slice$split2[0],
           name = _key$slice$split2[1];
 
@@ -493,14 +723,14 @@ function getHeaderSecrets() {
   return Object.keys(modules).reduce(function (headerSecrets, mod) {
     var secrets = modules[mod];
 
-    if (_rollupPluginBabelHelpers._typeof(secrets) === "object") {
+    if (_typeof(secrets) === "object") {
       Object.keys(secrets).forEach(function (secret) {
         headerSecrets["O-S-".concat(mod, "/").concat(secret)] = modules[mod][secret];
       });
     } else {
       log.warn("Attempt to generate header secrets but module \"".concat(mod, "\" is not a hash of name/values. Ignoring this module but continuing."), {
         module: mod,
-        type: _rollupPluginBabelHelpers._typeof(secrets),
+        type: _typeof(secrets),
         localModules: Object.keys(modules)
       });
     }
@@ -523,8 +753,8 @@ function getFnHeaders() {
   return fnHeaders;
 }
 function setFnHeaders(headers) {
-  if (_rollupPluginBabelHelpers._typeof(headers) !== "object") {
-    throw new Error("The value sent to setHeaders is not the required type. Was \"".concat(_rollupPluginBabelHelpers._typeof(headers), "\"; expected \"object\"."));
+  if (_typeof(headers) !== "object") {
+    throw new Error("The value sent to setHeaders is not the required type. Was \"".concat(_typeof(headers), "\"; expected \"object\"."));
   }
 
   fnHeaders = headers;
@@ -534,8 +764,8 @@ function getBaseHeaders(opts) {
   var _ref;
 
   var correlationId = awsLog.getCorrelationId();
-  var sequenceInfo = opts.sequence ? (_ref = {}, _rollupPluginBabelHelpers._defineProperty(_ref, "O-Sequence-Status", JSON.stringify(sequenceStatus(correlationId)(opts.sequence))), _rollupPluginBabelHelpers._defineProperty(_ref, "O-Serialized-Sequence", serializeSequence(opts.sequence)), _ref) : {};
-  return Object.assign(Object.assign(Object.assign({}, sequenceInfo), getFnHeaders()), _rollupPluginBabelHelpers._defineProperty({}, "X-Correlation-Id", awsLog.getCorrelationId()));
+  var sequenceInfo = opts.sequence ? (_ref = {}, _defineProperty(_ref, "O-Sequence-Status", JSON.stringify(sequenceStatus(correlationId)(opts.sequence))), _defineProperty(_ref, "O-Serialized-Sequence", serializeSequence(opts.sequence)), _ref) : {};
+  return Object.assign(Object.assign(Object.assign({}, sequenceInfo), getFnHeaders()), _defineProperty({}, "X-Correlation-Id", awsLog.getCorrelationId()));
 }
 /**
  * All the HTTP _Response_ headers to send when returning to API Gateway
@@ -562,7 +792,7 @@ var LambdaSequence =
 /*#__PURE__*/
 function () {
   function LambdaSequence() {
-    _rollupPluginBabelHelpers._classCallCheck(this, LambdaSequence);
+    _classCallCheck(this, LambdaSequence);
 
     /**
      * The steps defined in the sequence
@@ -576,7 +806,7 @@ function () {
    */
 
 
-  _rollupPluginBabelHelpers._createClass(LambdaSequence, [{
+  _createClass(LambdaSequence, [{
     key: "add",
 
     /**
@@ -724,8 +954,8 @@ function () {
         sequence = LambdaSequence.deserialize(decompress(event.sequence));
       } else if (isBareRequest(event)) {
         headers = {};
-        sequence = _rollupPluginBabelHelpers._typeof(event) === "object" && event._sequence ? this.ingestSteps(event, event._sequence) : LambdaSequence.notASequence();
-        request = _rollupPluginBabelHelpers._typeof(event) === "object" && event._sequence ? Object.keys(event).reduce(function (props, prop) {
+        sequence = _typeof(event) === "object" && event._sequence ? this.ingestSteps(event, event._sequence) : LambdaSequence.notASequence();
+        request = _typeof(event) === "object" && event._sequence ? Object.keys(event).reduce(function (props, prop) {
           if (prop !== "_sequence") {
             props[prop] = event[prop];
           }
@@ -779,7 +1009,7 @@ function () {
 
       this._steps = steps;
       var activeFnParams = this.activeFn && this.activeFn.params ? this.activeFn.params : {};
-      var transformedRequest = _rollupPluginBabelHelpers._typeof(request) === "object" ? Object.assign(Object.assign({}, activeFnParams), request) : Object.assign(Object.assign({}, activeFnParams), {
+      var transformedRequest = _typeof(request) === "object" ? Object.assign(Object.assign({}, activeFnParams), request) : Object.assign(Object.assign({}, activeFnParams), {
         request: request
       });
       /**
@@ -880,7 +1110,7 @@ function () {
         if (isDynamic(value)) {
           value = get(_this2._responses, value.lookup, undefined);
 
-          if (_rollupPluginBabelHelpers._typeof(value) === undefined) {
+          if (_typeof(value) === undefined) {
             throw new Error("The property \"".concat(key, "\" was set as a dynamic property by the Orchestrator but it was dependant on getting a value from ").concat(fn.params[key], " which could not be found."));
           }
         }
@@ -1075,10 +1305,10 @@ var LambdaEventParser =
 /*#__PURE__*/
 function () {
   function LambdaEventParser() {
-    _rollupPluginBabelHelpers._classCallCheck(this, LambdaEventParser);
+    _classCallCheck(this, LambdaEventParser);
   }
 
-  _rollupPluginBabelHelpers._createClass(LambdaEventParser, null, [{
+  _createClass(LambdaEventParser, null, [{
     key: "parse",
 
     /**
@@ -1116,14 +1346,14 @@ var ErrorHandler =
 /*#__PURE__*/
 function () {
   function ErrorHandler(code, identifiedBy, handling) {
-    _rollupPluginBabelHelpers._classCallCheck(this, ErrorHandler);
+    _classCallCheck(this, ErrorHandler);
 
     this.code = code;
     this.identifiedBy = identifiedBy;
     this.handling = handling;
   }
 
-  _rollupPluginBabelHelpers._createClass(ErrorHandler, [{
+  _createClass(ErrorHandler, [{
     key: "toString",
     value: function toString() {
       return {
@@ -1155,7 +1385,7 @@ var ErrorMeta =
 /*#__PURE__*/
 function () {
   function ErrorMeta() {
-    _rollupPluginBabelHelpers._classCallCheck(this, ErrorMeta);
+    _classCallCheck(this, ErrorMeta);
 
     this._errors = [];
     this._defaultErrorCode = DEFAULT_ERROR_CODE;
@@ -1165,7 +1395,7 @@ function () {
    */
 
 
-  _rollupPluginBabelHelpers._createClass(ErrorMeta, [{
+  _createClass(ErrorMeta, [{
     key: "addHandler",
     value: function addHandler(
     /** the return code that will be returned for this error */
@@ -1201,7 +1431,7 @@ function () {
   }, {
     key: "setDefaultHandler",
     value: function setDefaultHandler(param) {
-      switch (_rollupPluginBabelHelpers._typeof(param)) {
+      switch (_typeof(param)) {
         case "string":
           this._arn = param;
           this._defaultHandlerFn = undefined;
@@ -1221,7 +1451,7 @@ function () {
             this._defaultHandlerFn = undefined;
           } else {
             console.log({
-              message: "The passed in setDefaultHandler param was of an unknown type ".concat(_rollupPluginBabelHelpers._typeof(param), "; the action has been ignored")
+              message: "The passed in setDefaultHandler param was of an unknown type ".concat(_typeof(param), "; the action has been ignored")
             });
           }
 
@@ -1303,7 +1533,7 @@ function () {
 var HandledError =
 /*#__PURE__*/
 function (_Error) {
-  _rollupPluginBabelHelpers._inherits(HandledError, _Error);
+  _inherits(HandledError, _Error);
 
   /**
    * **Constructor**
@@ -1316,9 +1546,9 @@ function (_Error) {
   function HandledError(errorCode, e, context) {
     var _this;
 
-    _rollupPluginBabelHelpers._classCallCheck(this, HandledError);
+    _classCallCheck(this, HandledError);
 
-    _this = _rollupPluginBabelHelpers._possibleConstructorReturn(this, _rollupPluginBabelHelpers._getPrototypeOf(HandledError).call(this, e.message));
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(HandledError).call(this, e.message));
     _this.stack = e.stack;
     var type = e.name && e.name !== "Error" ? e.name : context.functionName;
     var subType = e.code ? String(e.code) : "handled-error";
@@ -1335,7 +1565,7 @@ function (_Error) {
    */
 
 
-  _rollupPluginBabelHelpers._createClass(HandledError, null, [{
+  _createClass(HandledError, null, [{
     key: "apiGatewayError",
     value: function apiGatewayError(errorCode, e, context) {
       var obj = new HandledError(errorCode, e, context);
@@ -1359,7 +1589,7 @@ function (_Error) {
   }]);
 
   return HandledError;
-}(_rollupPluginBabelHelpers._wrapNativeSuper(Error));
+}(_wrapNativeSuper(Error));
 
 /**
  * **findError**
@@ -1400,7 +1630,7 @@ var invokeNewSequence = _async$1(function () {
   }
 
   results = results || {};
-  return awsLog.invoke.apply(void 0, _rollupPluginBabelHelpers._toConsumableArray(newSequence.next(_rollupPluginBabelHelpers._typeof(results) === "object" ? results : {
+  return awsLog.invoke.apply(void 0, _toConsumableArray(newSequence.next(_typeof(results) === "object" ? results : {
     data: results
   })));
 });
@@ -1945,7 +2175,7 @@ var wrapper = function wrapper(fn) {
         return _invoke$1(function () {
           if (sequence.isSequence && !sequence.isDone) {
             workflowStatus = "invoke-started";
-            return _await$2(awsLog.invoke.apply(void 0, _rollupPluginBabelHelpers._toConsumableArray(sequence.next(result))), function (invokeParams) {
+            return _await$2(awsLog.invoke.apply(void 0, _toConsumableArray(sequence.next(result))), function (invokeParams) {
               log.debug("finished invoking the next function in the sequence", {
                 invokeParams: invokeParams
               });
