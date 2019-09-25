@@ -301,7 +301,11 @@ export function handler(event, context, callback) {
     // The active function's output is sent into the params
     const activeFn =
       this.activeFn && this.activeFn.params ? this.activeFn.params : {};
-    request = { ...activeFn, ...request } as T;
+    request =
+      typeof request === "object"
+        ? ({ ...activeFn, ...request } as T)
+        : // TODO: This may have to deal with the case where request type is a non-object but there ARE props from `activeFn` which are needed
+          request;
 
     return {
       request: request as T,

@@ -945,7 +945,8 @@ function () {
 
 
       var activeFn = this.activeFn && this.activeFn.params ? this.activeFn.params : {};
-      request = Object.assign(Object.assign({}, activeFn), request);
+      request = _typeof(request) === "object" ? Object.assign(Object.assign({}, activeFn), request) : // TODO: This may have to deal with the case where request type is a non-object but there ARE props from `activeFn` which are needed
+      request;
       return {
         request: request,
         apiGateway: apiGateway,
