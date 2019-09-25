@@ -917,7 +917,7 @@ function () {
       }
 
       if (isLambdaProxyRequest(event)) {
-        apiGateway = event;
+        apiGateway = Object.assign({}, event);
         headers = apiGateway.headers;
         delete apiGateway.headers;
         request = getBodyFromPossibleLambdaProxyRequest(event);

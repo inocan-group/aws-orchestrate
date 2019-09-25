@@ -265,7 +265,7 @@ export function handler(event, context, callback) {
     }
 
     if (isLambdaProxyRequest(event)) {
-      apiGateway = event;
+      apiGateway = { ...{}, ...event };
       headers = apiGateway.headers;
       delete apiGateway.headers;
       request = getBodyFromPossibleLambdaProxyRequest<T>(event) as T;
