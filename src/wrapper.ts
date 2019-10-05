@@ -1,6 +1,5 @@
 import {
   IAWSLambaContext,
-  IAWSLambdaProxyIntegrationRequest,
   IApiGatewayErrorResponse,
   HttpStatusCodes,
   IApiGatewayResponse,
