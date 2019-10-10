@@ -2751,7 +2751,7 @@ common-tags@^1.8.0:
   resolved "https://registry.yarnpkg.com/common-tags/-/common-tags-1.8.0.tgz#8e3153e542d4a39e9b10554434afaaf98956a937"
   integrity sha512-6P6g0uetGpW/sdyUy/iQQCbFF0kWVMSIVSyYz7Zgjcgh8mgw8PQzDNZeyZ5DQ2gM7LBoZPHmnjz8rUthkBG5tw==
 
-common-types@^1.11.14, common-types@^1.11.23, common-types@^1.12.1, common-types@^1.12.7, common-types@^1.12.9, common-types@^1.9.7:
+common-types@^1.11.14, common-types@^1.11.23, common-types@^1.12.1, common-types@^1.12.7, common-types@^1.12.9, common-types@^1.9.6, common-types@^1.9.7:
   version "1.12.9"
   resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.12.9.tgz#5b27bbe14ea929d7ef85c41b2a70264655ee7e50"
   integrity sha512-lafb2mghO7NspRQByZdjW3f18BwfursglGDlxlff7+IOMb12OLLW/zCN/Ci1uqGjuuVWc9RBRzzwLesafoy+0A==
@@ -4258,7 +4258,7 @@ faker@^4.1.0:
   resolved "https://registry.yarnpkg.com/faker/-/faker-4.1.0.tgz#1e45bbbecc6774b3c195fad2835109c6d748cc3f"
   integrity sha1-HkW7vsxndLPBlfrSg1EJxtdIzD8=
 
-fast-copy@^2.0.3:
+fast-copy@2.0.3, fast-copy@^2.0.3:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/fast-copy/-/fast-copy-2.0.3.tgz#e9202d6944c9602b575f44d2857cef0f40dc6581"
   integrity sha512-q0VzLSTRXwNOBzTG8dP+SkCxyTieVAhDEddSvw7X799+k3gb8I5T2IVPhBcwZzAY3Ac1P7/B6TSUvJDdO+8vcg==
@@ -4486,6 +4486,25 @@ firemock@^0.32.1:
     lodash.last "^3.0.0"
     lodash.set "^4.3.2"
     typed-conversions "^0.10.1"
+
+firemodel@^0.32.3:
+  version "0.32.3"
+  resolved "https://registry.yarnpkg.com/firemodel/-/firemodel-0.32.3.tgz#495684b9f147c7abb4bb1cdf44e1822919c21883"
+  integrity sha512-K7ePAme2P9A40K1MnPmwv7simYcSUbaeC83Y0TjRMcEvsdt9bcVAa18d1L7A+t/6YOeifkYVdveCz6K+mAP7rw==
+  dependencies:
+    abstracted-firebase "^0.32.2"
+    common-types "^1.12.9"
+    date-fns "^1.30.1"
+    fast-copy "2.0.3"
+    fast-deep-equal "^2.0.1"
+    firebase-key "^2.0.2"
+    get-value "^3.0.1"
+    pluralize "^8.0.0"
+    reflect-metadata "^0.1.13"
+    serialized-query "^0.8.1"
+    set-value "^3.0.0"
+    typed-conversions "^0.10.1"
+    wait-in-parallel "^1.2.6"
 
 flat@^4.1.0:
   version "4.1.0"
@@ -5978,6 +5997,11 @@ locate-path@^5.0.0:
   dependencies:
     p-locate "^4.1.0"
 
+lodash-es@^4.17.11:
+  version "4.17.15"
+  resolved "https://registry.yarnpkg.com/lodash-es/-/lodash-es-4.17.15.tgz#21bd96839354412f23d7a10340e5eac6ee455d78"
+  integrity sha512-rlrc3yU3+JNOpZ9zj5pQtxnx2THmvRykwL4Xlxoa8I9lHBlVbbyPhgyPMioxVZ4NqyxaVVtaJnzsyOidQIhyyQ==
+
 lodash._reinterpolate@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/lodash._reinterpolate/-/lodash._reinterpolate-3.0.0.tgz#0ccf2d89166af03b3663c796538b75ac6e114d9d"
@@ -7302,6 +7326,11 @@ pkg-up@^2.0.0:
   dependencies:
     find-up "^2.1.0"
 
+pluralize@^8.0.0:
+  version "8.0.0"
+  resolved "https://registry.yarnpkg.com/pluralize/-/pluralize-8.0.0.tgz#1a6fa16a38d12a1901e0320fa017051c539ce3b1"
+  integrity sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==
+
 portfinder@^1.0.13, portfinder@^1.0.24:
   version "1.0.24"
   resolved "https://registry.yarnpkg.com/portfinder/-/portfinder-1.0.24.tgz#11efbc6865f12f37624b6531ead1d809ed965cfa"
@@ -8034,6 +8063,11 @@ reduce@^1.0.1:
   dependencies:
     object-keys "^1.1.0"
 
+reflect-metadata@^0.1.13:
+  version "0.1.13"
+  resolved "https://registry.yarnpkg.com/reflect-metadata/-/reflect-metadata-0.1.13.tgz#67ae3ca57c972a2aa1642b10fe363fe32d49dc08"
+  integrity sha512-Ts1Y/anZELhSsjMcU605fU9RE4Oi3p5ORujwbIKXfWa+0Zxs510Qrmrce5/Jowq3cHSZSJqBjypxmHarc+vEWg==
+
 regenerate-unicode-properties@^8.1.0:
   version "8.1.0"
   resolved "https://registry.yarnpkg.com/regenerate-unicode-properties/-/regenerate-unicode-properties-8.1.0.tgz#ef51e0f0ea4ad424b77bf7cb41f3e015c70a3f0e"
@@ -8613,6 +8647,13 @@ set-value@^2.0.0, set-value@^2.0.1:
     is-extendable "^0.1.1"
     is-plain-object "^2.0.3"
     split-string "^3.0.1"
+
+set-value@^3.0.0:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/set-value/-/set-value-3.0.1.tgz#52c82af7653ba69eb1db92e81f5cdb32739b9e95"
+  integrity sha512-w6n3GUPYAWQj4ZyHWzD7K2FnFXHx9OTwJYbWg+6nXjG8sCLfs9DGv+KlqglKIIJx+ks7MlFuwFW2RBPb+8V+xg==
+  dependencies:
+    is-plain-object "^2.0.4"
 
 setimmediate@^1.0.4:
   version "1.0.5"
@@ -9492,6 +9533,14 @@ typed-conversions@^0.10.1:
     common-types "^1.9.7"
     get-value "^3.0.1"
 
+typed-conversions@^0.9.6:
+  version "0.9.7"
+  resolved "https://registry.yarnpkg.com/typed-conversions/-/typed-conversions-0.9.7.tgz#4e8d095a9bcdf0dfcda73774bc167e52352e4070"
+  integrity sha512-CyT59BbWhE970/jf5lJ3yLELJEtd+LVk6QNjY+Q35Pq6rLbejZ2YxTah3gxgjND3JV7ad/8ApG6trHXBslGzjQ==
+  dependencies:
+    common-types "^1.9.7"
+    lodash-es "^4.17.11"
+
 typedarray-to-buffer@^3.1.5:
   version "3.1.5"
   resolved "https://registry.yarnpkg.com/typedarray-to-buffer/-/typedarray-to-buffer-3.1.5.tgz#a97ee7a9ff42691b9f783ff1bc5112fe3fca9080"
@@ -9865,6 +9914,15 @@ vuepress@^1.1.0:
     cac "^6.3.9"
     envinfo "^7.2.0"
     opencollective-postinstall "^2.0.2"
+
+wait-in-parallel@^1.2.6:
+  version "1.2.6"
+  resolved "https://registry.yarnpkg.com/wait-in-parallel/-/wait-in-parallel-1.2.6.tgz#ffdcc342e4cff77bac11c1ddc604a797d3992887"
+  integrity sha512-j6qS3IT1cVDV9ATMvMuCN77OVsex9/knEDxFkYaGqAo21UQlGH5J0qJzkUt5AIrN2E3jcEVeuboalHkouJUxuQ==
+  dependencies:
+    common-types "^1.9.6"
+    lodash.first "^3.0.0"
+    typed-conversions "^0.9.6"
 
 walkdir@^0.4.0:
   version "0.4.1"

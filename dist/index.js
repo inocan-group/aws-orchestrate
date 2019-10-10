@@ -1760,9 +1760,9 @@ var loggedMessages = function loggedMessages(log) {
   return {
     /** a handler function just started executing */
     start: function start(request, headers, context, sequence, apiGateway) {
-      log.info("The handler function ".concat(context.functionName, " has started.  ").concat(sequence.isSequence ? " [ ".concat(log.getCorrelationId(), " ].") : " [ not part of sequence ]."), {
+      log.info("The handler function ".concat(get(context, "functionName"), " has started.  ").concat(get(sequence, "isSequence", false) ? " [ ".concat(log.getCorrelationId(), " ].") : " [ not part of sequence ]."), {
         request: request,
-        sequence: sequence.toObject(),
+        sequence: sequence ? sequence.toObject() : LambdaSequence.notASequence(),
         headers: headers,
         apiGateway: apiGateway
       });
@@ -1771,13 +1771,27 @@ var loggedMessages = function loggedMessages(log) {
       var s = getNewSequence();
       log.debug("The NEW sequence this function/conductor registered is about to be invoked", {
         sequence: s.toObject(),
-        headersForwarded: Object.keys(getRequestHeaders())
+        headersForwarded: Object.keys(getRequestHeaders() || {})
       });
     },
     sequenceStarted: function sequenceStarted(seqResponse) {
       log.debug("The NEW sequence this function registered was successfully invoked", {
         seqResponse: seqResponse
       });
+    },
+    startingInvocation: function startingInvocation(arn) {
+      log.debug("sequence: starting invocation of fn: ".concat(arn));
+    },
+    completingInvocation: function completingInvocation(arn, inovacationResponse) {
+      log.info("sequence: completed invocation of fn: ".concat(arn), {
+        inovacationResponse: inovacationResponse
+      });
+    },
+    notPartOfExistingSequence: function notPartOfExistingSequence() {
+      log.debug("This function is not part of a (continuing) sequence so skipping the next() invocation code path");
+    },
+    notPartOfNewSequence: function notPartOfNewSequence() {
+      log.debug("This function did not kick off a NEW sequence.");
     },
 
     /**
@@ -1789,10 +1803,15 @@ var loggedMessages = function loggedMessages(log) {
         workflowStatus: workflowStatus
       });
     },
+    sequenceTrackerComplete: function sequenceTrackerComplete(isDone) {
+      log.debug("The invocation to the sequence tracker has completed", {
+        isDone: isDone
+      });
+    },
     returnToApiGateway: function returnToApiGateway(result, responseHeaders) {
       log.debug("Returning results to API Gateway", {
         statusCode: commonTypes.HttpStatusCodes.Success,
-        result: JSON.stringify(result),
+        result: JSON.stringify(result || ""),
         responseHeaders: responseHeaders
       });
     },
@@ -1801,8 +1820,8 @@ var loggedMessages = function loggedMessages(log) {
      * as soon as an error is detected in the wrapper, write a log message about the error
      */
     processingError: function processingError(e, workflowStatus) {
-      var stack = e.stack || new Error().stack;
-      log.info("Processing error in handler function; error occurred sometime after the \"".concat(workflowStatus, "\" workflow status: [ ").concat(e.message, " ]"), {
+      var stack = get(e, "stack") || new Error().stack;
+      log.info("Processing error in handler function; error occurred sometime after the \"".concat(workflowStatus, "\" workflow status: [ ").concat(get(e, "message"), " ]"), {
         errorMessage: e.message,
         stack: stack,
         workflowStatus: workflowStatus
@@ -1828,6 +1847,39 @@ function convertToApiGatewayError(e) {
 }
 
 /**
+ * Errors which are encountered while handling an error. These secondary errors
+ * should always originate from the **wrapper** function rather than the consumer's
+ * _handler_ function.
+ */
+
+var ErrorWithinError =
+/*#__PURE__*/
+function (_Error) {
+  _inherits(ErrorWithinError, _Error);
+
+  function ErrorWithinError(
+  /** the original error */
+  originalError,
+  /** the error encountered within the error handling section */
+  secondaryErr) {
+    var _this;
+
+    _classCallCheck(this, ErrorWithinError);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(ErrorWithinError).call(this, originalError.message));
+    _this.name = "aws-orchestrate/error-handling";
+    _this.code = "error-handling";
+    _this.httpStatus = commonTypes.HttpStatusCodes.InternalServerError;
+    _this.message = "There was an error in the wrapper function while TRYING to handle another error. The original error had a message of: \n\"".concat(get(originalError, "message", "no message"), "\".\n\nSubsequently the error within the wrapper function was: \"").concat(get(secondaryErr, "message", "no message"), "\"");
+    _this.stack = secondaryErr.stack;
+    _this.originalStack = originalError.stack;
+    return _this;
+  }
+
+  return ErrorWithinError;
+}(_wrapNativeSuper(Error));
+
+/**
  * **wrapper**
  *
  * A higher order function which wraps a serverless _handler_-function with the aim of providing
@@ -1851,12 +1903,6 @@ function _await$2(value, then, direct) {
 }
 
 function _empty() {}
-
-function _awaitIgnored(value, direct) {
-  if (!direct) {
-    return value && value.then ? value.then(_empty) : Promise.resolve();
-  }
-}
 
 function _invokeIgnored(body) {
   var result = body();
@@ -2171,17 +2217,19 @@ var wrapper = function wrapper(fn) {
           result: result
         });
         workflowStatus = "function-complete"; //#endregion
-        //region SEQUENCE (next)
+        //#region SEQUENCE (next)
 
         return _invoke$1(function () {
           if (sequence.isSequence && !sequence.isDone) {
             workflowStatus = "invoke-started";
-            return _await$2(awsLog.invoke.apply(void 0, _toConsumableArray(sequence.next(result))), function (invokeParams) {
-              log.debug("finished invoking the next function in the sequence", {
-                invokeParams: invokeParams
-              });
+            var args = sequence.next(result);
+            msg.startingInvocation(get(args, "0", "MISSING-ARN"));
+            return _await$2(awsLog.invoke.apply(void 0, _toConsumableArray(args)), function (invokeParams) {
+              msg.completingInvocation(get(args, "0", "MISSING-ARN"), invokeParams);
               workflowStatus = "invoke-complete";
             });
+          } else {
+            msg.notPartOfExistingSequence();
           }
         }, function () {
           //#endregion
@@ -2195,7 +2243,7 @@ var wrapper = function wrapper(fn) {
                 workflowStatus = "sequence-started";
               });
             } else {
-              log.debug("This function did not kick off a NEW sequence.");
+              msg.notPartOfNewSequence();
             }
           }, function () {
             //#endregion
@@ -2206,9 +2254,13 @@ var wrapper = function wrapper(fn) {
                 msg.sequenceTracker(options.sequenceTracker, workflowStatus);
                 return _invokeIgnored(function () {
                   if (sequence.isDone) {
-                    return _awaitIgnored(awsLog.invoke(options.sequenceTracker, status(sequence), result));
+                    return _await$2(awsLog.invoke(options.sequenceTracker, status(sequence), result), function () {
+                      msg.sequenceTrackerComplete(true);
+                    });
                   } else {
-                    return _awaitIgnored(awsLog.invoke(options.sequenceTracker, status(sequence)));
+                    return _await$2(awsLog.invoke(options.sequenceTracker, status(sequence)), function () {
+                      msg.sequenceTrackerComplete(false);
+                    });
                   }
                 });
               }
@@ -2236,122 +2288,138 @@ var wrapper = function wrapper(fn) {
         });
       });
     }, function (e) {
-      msg.processingError(e, workflowStatus);
-      var found = findError(e, errorMeta);
-      var isApiGatewayRequest = commonTypes.isLambdaProxyRequest(event);
-      return function () {
-        if (found) {
-          if (found.handling.callback) {
-            var resolved = found.handling.callback(e);
+      //#region ERROR-HANDLING
+      // wrap all error handling in it's own try-catch
+      return _catch(function () {
+        msg.processingError(e, workflowStatus);
+        var found = findError(e, errorMeta);
+        var isApiGatewayRequest = commonTypes.isLambdaProxyRequest(event);
+        return function () {
+          if (found) {
+            if (found.handling.callback) {
+              var resolved = found.handling.callback(e);
 
-            if (!resolved) {
-              if (isApiGatewayRequest) {
-                return convertToApiGatewayError(new HandledError(found.code, e, log.getContext()));
-              } else {
-                throw new HandledError(found.code, e, log.getContext());
-              }
-            }
-          }
-
-          return _invokeIgnored(function () {
-            if (found.handling.forwardTo) {
-              return _await$2(awsLog.invoke(found.handling.forwardTo, e), function () {
-                log.info("Forwarded error to the function \"".concat(found.handling.forwardTo, "\""), {
-                  error: e,
-                  forwardTo: found.handling.forwardTo
-                });
-              });
-            }
-          });
-        } else {
-          // UNFOUND ERROR
-          log.debug("An error is being processed by the default handling mechanism", {
-            defaultHandling: errorMeta.defaultHandling,
-            errorMessage: e.message,
-            stack: e.stack
-          });
-          var handling = errorMeta.defaultHandling;
-          return _switch(handling.type, [[function () {
-            return "handler-fn";
-          }, function () {
-            //#region handle-fn
-
-            /**
-             * results are broadly three things:
-             *
-             * 1. handler throws an error
-             * 2. handler returns `true` which means that result should be considered successful
-             * 3. handler returns _falsy_ which means that the default error should be thrown
-             */
-            try {
-              var passed = handling.defaultHandlerFn(e);
-
-              if (passed === true) {
-                log.debug("The error was fully handled by the handling function/callback; resulting in a successful condition [ ".concat(result ? commonTypes.HttpStatusCodes.Success : commonTypes.HttpStatusCodes.NoContent, " ]."));
-
+              if (!resolved) {
                 if (isApiGatewayRequest) {
-                  return {
-                    statusCode: result ? commonTypes.HttpStatusCodes.Success : commonTypes.HttpStatusCodes.NoContent,
-                    headers: getResponseHeaders(),
-                    body: result ? JSON.stringify(result) : ""
-                  };
+                  return convertToApiGatewayError(new HandledError(found.code, e, log.getContext()));
                 } else {
-                  return result;
+                  throw new HandledError(found.code, e, log.getContext());
                 }
-              } else {
-                log.debug("The error was passed to the callback/handler function but it did NOT resolve the error condition.");
               }
-            } catch (e2) {
-              // handler threw an error
+            }
+
+            return _invokeIgnored(function () {
+              if (found.handling.forwardTo) {
+                return _await$2(awsLog.invoke(found.handling.forwardTo, e), function () {
+                  log.info("Forwarded error to the function \"".concat(found.handling.forwardTo, "\""), {
+                    error: e,
+                    forwardTo: found.handling.forwardTo
+                  });
+                });
+              }
+            });
+          } else {
+            var _interrupt2 = false;
+            //#region UNFOUND ERROR
+            log.debug("An error is being processed by the default handling mechanism", {
+              defaultHandling: errorMeta.defaultHandling,
+              errorMessage: e.message,
+              stack: e.stack
+            }); //#endregion
+
+            var handling = errorMeta.defaultHandling;
+            return _switch(handling.type, [[function () {
+              return "handler-fn";
+            }, function () {
+              //#region handle-fn
+
+              /**
+               * results are broadly three things:
+               *
+               * 1. handler throws an error
+               * 2. handler returns `true` which means that result should be considered successful
+               * 3. handler returns _falsy_ which means that the default error should be thrown
+               */
+              try {
+                var passed = handling.defaultHandlerFn(e);
+
+                if (passed === true) {
+                  log.debug("The error was fully handled by the handling function/callback; resulting in a successful condition [ ".concat(result ? commonTypes.HttpStatusCodes.Success : commonTypes.HttpStatusCodes.NoContent, " ]."));
+
+                  if (isApiGatewayRequest) {
+                    return {
+                      statusCode: result ? commonTypes.HttpStatusCodes.Success : commonTypes.HttpStatusCodes.NoContent,
+                      headers: getResponseHeaders(),
+                      body: result ? JSON.stringify(result) : ""
+                    };
+                  } else {
+                    return result;
+                  }
+                } else {
+                  log.debug("The error was passed to the callback/handler function but it did NOT resolve the error condition.");
+                }
+              } catch (e2) {
+                // handler threw an error
+                if (isApiGatewayRequest) {
+                  return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
+                }
+              }
+
+              _interrupt2 = true;
+            }], [function () {
+              return "error-forwarding";
+            }, function () {
+              //#region error-forwarding
+              log.debug("The error will be forwarded to another function for handling", {
+                arn: handling.arn
+              });
+              return _await$2(awsLog.invoke(handling.arn, e), function () {
+                _interrupt2 = true;
+              });
+            }], [function () {
+              return "default-error";
+            }, function () {
+              //#region default-error
+              handling.error.message = handling.error.message || e.message;
+              handling.error.stack = e.stack;
+
+              if (isApiGatewayRequest) {
+                return convertToApiGatewayError(handling.error);
+              } else {
+                throw handling.error;
+              }
+
+              _interrupt2 = true;
+            }], [function () {
+              return "default";
+            }, function () {
+              //#region default
+              log.debug("Error handled by default policy", {
+                code: errorMeta.defaultErrorCode,
+                message: e.message,
+                stack: e.stack
+              });
+
               if (isApiGatewayRequest) {
                 return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
+              } else {
+                throw new UnhandledError(errorMeta.defaultErrorCode, e);
               }
-            }
-          }], [function () {
-            return "error-forwarding";
-          }, function () {
-            //#region error-forwarding
-            log.debug("The error will be forwarded to another function for handling", {
-              arn: handling.arn
-            });
-            return _await$2(awsLog.invoke(handling.arn, e), function () {
-            });
-          }], [function () {
-            return "default-error";
-          }, function () {
-            //#region default-error
-            handling.error.message = handling.error.message || e.message;
-            handling.error.stack = e.stack;
 
-            if (isApiGatewayRequest) {
-              return convertToApiGatewayError(handling.error);
-            } else {
-              throw handling.error;
-            }
-          }], [function () {
-            return "default";
-          }, function () {
-            //#region default
-            log.debug("Error handled by default policy", {
-              code: errorMeta.defaultErrorCode,
-              message: e.message,
-              stack: e.stack
-            });
-
-            if (isApiGatewayRequest) {
-              return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
-            } else {
+              _interrupt2 = true;
+            }], [void 0, function () {
+              log.debug("Unknown handling technique for unhandled error", {
+                type: handling.type,
+                errorMessage: e.message
+              });
               throw new UnhandledError(errorMeta.defaultErrorCode, e);
-            }
-          }], [void 0, function () {
-            log.debug("Unknown handling technique for unhandled error", {
-              type: handling.type,
-              errorMessage: e.message
-            });
-            throw new UnhandledError(errorMeta.defaultErrorCode, e);
-          }]]);
-        }
-      }();
+            }]]);
+          }
+        }();
+      }, function (eOfE) {
+        // Catch errors in error handlers
+        throw new ErrorWithinError(e, eOfE);
+      });
     });
   });
 };
