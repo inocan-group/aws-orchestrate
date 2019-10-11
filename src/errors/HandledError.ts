@@ -43,6 +43,8 @@ export class HandledError extends Error {
    */
   code: string;
 
+  type = "handled-error";
+
   classification: string;
   functionName: string;
 
@@ -74,6 +76,7 @@ export class HandledError extends Error {
     this.functionName = context.functionName;
     this.name = type;
     this.code = subType;
+
     this.httpStatus = errorCode;
   }
 }
