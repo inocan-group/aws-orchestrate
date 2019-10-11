@@ -662,6 +662,14 @@ function maskLoggingForSecrets(modules, log) {
   }
 }
 
+/**
+ * Wraps the functionality provided by the `aws-log`'s **invoke()** function
+ * that ensures that improper self-calling is prohibited unless expressly enabled
+ *
+ * @param fnArn the Function's ARN
+ * @param request The request object to pass to the next function
+ */
+
 function _async$1(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
@@ -676,7 +684,25 @@ function _async$1(f) {
   };
 }
 
-var invokeNewSequence = _async$1(function () {
+var invoke = _async$1(function (fnArn, request) {
+  return awsLog.invoke(fnArn, request);
+});
+
+function _async$2(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var invokeNewSequence = _async$2(function () {
   var results = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
   if (!newSequence) {
@@ -684,11 +710,11 @@ var invokeNewSequence = _async$1(function () {
   }
 
   results = results || {};
-  return awsLog.invoke.apply(void 0, _toConsumableArray(newSequence.next(_typeof(results) === "object" ? results : {
+  return invoke.apply(void 0, _toConsumableArray(newSequence.next(_typeof(results) === "object" ? results : {
     data: results
   })));
 });
-var newSequence = LambdaSequence.notASequence();
+var newSequence;
 /**
  * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)
  */
@@ -706,7 +732,7 @@ function registerSequence(log, context) {
  **/
 
 function getNewSequence() {
-  return newSequence;
+  return newSequence || LambdaSequence.notASequence();
 }
 
 /**
@@ -886,7 +912,7 @@ function _invoke(body, then) {
   return then(result);
 }
 
-function _async$2(f) {
+function _async$3(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -900,7 +926,7 @@ function _async$2(f) {
   };
 }
 
-var database = _async$2(function (config) {
+var database = _async$3(function (config) {
   var log = awsLog.logger().reloadContext();
   return _invoke(function () {
     if (!_database) {
@@ -1123,50 +1149,33 @@ function () {
     key: "next",
     value: function next() {
       var currentFnResponse = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      var logger = arguments.length > 1 ? arguments[1] : undefined;
 
-      if (!logger) {
-        logger = awsLog.logger();
-        logger.getContext();
-      }
-
-      if (this.isDone) {
-        logger.info("The next() function called on ".concat(this.activeFn && this.activeFn.arn ? this.activeFn.arn : "unknown", " was called but we are now done with the sequence so exiting."));
-        return;
-      }
       /**
        * if there is an active function, set it to completed
        * and assign _results_
        */
-
-
       if (this.activeFn) {
         var results = currentFnResponse;
         delete results._sequence;
         this._responses[this.activeFn.arn] = results;
         this.activeFn.status = "completed";
       }
-      /**
-       *assign the first
-       */
-
 
       var body = this.resolveRequestProperties(this.nextFn);
+      var arn = this.nextFn.arn;
+      this.validateCallDepth();
       var request = buildOrchestratedRequest(body, this);
-      logger.debug("LambdaSequence.next(): the \"".concat(this.activeFn ? "\"".concat(this.activeFn.arn, "\" function") : "sequence Conductor", "\" will be calling \"").concat(this.nextFn.arn, "\" in a moment"), {
-        fn: this.nextFn.arn,
-        request: request
-      });
-      /**
-       * The parameters needed to pass into the `invoke()` function
-       */
-
-      var invokeParams = [// the arn
-      this.nextFn.arn, // the params passed forward
-      request];
       this.nextFn.status = "active";
-      return invokeParams;
+      return [arn, request];
     }
+    /**
+     * Ensures that you can't call yourself in a sequence unless this has been
+     * enabled explicitly.
+     */
+
+  }, {
+    key: "validateCallDepth",
+    value: function validateCallDepth() {}
     /**
      * **from**
      *
@@ -1913,32 +1922,6 @@ function (_Error) {
 }(_wrapNativeSuper(Error));
 
 /**
- * Wraps the functionality provided by the `aws-log`'s **invoke()** function
- * that ensures that improper self-calling is prohibited unless expressly enabled
- *
- * @param fnArn the Function's ARN
- * @param request The request object to pass to the next function
- */
-
-function _async$3(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var invoke = _async$3(function (fnArn, request) {
-  return awsLog.invoke(fnArn, request);
-});
-
-/**
  * **wrapper**
  *
  * A higher order function which wraps a serverless _handler_-function with the aim of providing
@@ -2302,7 +2285,7 @@ var wrapper = function wrapper(fn) {
             if (getNewSequence().isSequence) {
               workflowStatus = "sequence-starting";
               msg.sequenceStarting();
-              return _await$2(invokeNewSequence(result, log), function (seqResponse) {
+              return _await$2(invokeNewSequence(result), function (seqResponse) {
                 msg.sequenceStarted(seqResponse);
                 workflowStatus = "sequence-started";
               });
@@ -2481,7 +2464,7 @@ var wrapper = function wrapper(fn) {
         throw new ErrorWithinError(e, eOfE);
       });
     });
-  });
+  }); //#endregion
 };
 
 exports.LambdaEventParser = LambdaEventParser;

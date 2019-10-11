@@ -96,6 +96,11 @@ export declare class LambdaSequence {
     /** the _current_ function's response */
     currentFnResponse?: Partial<T>, logger?: import("aws-log").ILoggerApi): ILambdaSequenceNextTuple<T>;
     /**
+     * Ensures that you can't call yourself in a sequence unless this has been
+     * enabled explicitly.
+     */
+    private validateCallDepth;
+    /**
      * **from**
      *
      * unboxes `request`, `sequence`, `apiGateway`, and `headers` data structures

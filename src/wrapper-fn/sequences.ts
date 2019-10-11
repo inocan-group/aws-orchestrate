@@ -1,9 +1,9 @@
 import { LambdaSequence } from "../LambdaSequence";
-import { ILoggerApi, invoke } from "aws-log";
+import { ILoggerApi } from "aws-log";
 import { IAWSLambaContext } from "common-types";
+import { invoke } from "../invoke";
 
-// default to NOT a sequence
-let newSequence: LambdaSequence = LambdaSequence.notASequence();
+let newSequence: LambdaSequence;
 
 /**
  * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)
@@ -22,10 +22,10 @@ export function registerSequence(log: ILoggerApi, context: IAWSLambaContext) {
  * returns the sequence which was set by `startSequence()`
  **/
 export function getNewSequence() {
-  return newSequence;
+  return newSequence || LambdaSequence.notASequence();
 }
 
-export async function invokeNewSequence(results: any = {}, log: ILoggerApi) {
+export async function invokeNewSequence(results: any = {}) {
   if (!newSequence) {
     return;
   }

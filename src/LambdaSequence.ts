@@ -161,19 +161,6 @@ export function handler(event, context, callback) {
     currentFnResponse: Partial<T> = {},
     logger?: import("aws-log").ILoggerApi
   ): ILambdaSequenceNextTuple<T> {
-    if (!logger) {
-      logger = awsLogger();
-      logger.getContext();
-    }
-    if (this.isDone) {
-      logger.info(
-        `The next() function called on ${
-          this.activeFn && this.activeFn.arn ? this.activeFn.arn : "unknown"
-        } was called but we are now done with the sequence so exiting.`
-      );
-      return;
-    }
-
     /**
      * if there is an active function, set it to completed
      * and assign _results_
@@ -185,36 +172,21 @@ export function handler(event, context, callback) {
       this.activeFn.status = "completed";
     }
 
-    /**
-     *assign the first
-     */
     let body: T = this.resolveRequestProperties<T>(this.nextFn);
+    let arn = this.nextFn.arn;
+    this.validateCallDepth();
     const request = buildOrchestratedRequest<T>(body, this);
-
-    logger.debug(
-      `LambdaSequence.next(): the "${
-        this.activeFn ? `"${this.activeFn.arn}" function` : `sequence Conductor`
-      }" will be calling "${this.nextFn.arn}" in a moment`,
-      {
-        fn: this.nextFn.arn,
-        request
-      }
-    );
-
-    /**
-     * The parameters needed to pass into the `invoke()` function
-     */
-    const invokeParams: ILambdaSequenceNextTuple<T> = [
-      // the arn
-      this.nextFn.arn,
-      // the params passed forward
-      request
-    ];
 
     this.nextFn.status = "active";
 
-    return invokeParams;
+    return [arn, request] as ILambdaSequenceNextTuple<T>;
   }
+
+  /**
+   * Ensures that you can't call yourself in a sequence unless this has been
+   * enabled explicitly.
+   */
+  private validateCallDepth() {}
 
   /**
    * **from**

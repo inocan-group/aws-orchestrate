@@ -31,13 +31,10 @@ import {
   maskLoggingForSecrets,
   getLocalSecrets
 } from "./wrapper-fn/index";
-import { convertToApiGatewayError, ErrorWithinError } from "./errors";
-import { sequenceStatus, buildOrchestratedRequest } from "./sequences";
+import { convertToApiGatewayError, ErrorWithinError } from "./errors/index";
+import { sequenceStatus, buildOrchestratedRequest } from "./sequences/index";
 import { invoke } from "./invoke";
-import {
-  ISequenceTrackerRequest,
-  ISequenceTrackerStatus
-} from "./exported-functions/SequenceTracker";
+import { ISequenceTrackerStatus } from "./exported-functions/SequenceTracker";
 
 /**
  * **wrapper**
@@ -135,7 +132,7 @@ export const wrapper = function<I, O>(
       if (getNewSequence().isSequence) {
         workflowStatus = "sequence-starting";
         msg.sequenceStarting();
-        const seqResponse = await invokeNewSequence(result, log);
+        const seqResponse = await invokeNewSequence(result);
         msg.sequenceStarted(seqResponse);
         workflowStatus = "sequence-started";
       } else {
@@ -317,4 +314,5 @@ export const wrapper = function<I, O>(
       }
     }
   };
+  //#endregion
 };
