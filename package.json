@@ -52,7 +52,7 @@
     "async-shelljs": "^0.1.2",
     "bili": "^4.8.1",
     "chai": "^4.2.0",
-    "do-devops": "^0.2.2",
+    "do-devops": "^0.2.3",
     "firemock": "^0.32.1",
     "firemodel": "^0.32.3",
     "mocha": "^6.2.0",
