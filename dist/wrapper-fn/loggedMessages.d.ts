@@ -74,7 +74,7 @@ export declare const loggedMessages: (log: {
     start(request: IDictionary<any>, headers: IDictionary<any>, context: IDictionary<any>, sequence: LambdaSequence, apiGateway: Pick<import("common-types").IAWSLambdaProxyIntegrationRequest, "resource" | "path" | "httpMethod" | "queryStringParameters" | "pathParameters" | "requestContext" | "isBase64Encoded">): void;
     sequenceStarting(): void;
     sequenceStarted(seqResponse: any): void;
-    startingInvocation(arn: string): void;
+    startingInvocation(arn: string, params: IDictionary<any>): void;
     completingInvocation(arn: string, inovacationResponse: IDictionary<any>): void;
     notPartOfExistingSequence(): void;
     notPartOfNewSequence(): void;

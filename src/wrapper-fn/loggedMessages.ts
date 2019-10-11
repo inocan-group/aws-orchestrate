@@ -53,8 +53,8 @@ export const loggedMessages = (log: ILoggerApi) => ({
     );
   },
 
-  startingInvocation(arn: string) {
-    log.debug(`sequence: starting invocation of fn: ${arn}`);
+  startingInvocation(arn: string, params: IDictionary) {
+    log.debug(`sequence: starting invocation of fn: ${arn}`, { arn, params });
   },
 
   completingInvocation(arn: string, inovacationResponse: IDictionary) {
@@ -105,13 +105,11 @@ export const loggedMessages = (log: ILoggerApi) => ({
    */
   processingError: (e: IErrorClass, workflowStatus: string) => {
     const stack = get(e, "stack") || new Error().stack;
+    const errorMessage = get(e, "message", "no-message");
     log.info(
-      `Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${get(
-        e,
-        "message"
-      )} ]`,
+      `Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}} ]`,
       {
-        errorMessage: e.message,
+        errorMessage,
         stack,
         workflowStatus
       }

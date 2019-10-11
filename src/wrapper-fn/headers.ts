@@ -131,8 +131,7 @@ function getBaseHeaders(opts: IHttpResponseHeaders) {
     ? {
         ["O-Sequence-Status"]: JSON.stringify(
           sequenceStatus(correlationId)(opts.sequence)
-        ),
-        ["O-Serialized-Sequence"]: serializeSequence(opts.sequence)
+        )
       }
     : {};
 

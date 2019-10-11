@@ -5,7 +5,7 @@ import {
   IApiGatewayResponse,
   isLambdaProxyRequest
 } from "common-types";
-import { logger, invoke } from "aws-log";
+import { logger } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
 import { LambdaSequence } from "./LambdaSequence";
 import { UnhandledError } from "./errors/UnhandledError";
@@ -32,8 +32,12 @@ import {
   getLocalSecrets
 } from "./wrapper-fn/index";
 import { convertToApiGatewayError, ErrorWithinError } from "./errors";
-import { sequenceStatus } from "./sequences";
-import get from "lodash.get";
+import { sequenceStatus, buildOrchestratedRequest } from "./sequences";
+import { invoke } from "./invoke";
+import {
+  ISequenceTrackerRequest,
+  ISequenceTrackerStatus
+} from "./exported-functions/SequenceTracker";
 
 /**
  * **wrapper**
@@ -117,10 +121,10 @@ export const wrapper = function<I, O>(
       //#region SEQUENCE (next)
       if (sequence.isSequence && !sequence.isDone) {
         workflowStatus = "invoke-started";
-        const args = sequence.next<O>(result);
-        msg.startingInvocation(get(args, "0", "MISSING-ARN"));
-        const invokeParams = await invoke(...args);
-        msg.completingInvocation(get(args, "0", "MISSING-ARN"), invokeParams);
+        const [fn, requestBody] = sequence.next<O>(result);
+        msg.startingInvocation(fn, requestBody);
+        const invokeParams = await invoke(fn, requestBody);
+        msg.completingInvocation(fn, invokeParams);
         workflowStatus = "invoke-complete";
       } else {
         msg.notPartOfExistingSequence();
@@ -143,11 +147,13 @@ export const wrapper = function<I, O>(
       if (options.sequenceTracker && sequence.isSequence) {
         workflowStatus = "sequence-tracker-starting";
         msg.sequenceTracker(options.sequenceTracker, workflowStatus);
+        await invoke(
+          options.sequenceTracker,
+          buildOrchestratedRequest<ISequenceTrackerStatus>(status(sequence))
+        );
         if (sequence.isDone) {
-          await invoke(options.sequenceTracker, status(sequence), result);
           msg.sequenceTrackerComplete(true);
         } else {
-          await invoke(options.sequenceTracker, status(sequence));
           msg.sequenceTrackerComplete(false);
         }
       }

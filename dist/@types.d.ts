@@ -43,14 +43,15 @@ export interface IWrapperResponseHeaders extends IHttpResponseHeaders {
      */
     ["O-firemodel/SERVICE_ACCOUNT"]?: string;
     /**
+     * If you are using firebase and a prior function asked SSM for secrets
+     * for the Admin SDK this will likely exist.
+     */
+    ["O-firemodel/BASE_URL"]?: string;
+    /**
      * The status of the _sequence_ when being passed from function
      * to function.
      */
     ["O-Sequence-Status"]?: string;
-    /**
-     * The `LambdaSequence` serialized for passing to the next function
-     */
-    ["O-Serialized-Sequence"]?: string;
 }
 /**
  * the `arn` and `params` to pass in. The _parameters_
@@ -118,9 +119,9 @@ export interface ICompressedSection {
  */
 export interface IOrchestratedRequest<T> {
     type: "orchestrated-message-body";
+    body: T | ICompressedSection;
     sequence: ISerializedSequence | ICompressedSection;
     headers: IWrapperResponseHeaders | ICompressedSection;
-    body: T | ICompressedSection;
 }
 /**
  * This is a antiquated request form which should not be used anymore

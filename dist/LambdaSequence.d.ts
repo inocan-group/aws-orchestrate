@@ -79,8 +79,10 @@ export declare class LambdaSequence {
     /**
      * **next**
      *
-     * Returns the parameters needed to execute the _next_ function in the sequence. The
-     * parameters passed to the next function will be of the format:
+     * Returns the parameters needed to execute the _invoke()_ function. There
+     * are two parameters: `fnArn` and `requestBody`. The first parameter is simply a string
+     * representing the fully-qualified AWS **arn** for the function. The `requestBody` is
+     * structured like so:
      *
      * ```typescript
      * { body, headers, sequence }
