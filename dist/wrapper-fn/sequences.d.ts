@@ -9,4 +9,4 @@ export declare function registerSequence(log: ILoggerApi, context: IAWSLambaCont
  * returns the sequence which was set by `startSequence()`
  **/
 export declare function getNewSequence(): LambdaSequence;
-export declare function invokeNewSequence(results: any, log: ILoggerApi): Promise<import("aws-sdk/clients/lambda").InvocationResponse>;
+export declare function invokeNewSequence(results?: any): Promise<import("aws-sdk/clients/lambda").InvocationResponse>;

@@ -1,6 +1,6 @@
 import { HttpStatusCodes, isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest } from 'common-types';
 import { compress as compress$1, decompress as decompress$1 } from 'lzutf8';
-import { logger, getCorrelationId, invoke } from 'aws-log';
+import { logger, invoke as invoke$1, getCorrelationId } from 'aws-log';
 import get from 'lodash.get';
 import flatten from 'lodash.flatten';
 import set from 'lodash.set';
@@ -446,6 +446,23 @@ function isBareRequest(event) {
 }
 
 /**
+ * **findError**
+ *
+ * Look for the error encountered within the "known errors" that
+ * the function defined and return it's `ErrorHandler` if found.
+ * If _not_ found then return `false`.
+ */
+function findError(e, expectedErrors) {
+  var found = false;
+  expectedErrors.list.forEach(function (i) {
+    if (e.code === i.identifiedBy.code || e.name == i.identifiedBy.name || e.message.includes(i.identifiedBy.messageContains) || e instanceof i.identifiedBy.errorClass) {
+      found = i;
+    }
+  });
+  return found;
+}
+
+/**
  * Allows getting a single secret out of either _locally_ stored secrets -- or
  * if not found -- going to **SSM** and pulling the module containing this secret.
  */
@@ -621,6 +638,79 @@ function maskLoggingForSecrets(modules, log) {
 }
 
 /**
+ * Wraps the functionality provided by the `aws-log`'s **invoke()** function
+ * that ensures that improper self-calling is prohibited unless expressly enabled
+ *
+ * @param fnArn the Function's ARN
+ * @param request The request object to pass to the next function
+ */
+
+function _async$1(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var invoke = _async$1(function (fnArn, request) {
+  return invoke$1(fnArn, request);
+});
+
+function _async$2(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var invokeNewSequence = _async$2(function () {
+  var results = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+  if (!newSequence) {
+    return;
+  }
+
+  results = results || {};
+  return invoke.apply(void 0, _toConsumableArray(newSequence.next(_typeof(results) === "object" ? results : {
+    data: results
+  })));
+});
+var newSequence;
+/**
+ * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)
+ */
+
+function registerSequence(log, context) {
+  return function (s) {
+    log.debug("This function has registered a new sequence with ".concat(s.steps.length, " steps to be kicked off as part of this function's execution."), {
+      sequence: s.toObject()
+    });
+    newSequence = s;
+  };
+}
+/**
+ * returns the sequence which was set by `startSequence()`
+ **/
+
+function getNewSequence() {
+  return newSequence || LambdaSequence.notASequence();
+}
+
+/**
  * Ensures that frontend clients who call Lambda's
  * will be given a CORs friendly response
  */
@@ -736,10 +826,8 @@ function setFnHeaders(headers) {
 }
 
 function getBaseHeaders(opts) {
-  var _ref;
-
   var correlationId = getCorrelationId();
-  var sequenceInfo = opts.sequence ? (_ref = {}, _defineProperty(_ref, "O-Sequence-Status", JSON.stringify(sequenceStatus(correlationId)(opts.sequence))), _defineProperty(_ref, "O-Serialized-Sequence", serializeSequence(opts.sequence)), _ref) : {};
+  var sequenceInfo = opts.sequence ? _defineProperty({}, "O-Sequence-Status", JSON.stringify(sequenceStatus(correlationId)(opts.sequence))) : {};
   return Object.assign(Object.assign(Object.assign({}, sequenceInfo), getFnHeaders()), _defineProperty({}, "X-Correlation-Id", getCorrelationId()));
 }
 /**
@@ -761,6 +849,204 @@ function getResponseHeaders() {
 function getRequestHeaders() {
   var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
   return Object.assign(Object.assign({}, getHeaderSecrets()), getBaseHeaders(opts));
+}
+
+function _await$1(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+var _database;
+/**
+ * **database**
+ *
+ * Provides a convenient means to connect to the database which lives
+ * outside the _handler_ function's main thread. This allows the connection
+ * to the database to sometimes be preserved between function executions.
+ *
+ * This is loaded asynchronously and the containing code must explicitly
+ * load the `abstracted-admin` library (as this library only lists it as
+ * a devDep)
+ */
+
+
+function _invoke(body, then) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(then);
+  }
+
+  return then(result);
+}
+
+function _async$3(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var database = _async$3(function (config) {
+  var log = logger().reloadContext();
+  return _invoke(function () {
+    if (!_database) {
+      return _invoke(function () {
+        if (!config) {
+          return function () {
+            if (process.env.FIREBASE_SERVICE_ACCOUNT && process.env.FIREBASE_DATA_ROOT_URL) {
+              log.debug("The environment variables are in place to configure database connectivity", {
+                firebaseDataRootUrl: process.env.FIREBASE_DATA_ROOT_URL
+              });
+            } else {
+              return _await$1(getSecrets(["firebase"]), function (_ref) {
+                var firebase = _ref.firebase;
+
+                if (!firebase) {
+                  throw new Error("The module \"firebase\" was not found in SSM; Firebase configuration could not be established");
+                }
+
+                if (!firebase.SERVICE_ACCOUNT) {
+                  throw new Error("The module \"firebase\" was found but it did not have a ");
+                }
+
+                log.debug("The Firebase service account has been retrieved from SSM and will be used.");
+                config = {
+                  serviceAccount: firebase.SERVICE_ACCOUNT,
+                  databaseUrl: firebase.DATABASE_URL
+                };
+              });
+            }
+          }();
+        }
+      }, function (_result2) {
+        return  _await$1(import('abstracted-admin'), function (_temp) {
+          var DB = _temp.DB;
+          return _await$1(DB.connect(config), function (_DB$connect) {
+            _database = _DB$connect;
+          });
+        });
+      });
+    }
+  }, function (_result3) {
+    return  _database;
+  });
+});
+
+/**
+ * A collection of log messages that the wrapper function will emit
+ */
+
+var loggedMessages = function loggedMessages(log) {
+  return {
+    /** a handler function just started executing */
+    start: function start(request, headers, context, sequence, apiGateway) {
+      log.info("The handler function ".concat(get(context, "functionName"), " has started.  ").concat(get(sequence, "isSequence", false) ? " [ ".concat(log.getCorrelationId(), " ].") : " [ not part of sequence ]."), {
+        request: request,
+        sequence: sequence ? sequence.toObject() : LambdaSequence.notASequence(),
+        headers: headers,
+        apiGateway: apiGateway
+      });
+    },
+    sequenceStarting: function sequenceStarting() {
+      var s = getNewSequence();
+      log.debug("The NEW sequence this function/conductor registered is about to be invoked", {
+        sequence: s.toObject(),
+        headersForwarded: Object.keys(getRequestHeaders() || {})
+      });
+    },
+    sequenceStarted: function sequenceStarted(seqResponse) {
+      log.debug("The NEW sequence this function registered was successfully invoked", {
+        seqResponse: seqResponse
+      });
+    },
+    startingInvocation: function startingInvocation(arn, params) {
+      log.debug("sequence: starting invocation of fn: ".concat(arn), {
+        arn: arn,
+        params: params
+      });
+    },
+    completingInvocation: function completingInvocation(arn, inovacationResponse) {
+      log.info("sequence: completed invocation of fn: ".concat(arn), {
+        inovacationResponse: inovacationResponse
+      });
+    },
+    notPartOfExistingSequence: function notPartOfExistingSequence() {
+      log.debug("This function is not part of a (continuing) sequence so skipping the next() invocation code path");
+    },
+    notPartOfNewSequence: function notPartOfNewSequence() {
+      log.debug("This function did not kick off a NEW sequence.");
+    },
+
+    /**
+     * right before forwarding the sequence status to the `sequenceTracker` lambda
+     */
+    sequenceTracker: function sequenceTracker(_sequenceTracker, workflowStatus) {
+      log.info("About to send the LambdaSequence's status to the sequenceTracker [ ".concat(_sequenceTracker, " ]"), {
+        sequenceTracker: _sequenceTracker,
+        workflowStatus: workflowStatus
+      });
+    },
+    sequenceTrackerComplete: function sequenceTrackerComplete(isDone) {
+      log.debug("The invocation to the sequence tracker has completed", {
+        isDone: isDone
+      });
+    },
+    returnToApiGateway: function returnToApiGateway(result, responseHeaders) {
+      log.debug("Returning results to API Gateway", {
+        statusCode: HttpStatusCodes.Success,
+        result: JSON.stringify(result || ""),
+        responseHeaders: responseHeaders
+      });
+    },
+
+    /**
+     * as soon as an error is detected in the wrapper, write a log message about the error
+     */
+    processingError: function processingError(e, workflowStatus) {
+      var stack = get(e, "stack") || new Error().stack;
+      var errorMessage = get(e, "message", "no-message");
+      log.info("Processing error in handler function; error occurred sometime after the \"".concat(workflowStatus, "\" workflow status: [ ").concat(errorMessage, "} ]"), {
+        errorMessage: errorMessage,
+        stack: stack,
+        workflowStatus: workflowStatus
+      });
+    }
+  };
+};
+
+function buildOrchestratedRequest(body, sequence,
+/**
+ * By default this function will include all _request headers_
+ * such as the forwarding of _secrets_ but if you want to include
+ * additional ones they can be added with this parameter.
+ */
+additionalHeaders) {
+  if (!sequence) {
+    sequence = LambdaSequence.notASequence();
+  }
+
+  var headers = additionalHeaders ? Object.assign(Object.assign({}, getRequestHeaders()), additionalHeaders) : getRequestHeaders();
+  return {
+    type: "orchestrated-message-body",
+    body: compress(body, 4096),
+    sequence: compress(sequence.toObject(), 4096),
+    headers: compress(headers, 4096)
+  };
 }
 
 var LambdaSequence =
@@ -820,8 +1106,10 @@ function () {
     /**
      * **next**
      *
-     * Returns the parameters needed to execute the _next_ function in the sequence. The
-     * parameters passed to the next function will be of the format:
+     * Returns the parameters needed to execute the _invoke()_ function. There
+     * are two parameters: `fnArn` and `requestBody`. The first parameter is simply a string
+     * representing the fully-qualified AWS **arn** for the function. The `requestBody` is
+     * structured like so:
      *
      * ```typescript
      * { body, headers, sequence }
@@ -836,67 +1124,33 @@ function () {
     key: "next",
     value: function next() {
       var currentFnResponse = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      var logger$1 = arguments.length > 1 ? arguments[1] : undefined;
 
-      if (!logger$1) {
-        logger$1 = logger();
-        logger$1.getContext();
-      }
-
-      if (this.isDone) {
-        logger$1.info("The next() function called on ".concat(this.activeFn && this.activeFn.arn ? this.activeFn.arn : "unknown", " was called but we are now done with the sequence so exiting."));
-        return;
-      }
       /**
        * if there is an active function, set it to completed
        * and assign _results_
        */
-
-
       if (this.activeFn) {
         var results = currentFnResponse;
         delete results._sequence;
         this._responses[this.activeFn.arn] = results;
         this.activeFn.status = "completed";
       }
-      /**
-       *assign the first
-       */
-
 
       var body = this.resolveRequestProperties(this.nextFn);
-      console.log(this.activeFn);
-      var sequence = this.toObject();
-      var headers = getRequestHeaders();
-      logger$1.debug("LambdaSequence.next(): the \"".concat(this.activeFn ? "\"".concat(this.activeFn.arn, "\" function") : "sequence Conductor", "\" will be calling \"").concat(this.nextFn.arn, "\" in a moment"), {
-        fn: this.nextFn.arn,
-        request: {
-          type: "orchestrated-message-body",
-          body: body,
-          sequence: sequence,
-          headers: headers
-        }
-      }); // compress if large
-
-      body = compress(body, 4096);
-      sequence = compress(sequence, 4096);
-      headers = compress(headers, 4096);
-      /**
-       * The parameters needed to pass into `aws-log`'s
-       * invoke() function
-       */
-
-      var invokeParams = [// the arn
-      this.nextFn.arn, // the params passed forward
-      {
-        type: "orchestrated-message-body",
-        sequence: sequence,
-        body: body,
-        headers: headers
-      }];
+      var arn = this.nextFn.arn;
+      this.validateCallDepth();
+      var request = buildOrchestratedRequest(body, this);
       this.nextFn.status = "active";
-      return invokeParams;
+      return [arn, request];
     }
+    /**
+     * Ensures that you can't call yourself in a sequence unless this has been
+     * enabled explicitly.
+     */
+
+  }, {
+    key: "validateCallDepth",
+    value: function validateCallDepth() {}
     /**
      * **from**
      *
@@ -1568,225 +1822,6 @@ function (_Error) {
 }(_wrapNativeSuper(Error));
 
 /**
- * **findError**
- *
- * Look for the error encountered within the "known errors" that
- * the function defined and return it's `ErrorHandler` if found.
- * If _not_ found then return `false`.
- */
-function findError(e, expectedErrors) {
-  var found = false;
-  expectedErrors.list.forEach(function (i) {
-    if (e.code === i.identifiedBy.code || e.name == i.identifiedBy.name || e.message.includes(i.identifiedBy.messageContains) || e instanceof i.identifiedBy.errorClass) {
-      found = i;
-    }
-  });
-  return found;
-}
-
-function _async$1(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var invokeNewSequence = _async$1(function () {
-  var results = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
-  if (!newSequence) {
-    return;
-  }
-
-  results = results || {};
-  return invoke.apply(void 0, _toConsumableArray(newSequence.next(_typeof(results) === "object" ? results : {
-    data: results
-  })));
-});
-var newSequence = LambdaSequence.notASequence();
-/**
- * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)
- */
-
-function registerSequence(log, context) {
-  return function (s) {
-    log.debug("This function has registered a new sequence with ".concat(s.steps.length, " steps to be kicked off as part of this function's execution."), {
-      sequence: s.toObject()
-    });
-    newSequence = s;
-  };
-}
-/**
- * returns the sequence which was set by `startSequence()`
- **/
-
-function getNewSequence() {
-  return newSequence;
-}
-
-function _await$1(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-var _database;
-/**
- * **database**
- *
- * Provides a convenient means to connect to the database which lives
- * outside the _handler_ function's main thread. This allows the connection
- * to the database to sometimes be preserved between function executions.
- *
- * This is loaded asynchronously and the containing code must explicitly
- * load the `abstracted-admin` library (as this library only lists it as
- * a devDep)
- */
-
-
-function _invoke(body, then) {
-  var result = body();
-
-  if (result && result.then) {
-    return result.then(then);
-  }
-
-  return then(result);
-}
-
-function _async$2(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var database = _async$2(function (config) {
-  var log = logger().reloadContext();
-  return _invoke(function () {
-    if (!_database) {
-      return _invoke(function () {
-        if (!config) {
-          return function () {
-            if (process.env.FIREBASE_SERVICE_ACCOUNT && process.env.FIREBASE_DATA_ROOT_URL) {
-              log.debug("The environment variables are in place to configure database connectivity", {
-                firebaseDataRootUrl: process.env.FIREBASE_DATA_ROOT_URL
-              });
-            } else {
-              return _await$1(getSecrets(["firebase"]), function (_ref) {
-                var firebase = _ref.firebase;
-
-                if (!firebase) {
-                  throw new Error("The module \"firebase\" was not found in SSM; Firebase configuration could not be established");
-                }
-
-                if (!firebase.SERVICE_ACCOUNT) {
-                  throw new Error("The module \"firebase\" was found but it did not have a ");
-                }
-
-                log.debug("The Firebase service account has been retrieved from SSM and will be used.");
-                config = {
-                  serviceAccount: firebase.SERVICE_ACCOUNT,
-                  databaseUrl: firebase.DATABASE_URL
-                };
-              });
-            }
-          }();
-        }
-      }, function (_result2) {
-        return  _await$1(import('abstracted-admin'), function (_temp) {
-          var DB = _temp.DB;
-          return _await$1(DB.connect(config), function (_DB$connect) {
-            _database = _DB$connect;
-          });
-        });
-      });
-    }
-  }, function (_result3) {
-    return  _database;
-  });
-});
-
-/**
- * A collection of log messages that the wrapper function will emit
- */
-
-var loggedMessages = function loggedMessages(log) {
-  return {
-    /** a handler function just started executing */
-    start: function start(request, headers, context, sequence, apiGateway) {
-      log.info("The handler function ".concat(context.functionName, " has started.  ").concat(sequence.isSequence ? " [ ".concat(log.getCorrelationId(), " ].") : " [ not part of sequence ]."), {
-        request: request,
-        sequence: sequence.toObject(),
-        headers: headers,
-        apiGateway: apiGateway
-      });
-    },
-    sequenceStarting: function sequenceStarting() {
-      var s = getNewSequence();
-      log.debug("The NEW sequence this function/conductor registered is about to be invoked", {
-        sequence: s.toObject(),
-        headersForwarded: Object.keys(getRequestHeaders())
-      });
-    },
-    sequenceStarted: function sequenceStarted(seqResponse) {
-      log.debug("The NEW sequence this function registered was successfully invoked", {
-        seqResponse: seqResponse
-      });
-    },
-
-    /**
-     * right before forwarding the sequence status to the `sequenceTracker` lambda
-     */
-    sequenceTracker: function sequenceTracker(_sequenceTracker, workflowStatus) {
-      log.info("About to send the LambdaSequence's status to the sequenceTracker [ ".concat(_sequenceTracker, " ]"), {
-        sequenceTracker: _sequenceTracker,
-        workflowStatus: workflowStatus
-      });
-    },
-    returnToApiGateway: function returnToApiGateway(result, responseHeaders) {
-      log.debug("Returning results to API Gateway", {
-        statusCode: HttpStatusCodes.Success,
-        result: JSON.stringify(result),
-        responseHeaders: responseHeaders
-      });
-    },
-
-    /**
-     * as soon as an error is detected in the wrapper, write a log message about the error
-     */
-    processingError: function processingError(e, workflowStatus) {
-      var stack = e.stack || new Error().stack;
-      log.info("Processing error in handler function; error occurred sometime after the \"".concat(workflowStatus, "\" workflow status: [ ").concat(e.message, " ]"), {
-        errorMessage: e.message,
-        stack: stack,
-        workflowStatus: workflowStatus
-      });
-    }
-  };
-};
-
-/**
  * converts an `Error` (or subclass) into a error hash
  * which **API Gateway** can process.
  */
@@ -1801,6 +1836,65 @@ function convertToApiGatewayError(e) {
     stackTrace: e.stack
   };
 }
+
+/**
+ * Errors which are encountered while handling an error. These secondary errors
+ * should always originate from the **wrapper** function rather than the consumer's
+ * _handler_ function.
+ */
+
+var ErrorWithinError =
+/*#__PURE__*/
+function (_Error) {
+  _inherits(ErrorWithinError, _Error);
+
+  function ErrorWithinError(
+  /** the original error */
+  originalError,
+  /** the error encountered within the error handling section */
+  secondaryErr) {
+    var _this;
+
+    _classCallCheck(this, ErrorWithinError);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(ErrorWithinError).call(this, originalError.message));
+    _this.name = "aws-orchestrate/error-handling";
+    _this.code = "error-handling";
+    _this.httpStatus = HttpStatusCodes.InternalServerError;
+    _this.message = "There was an error in the wrapper function while TRYING to handle another error. The original error had a message of: \n\"".concat(get(originalError, "message", "no message"), "\".\n\nSubsequently the error within the wrapper function was: \"").concat(get(secondaryErr, "message", "no message"), "\"");
+    _this.stack = secondaryErr.stack;
+    _this.originalStack = originalError.stack;
+    return _this;
+  }
+
+  return ErrorWithinError;
+}(_wrapNativeSuper(Error));
+
+/**
+ * Thrown when a function calls itself more than the allowed `callDepth`
+ * setting allows for.
+ */
+
+var CallDepthExceeded =
+/*#__PURE__*/
+function (_Error) {
+  _inherits(CallDepthExceeded, _Error);
+
+  function CallDepthExceeded(callDepth) {
+    var _this;
+
+    _classCallCheck(this, CallDepthExceeded);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(CallDepthExceeded).call(this, ""));
+    _this.name = "aws-orchestrate/call-depth-exceeded";
+    _this.code = "call-depth-exceeded";
+    _this.httpStatus = HttpStatusCodes.InternalServerError;
+    _this.message = "The allowed number of self-calls [ ] was exceeded!\"";
+    return _this;
+  }
+
+  return CallDepthExceeded;
+}(_wrapNativeSuper(Error));
 
 /**
  * **wrapper**
@@ -1825,22 +1919,6 @@ function _await$2(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _empty() {}
-
-function _awaitIgnored(value, direct) {
-  if (!direct) {
-    return value && value.then ? value.then(_empty) : Promise.resolve();
-  }
-}
-
-function _invokeIgnored(body) {
-  var result = body();
-
-  if (result && result.then) {
-    return result.then(_empty);
-  }
-}
-
 function _invoke$1(body, then) {
   var result = body();
 
@@ -1849,6 +1927,16 @@ function _invoke$1(body, then) {
   }
 
   return then(result);
+}
+
+function _empty() {}
+
+function _invokeIgnored(body) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(_empty);
+  }
 }
 
 function _settle(pact, state, value) {
@@ -2079,7 +2167,7 @@ function _catch(body, recover) {
   return result;
 }
 
-function _async$3(f) {
+function _async$4(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -2097,7 +2185,7 @@ var wrapper = function wrapper(fn) {
   var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
   /** this is the core Lambda event which the wrapper takes as an input */
-  return _async$3(function (event, context) {
+  return _async$4(function (event, context) {
     var result;
     var workflowStatus;
     workflowStatus = "initializing";
@@ -2146,17 +2234,24 @@ var wrapper = function wrapper(fn) {
           result: result
         });
         workflowStatus = "function-complete"; //#endregion
-        //region SEQUENCE (next)
+        //#region SEQUENCE (next)
 
         return _invoke$1(function () {
           if (sequence.isSequence && !sequence.isDone) {
             workflowStatus = "invoke-started";
-            return _await$2(invoke.apply(void 0, _toConsumableArray(sequence.next(result))), function (invokeParams) {
-              log.debug("finished invoking the next function in the sequence", {
-                invokeParams: invokeParams
-              });
+
+            var _sequence$next = sequence.next(result),
+                _sequence$next2 = _slicedToArray(_sequence$next, 2),
+                _fn2 = _sequence$next2[0],
+                requestBody = _sequence$next2[1];
+
+            msg.startingInvocation(_fn2, requestBody);
+            return _await$2(invoke(_fn2, requestBody), function (invokeParams) {
+              msg.completingInvocation(_fn2, invokeParams);
               workflowStatus = "invoke-complete";
             });
+          } else {
+            msg.notPartOfExistingSequence();
           }
         }, function () {
           //#endregion
@@ -2165,12 +2260,12 @@ var wrapper = function wrapper(fn) {
             if (getNewSequence().isSequence) {
               workflowStatus = "sequence-starting";
               msg.sequenceStarting();
-              return _await$2(invokeNewSequence(result, log), function (seqResponse) {
+              return _await$2(invokeNewSequence(result), function (seqResponse) {
                 msg.sequenceStarted(seqResponse);
                 workflowStatus = "sequence-started";
               });
             } else {
-              log.debug("This function did not kick off a NEW sequence.");
+              msg.notPartOfNewSequence();
             }
           }, function () {
             //#endregion
@@ -2179,11 +2274,11 @@ var wrapper = function wrapper(fn) {
               if (options.sequenceTracker && sequence.isSequence) {
                 workflowStatus = "sequence-tracker-starting";
                 msg.sequenceTracker(options.sequenceTracker, workflowStatus);
-                return _invokeIgnored(function () {
+                return _await$2(invoke(options.sequenceTracker, buildOrchestratedRequest(status(sequence))), function () {
                   if (sequence.isDone) {
-                    return _awaitIgnored(invoke(options.sequenceTracker, status(sequence), result));
+                    msg.sequenceTrackerComplete(true);
                   } else {
-                    return _awaitIgnored(invoke(options.sequenceTracker, status(sequence)));
+                    msg.sequenceTrackerComplete(false);
                   }
                 });
               }
@@ -2211,124 +2306,140 @@ var wrapper = function wrapper(fn) {
         });
       });
     }, function (e) {
-      msg.processingError(e, workflowStatus);
-      var found = findError(e, errorMeta);
-      var isApiGatewayRequest = isLambdaProxyRequest(event);
-      return function () {
-        if (found) {
-          if (found.handling.callback) {
-            var resolved = found.handling.callback(e);
+      //#region ERROR-HANDLING
+      // wrap all error handling in it's own try-catch
+      return _catch(function () {
+        msg.processingError(e, workflowStatus);
+        var found = findError(e, errorMeta);
+        var isApiGatewayRequest = isLambdaProxyRequest(event);
+        return function () {
+          if (found) {
+            if (found.handling.callback) {
+              var resolved = found.handling.callback(e);
 
-            if (!resolved) {
-              if (isApiGatewayRequest) {
-                return convertToApiGatewayError(new HandledError(found.code, e, log.getContext()));
-              } else {
-                throw new HandledError(found.code, e, log.getContext());
-              }
-            }
-          }
-
-          return _invokeIgnored(function () {
-            if (found.handling.forwardTo) {
-              return _await$2(invoke(found.handling.forwardTo, e), function () {
-                log.info("Forwarded error to the function \"".concat(found.handling.forwardTo, "\""), {
-                  error: e,
-                  forwardTo: found.handling.forwardTo
-                });
-              });
-            }
-          });
-        } else {
-          // UNFOUND ERROR
-          log.debug("An error is being processed by the default handling mechanism", {
-            defaultHandling: errorMeta.defaultHandling,
-            errorMessage: e.message,
-            stack: e.stack
-          });
-          var handling = errorMeta.defaultHandling;
-          return _switch(handling.type, [[function () {
-            return "handler-fn";
-          }, function () {
-            //#region handle-fn
-
-            /**
-             * results are broadly three things:
-             *
-             * 1. handler throws an error
-             * 2. handler returns `true` which means that result should be considered successful
-             * 3. handler returns _falsy_ which means that the default error should be thrown
-             */
-            try {
-              var passed = handling.defaultHandlerFn(e);
-
-              if (passed === true) {
-                log.debug("The error was fully handled by the handling function/callback; resulting in a successful condition [ ".concat(result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent, " ]."));
-
+              if (!resolved) {
                 if (isApiGatewayRequest) {
-                  return {
-                    statusCode: result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
-                    headers: getResponseHeaders(),
-                    body: result ? JSON.stringify(result) : ""
-                  };
+                  return convertToApiGatewayError(new HandledError(found.code, e, log.getContext()));
                 } else {
-                  return result;
+                  throw new HandledError(found.code, e, log.getContext());
                 }
-              } else {
-                log.debug("The error was passed to the callback/handler function but it did NOT resolve the error condition.");
               }
-            } catch (e2) {
-              // handler threw an error
+            }
+
+            return _invokeIgnored(function () {
+              if (found.handling.forwardTo) {
+                return _await$2(invoke(found.handling.forwardTo, e), function () {
+                  log.info("Forwarded error to the function \"".concat(found.handling.forwardTo, "\""), {
+                    error: e,
+                    forwardTo: found.handling.forwardTo
+                  });
+                });
+              }
+            });
+          } else {
+            var _interrupt2 = false;
+            //#region UNFOUND ERROR
+            log.debug("An error is being processed by the default handling mechanism", {
+              defaultHandling: errorMeta.defaultHandling,
+              errorMessage: e.message,
+              stack: e.stack
+            }); //#endregion
+
+            var handling = errorMeta.defaultHandling;
+            return _switch(handling.type, [[function () {
+              return "handler-fn";
+            }, function () {
+              //#region handle-fn
+
+              /**
+               * results are broadly three things:
+               *
+               * 1. handler throws an error
+               * 2. handler returns `true` which means that result should be considered successful
+               * 3. handler returns _falsy_ which means that the default error should be thrown
+               */
+              try {
+                var passed = handling.defaultHandlerFn(e);
+
+                if (passed === true) {
+                  log.debug("The error was fully handled by the handling function/callback; resulting in a successful condition [ ".concat(result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent, " ]."));
+
+                  if (isApiGatewayRequest) {
+                    return {
+                      statusCode: result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
+                      headers: getResponseHeaders(),
+                      body: result ? JSON.stringify(result) : ""
+                    };
+                  } else {
+                    return result;
+                  }
+                } else {
+                  log.debug("The error was passed to the callback/handler function but it did NOT resolve the error condition.");
+                }
+              } catch (e2) {
+                // handler threw an error
+                if (isApiGatewayRequest) {
+                  return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
+                }
+              }
+
+              _interrupt2 = true;
+            }], [function () {
+              return "error-forwarding";
+            }, function () {
+              //#region error-forwarding
+              log.debug("The error will be forwarded to another function for handling", {
+                arn: handling.arn
+              });
+              return _await$2(invoke(handling.arn, e), function () {
+                _interrupt2 = true;
+              });
+            }], [function () {
+              return "default-error";
+            }, function () {
+              //#region default-error
+              handling.error.message = handling.error.message || e.message;
+              handling.error.stack = e.stack;
+
+              if (isApiGatewayRequest) {
+                return convertToApiGatewayError(handling.error);
+              } else {
+                throw handling.error;
+              }
+
+              _interrupt2 = true;
+            }], [function () {
+              return "default";
+            }, function () {
+              //#region default
+              log.debug("Error handled by default policy", {
+                code: errorMeta.defaultErrorCode,
+                message: e.message,
+                stack: e.stack
+              });
+
               if (isApiGatewayRequest) {
                 return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
+              } else {
+                throw new UnhandledError(errorMeta.defaultErrorCode, e);
               }
-            }
-          }], [function () {
-            return "error-forwarding";
-          }, function () {
-            //#region error-forwarding
-            log.debug("The error will be forwarded to another function for handling", {
-              arn: handling.arn
-            });
-            return _await$2(invoke(handling.arn, e), function () {
-            });
-          }], [function () {
-            return "default-error";
-          }, function () {
-            //#region default-error
-            handling.error.message = handling.error.message || e.message;
-            handling.error.stack = e.stack;
 
-            if (isApiGatewayRequest) {
-              return convertToApiGatewayError(handling.error);
-            } else {
-              throw handling.error;
-            }
-          }], [function () {
-            return "default";
-          }, function () {
-            //#region default
-            log.debug("Error handled by default policy", {
-              code: errorMeta.defaultErrorCode,
-              message: e.message,
-              stack: e.stack
-            });
-
-            if (isApiGatewayRequest) {
-              return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
-            } else {
+              _interrupt2 = true;
+            }], [void 0, function () {
+              log.debug("Unknown handling technique for unhandled error", {
+                type: handling.type,
+                errorMessage: e.message
+              });
               throw new UnhandledError(errorMeta.defaultErrorCode, e);
-            }
-          }], [void 0, function () {
-            log.debug("Unknown handling technique for unhandled error", {
-              type: handling.type,
-              errorMessage: e.message
-            });
-            throw new UnhandledError(errorMeta.defaultErrorCode, e);
-          }]]);
-        }
-      }();
+            }]]);
+          }
+        }();
+      }, function (eOfE) {
+        // Catch errors in error handlers
+        throw new ErrorWithinError(e, eOfE);
+      });
     });
-  });
+  }); //#endregion
 };
 
-export { LambdaEventParser, LambdaSequence, compress, decompress, dynamic, isBareRequest, isCompressedSection, isDynamic, isOrchestratedRequest, sequenceStatus, serializeSequence, wrapper };
+export { LambdaEventParser, LambdaSequence, buildOrchestratedRequest, compress, decompress, dynamic, isBareRequest, isCompressedSection, isDynamic, isOrchestratedRequest, sequenceStatus, serializeSequence, wrapper };

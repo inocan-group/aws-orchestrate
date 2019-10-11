@@ -74,10 +74,15 @@ export declare const loggedMessages: (log: {
     start(request: IDictionary<any>, headers: IDictionary<any>, context: IDictionary<any>, sequence: LambdaSequence, apiGateway: Pick<import("common-types").IAWSLambdaProxyIntegrationRequest, "resource" | "path" | "httpMethod" | "queryStringParameters" | "pathParameters" | "requestContext" | "isBase64Encoded">): void;
     sequenceStarting(): void;
     sequenceStarted(seqResponse: any): void;
+    startingInvocation(arn: string, params: IDictionary<any>): void;
+    completingInvocation(arn: string, inovacationResponse: IDictionary<any>): void;
+    notPartOfExistingSequence(): void;
+    notPartOfNewSequence(): void;
     /**
      * right before forwarding the sequence status to the `sequenceTracker` lambda
      */
     sequenceTracker: (sequenceTracker: string, workflowStatus: string) => void;
+    sequenceTrackerComplete(isDone: boolean): void;
     returnToApiGateway: (result: any, responseHeaders: IDictionary<any>) => void;
     /**
      * as soon as an error is detected in the wrapper, write a log message about the error

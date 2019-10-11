@@ -13,27 +13,19 @@ import {
   IOrchestratedRequest,
   IWrapperRequestHeaders,
   ISerializedSequence,
-  ICompressedSection,
   IOrchestratedDynamicProperty,
   IOrchestratedProperties,
-  IWrapperResponseHeaders,
-  IBareRequest,
   IOrchestrationRequestTypes
 } from "./@types";
 import { isOrchestratedRequest } from "./sequences/isOrchestratedMessageBody";
-import { getRequestHeaders } from "./wrapper-fn/headers";
-import { isDynamic, compress, decompress, isBareRequest } from "./sequences";
+import {
+  isDynamic,
+  decompress,
+  isBareRequest,
+  buildOrchestratedRequest
+} from "./sequences";
 import get from "lodash.get";
 import { logger as awsLogger, logger } from "aws-log";
-
-function size(obj: IDictionary) {
-  let size = 0,
-    key;
-  for (key in obj) {
-    if (obj.hasOwnProperty(key)) size++;
-  }
-  return size;
-}
 
 export class LambdaSequence {
   /**
@@ -151,8 +143,10 @@ export function handler(event, context, callback) {
   /**
    * **next**
    *
-   * Returns the parameters needed to execute the _next_ function in the sequence. The
-   * parameters passed to the next function will be of the format:
+   * Returns the parameters needed to execute the _invoke()_ function. There
+   * are two parameters: `fnArn` and `requestBody`. The first parameter is simply a string
+   * representing the fully-qualified AWS **arn** for the function. The `requestBody` is
+   * structured like so:
    *
    * ```typescript
    * { body, headers, sequence }
@@ -167,19 +161,6 @@ export function handler(event, context, callback) {
     currentFnResponse: Partial<T> = {},
     logger?: import("aws-log").ILoggerApi
   ): ILambdaSequenceNextTuple<T> {
-    if (!logger) {
-      logger = awsLogger();
-      logger.getContext();
-    }
-    if (this.isDone) {
-      logger.info(
-        `The next() function called on ${
-          this.activeFn && this.activeFn.arn ? this.activeFn.arn : "unknown"
-        } was called but we are now done with the sequence so exiting.`
-      );
-      return;
-    }
-
     /**
      * if there is an active function, set it to completed
      * and assign _results_
@@ -191,60 +172,21 @@ export function handler(event, context, callback) {
       this.activeFn.status = "completed";
     }
 
-    /**
-     *assign the first
-     */
-
-    let body: T | ICompressedSection = this.resolveRequestProperties<T>(
-      this.nextFn
-    );
-    console.log(this.activeFn);
-
-    let sequence: ISerializedSequence | ICompressedSection = this.toObject();
-    let headers:
-      | IWrapperResponseHeaders
-      | ICompressedSection = getRequestHeaders();
-
-    logger.debug(
-      `LambdaSequence.next(): the "${
-        this.activeFn ? `"${this.activeFn.arn}" function` : `sequence Conductor`
-      }" will be calling "${this.nextFn.arn}" in a moment`,
-      {
-        fn: this.nextFn.arn,
-        request: {
-          type: "orchestrated-message-body",
-          body,
-          sequence,
-          headers
-        }
-      }
-    );
-
-    // compress if large
-    body = compress(body, 4096);
-    sequence = compress(sequence, 4096);
-    headers = compress(headers, 4096);
-
-    /**
-     * The parameters needed to pass into `aws-log`'s
-     * invoke() function
-     */
-    const invokeParams: ILambdaSequenceNextTuple<T> = [
-      // the arn
-      this.nextFn.arn,
-      // the params passed forward
-      {
-        type: "orchestrated-message-body",
-        sequence,
-        body,
-        headers
-      }
-    ];
+    let body: T = this.resolveRequestProperties<T>(this.nextFn);
+    let arn = this.nextFn.arn;
+    this.validateCallDepth();
+    const request = buildOrchestratedRequest<T>(body, this);
 
     this.nextFn.status = "active";
 
-    return invokeParams;
+    return [arn, request] as ILambdaSequenceNextTuple<T>;
   }
+
+  /**
+   * Ensures that you can't call yourself in a sequence unless this has been
+   * enabled explicitly.
+   */
+  private validateCallDepth() {}
 
   /**
    * **from**

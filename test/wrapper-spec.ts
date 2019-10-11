@@ -4,7 +4,6 @@ import { wrapper, LambdaSequence, IOrchestratedRequest } from "../src/index";
 import { HandledError } from "../src/errors/HandledError";
 import { UnhandledError } from "../src/errors/UnhandledError";
 import { DEFAULT_ERROR_CODE } from "../src/errors/ErrorMeta";
-import { IApiGatewayResponse } from "common-types";
 
 interface IRequest {
   foo: string;
