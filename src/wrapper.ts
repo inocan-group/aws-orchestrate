@@ -31,10 +31,15 @@ import {
   maskLoggingForSecrets,
   getLocalSecrets
 } from "./wrapper-fn/index";
-import { convertToApiGatewayError, ErrorWithinError } from "./errors/index";
+import {
+  convertToApiGatewayError,
+  ErrorWithinError,
+  RethrowError
+} from "./errors/index";
 import { sequenceStatus, buildOrchestratedRequest } from "./sequences/index";
 import { invoke } from "./invoke";
 import { ISequenceTrackerStatus } from "./exported-functions/SequenceTracker";
+import get = require("lodash.get");
 
 /**
  * **wrapper**
@@ -189,6 +194,8 @@ export const wrapper = function<I, O>(
                   new HandledError(found.code, e, log.getContext())
                 );
               } else {
+                console.log(e.name, e.code);
+
                 throw new HandledError(found.code, e, log.getContext());
               }
             }
@@ -206,9 +213,9 @@ export const wrapper = function<I, O>(
           log.debug(
             `An error is being processed by the default handling mechanism`,
             {
-              defaultHandling: errorMeta.defaultHandling,
-              errorMessage: e.message,
-              stack: e.stack
+              defaultHandling: get(errorMeta, "defaultHandling"),
+              errorMessage: get(e, "message", "no error messsage"),
+              stack: get(e, "stack", "no stack available")
             }
           );
           //#endregion
@@ -310,6 +317,9 @@ export const wrapper = function<I, O>(
         }
       } catch (eOfE) {
         // Catch errors in error handlers
+        if (eOfE.type === "unhandled-error" || eOfE.type === "handled-error") {
+          throw new RethrowError(eOfE);
+        }
         throw new ErrorWithinError(e, eOfE);
       }
     }
