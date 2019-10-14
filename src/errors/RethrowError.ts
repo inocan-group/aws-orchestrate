@@ -1,5 +1,5 @@
 import { HttpStatusCodes } from "common-types";
-import get = require("lodash.get");
+import get from "lodash.get";
 
 /**
  * Rethrows an error which has a `code` property set
@@ -10,12 +10,16 @@ export class RethrowError extends Error {
   public code: string;
   public httpStatus: number;
 
-  constructor(e) {
-    super(e);
+  constructor(err: Error & { code?: string }) {
+    super(err.message);
 
-    this.code = get(e, "code");
-    this.name = get(e, "name");
-    this.stack = get(e, "stack");
-    this.httpStatus = get(e, "httpStatus", HttpStatusCodes.InternalServerError);
+    this.code = get(err, "code");
+    this.name = get(err, "name");
+    this.stack = get(err, "stack");
+    this.httpStatus = get(
+      err,
+      "httpStatus",
+      HttpStatusCodes.InternalServerError
+    );
   }
 }

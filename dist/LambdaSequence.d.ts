@@ -94,7 +94,7 @@ export declare class LambdaSequence {
      */
     next<T extends IDictionary>(
     /** the _current_ function's response */
-    currentFnResponse?: Partial<T>, logger?: import("aws-log").ILoggerApi): ILambdaSequenceNextTuple<T>;
+    currentFnResponse?: Partial<T>): ILambdaSequenceNextTuple<T>;
     /**
      * Ensures that you can't call yourself in a sequence unless this has been
      * enabled explicitly.
@@ -130,7 +130,14 @@ export declare class LambdaSequence {
      */
     readonly steps: ILambdaSequenceStep<IDictionary<any>>[];
     readonly nextFn: ILambdaSequenceStep<IDictionary<any>>;
-    readonly activeFn: ILambdaSequenceStep<IDictionary<any>>;
+    /**
+     * Sets the currently _active_ function to `completed` and registers
+     * the active functions results into the `_responses` dictionary.
+     *
+     * @param results the results from the activeFn's execution
+     */
+    finishStep(results: any): void;
+    readonly activeFn: ILambdaSequenceStep;
     /**
      * Ingests a set of steps into the current sequence; resolving
      * dynamic properties into real values at the same time.

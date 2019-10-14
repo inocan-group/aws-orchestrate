@@ -158,26 +158,18 @@ export function handler(event, context, callback) {
    */
   public next<T extends IDictionary>(
     /** the _current_ function's response */
-    currentFnResponse: Partial<T> = {},
-    logger?: import("aws-log").ILoggerApi
+    currentFnResponse: Partial<T> = {}
   ): ILambdaSequenceNextTuple<T> {
-    /**
-     * if there is an active function, set it to completed
-     * and assign _results_
-     */
-    if (this.activeFn) {
-      const results = currentFnResponse;
-      delete results._sequence;
-      this._responses[this.activeFn.arn] = results;
-      this.activeFn.status = "completed";
-    }
+    this.finishStep(currentFnResponse);
 
-    let body: T = this.resolveRequestProperties<T>(this.nextFn);
-    let arn = this.nextFn.arn;
+    /**
+     * Because `activeFn` has been moved forward to the "next function"
+     * using the `activeFn` reference is correct
+     **/
+    let body: T = this.resolveRequestProperties<T>(this.activeFn);
+    let arn = this.activeFn.arn;
     this.validateCallDepth();
     const request = buildOrchestratedRequest<T>(body, this);
-
-    this.nextFn.status = "active";
 
     return [arn, request] as ILambdaSequenceNextTuple<T>;
   }
@@ -186,7 +178,9 @@ export function handler(event, context, callback) {
    * Ensures that you can't call yourself in a sequence unless this has been
    * enabled explicitly.
    */
-  private validateCallDepth() {}
+  private validateCallDepth() {
+    // TODO: implement
+  }
 
   /**
    * **from**
@@ -195,16 +189,13 @@ export function handler(event, context, callback) {
    */
   public from<T>(
     event: IOrchestrationRequestTypes<T>,
+    // TODO: remove this from API in future
     logger?: import("aws-log").ILoggerApi
   ): ILambaSequenceFromResponse<T> {
     let apiGateway: IAWSLambdaProxyIntegrationRequest | undefined;
     let headers: IWrapperRequestHeaders = {};
     let sequence: LambdaSequence;
     let request: T;
-    if (!logger) {
-      logger = awsLogger();
-      logger.getContext();
-    }
 
     if (isLambdaProxyRequest(event)) {
       apiGateway = { ...{}, ...event };
@@ -232,12 +223,6 @@ export function handler(event, context, callback) {
               return props;
             }, {}) as T)
           : event;
-
-      const e = new Error();
-      logger.warn(
-        `Deprecated message format. Bare messages -- where the property "_sequence" is used to convey sequence passing -- has been replaced with the IOrchestratedRequest message body. This technique will be removed in the future.`,
-        { stack: e.stack }
-      );
     }
 
     // The active function's output is sent into the params
@@ -262,12 +247,11 @@ export function handler(event, context, callback) {
    * is part of a _sequence_.
    */
   public get isSequence() {
-    // return this._isASequence;
     return this._steps && this._steps.length > 0;
   }
 
   public get isDone() {
-    return this.remaining.length === 0;
+    return !this.nextFn;
   }
 
   /**
@@ -303,7 +287,18 @@ export function handler(event, context, callback) {
     return this.remaining.length > 0 ? this.remaining[0] : undefined;
   }
 
-  public get activeFn() {
+  /**
+   * Sets the currently _active_ function to `completed` and registers
+   * the active functions results into the `_responses` dictionary.
+   *
+   * @param results the results from the activeFn's execution
+   */
+  public finishStep(results: any) {
+    this._responses[this.activeFn.arn] = results;
+    this.activeFn.status = "completed";
+  }
+
+  public get activeFn(): ILambdaSequenceStep {
     const log = logger().reloadContext();
     const active = this._steps
       ? this._steps.filter(s => s.status === "active")
@@ -316,7 +311,13 @@ export function handler(event, context, callback) {
       );
     }
 
-    return active.length > 0 ? active[0] : undefined;
+    if (active.length === 0) {
+      const step = this._steps.find(i => i.status === "assigned");
+      step.status = "active";
+      return this.activeFn;
+    }
+
+    return active[0];
   }
 
   /**
