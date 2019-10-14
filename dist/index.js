@@ -356,8 +356,9 @@ function (_Error) {
     _classCallCheck(this, UnhandledError);
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(UnhandledError).call(this, e.message));
+    _this.type = "unhandled-error";
     _this.stack = e.stack;
-    classification = classification || "unhandled-error/".concat(e.name);
+    classification = classification || "unhandled-error/".concat(e.name || e.code);
     classification = classification.includes("/") ? classification : "unhandled-error/".concat(classification);
 
     var _classification$split = classification.split("/"),
@@ -1149,23 +1150,16 @@ function () {
     key: "next",
     value: function next() {
       var currentFnResponse = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
+      this.finishStep(currentFnResponse);
       /**
-       * if there is an active function, set it to completed
-       * and assign _results_
-       */
-      if (this.activeFn) {
-        var results = currentFnResponse;
-        delete results._sequence;
-        this._responses[this.activeFn.arn] = results;
-        this.activeFn.status = "completed";
-      }
+       * Because `activeFn` has been moved forward to the "next function"
+       * using the `activeFn` reference is correct
+       **/
 
-      var body = this.resolveRequestProperties(this.nextFn);
-      var arn = this.nextFn.arn;
+      var body = this.resolveRequestProperties(this.activeFn);
+      var arn = this.activeFn.arn;
       this.validateCallDepth();
       var request = buildOrchestratedRequest(body, this);
-      this.nextFn.status = "active";
       return [arn, request];
     }
     /**
@@ -1184,16 +1178,12 @@ function () {
 
   }, {
     key: "from",
-    value: function from(event, logger) {
+    value: function from(event, // TODO: remove this from API in future
+    logger) {
       var apiGateway;
       var headers = {};
       var sequence;
       var request;
-
-      if (!logger) {
-        logger = awsLog.logger();
-        logger.getContext();
-      }
 
       if (commonTypes.isLambdaProxyRequest(event)) {
         apiGateway = Object.assign({}, event);
@@ -1216,10 +1206,6 @@ function () {
 
           return props;
         }, {}) : event;
-        var e = new Error();
-        logger.warn("Deprecated message format. Bare messages -- where the property \"_sequence\" is used to convey sequence passing -- has been replaced with the IOrchestratedRequest message body. This technique will be removed in the future.", {
-          stack: e.stack
-        });
       } // The active function's output is sent into the params
 
 
@@ -1238,6 +1224,19 @@ function () {
      * is part of a _sequence_.
      */
 
+  }, {
+    key: "finishStep",
+
+    /**
+     * Sets the currently _active_ function to `completed` and registers
+     * the active functions results into the `_responses` dictionary.
+     *
+     * @param results the results from the activeFn's execution
+     */
+    value: function finishStep(results) {
+      this._responses[this.activeFn.arn] = results;
+      this.activeFn.status = "completed";
+    }
   }, {
     key: "ingestSteps",
 
@@ -1381,13 +1380,12 @@ function () {
   }, {
     key: "isSequence",
     get: function get() {
-      // return this._isASequence;
       return this._steps && this._steps.length > 0;
     }
   }, {
     key: "isDone",
     get: function get() {
-      return this.remaining.length === 0;
+      return !this.nextFn;
     }
     /**
      * the tasks in the sequence that still remain in the
@@ -1449,7 +1447,16 @@ function () {
         });
       }
 
-      return active.length > 0 ? active[0] : undefined;
+      if (active.length === 0) {
+        var step = this._steps.find(function (i) {
+          return i.status === "assigned";
+        });
+
+        step.status = "active";
+        return this.activeFn;
+      }
+
+      return active[0];
     }
   }, {
     key: "dynamicProperties",
@@ -1804,6 +1811,7 @@ function (_Error) {
     _classCallCheck(this, HandledError);
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(HandledError).call(this, e.message));
+    _this.type = "handled-error";
     _this.stack = e.stack;
     var type = e.name && e.name !== "Error" ? e.name : context.functionName;
     var subType = e.code ? String(e.code) : "handled-error";
@@ -1919,6 +1927,33 @@ function (_Error) {
   }
 
   return CallDepthExceeded;
+}(_wrapNativeSuper(Error));
+
+/**
+ * Rethrows an error which has a `code` property set
+ * such as `HandledError` or `HandledError`; preserving
+ * _code_, _name_, _httpStatus_, and _stack_.
+ */
+
+var RethrowError =
+/*#__PURE__*/
+function (_Error) {
+  _inherits(RethrowError, _Error);
+
+  function RethrowError(err) {
+    var _this;
+
+    _classCallCheck(this, RethrowError);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(RethrowError).call(this, err.message));
+    _this.code = get(err, "code");
+    _this.name = get(err, "name");
+    _this.stack = get(err, "stack");
+    _this.httpStatus = get(err, "httpStatus", commonTypes.HttpStatusCodes.InternalServerError);
+    return _this;
+  }
+
+  return RethrowError;
 }(_wrapNativeSuper(Error));
 
 /**
@@ -2346,6 +2381,7 @@ var wrapper = function wrapper(fn) {
                 if (isApiGatewayRequest) {
                   return convertToApiGatewayError(new HandledError(found.code, e, log.getContext()));
                 } else {
+                  console.log(e.name, e.code);
                   throw new HandledError(found.code, e, log.getContext());
                 }
               }
@@ -2365,9 +2401,9 @@ var wrapper = function wrapper(fn) {
             var _interrupt2 = false;
             //#region UNFOUND ERROR
             log.debug("An error is being processed by the default handling mechanism", {
-              defaultHandling: errorMeta.defaultHandling,
-              errorMessage: e.message,
-              stack: e.stack
+              defaultHandling: get(errorMeta, "defaultHandling"),
+              errorMessage: get(e, "message", "no error messsage"),
+              stack: get(e, "stack", "no stack available")
             }); //#endregion
 
             var handling = errorMeta.defaultHandling;
@@ -2461,6 +2497,10 @@ var wrapper = function wrapper(fn) {
         }();
       }, function (eOfE) {
         // Catch errors in error handlers
+        if (eOfE.type === "unhandled-error" || eOfE.type === "handled-error") {
+          throw new RethrowError(eOfE);
+        }
+
         throw new ErrorWithinError(e, eOfE);
       });
     });

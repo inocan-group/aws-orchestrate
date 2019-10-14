@@ -23,6 +23,7 @@ export declare class UnhandledError extends Error {
      * The `code` is the "sub-type" of the name
      */
     code: string;
+    type: "unhandled-error";
     /** the HTTP errorCode */
     httpStatus: number;
     /** the AWS requestId */
@@ -35,5 +36,7 @@ export declare class UnhandledError extends Error {
      * @param classification the type/subtype of the error; if only `subtype` stated then
      * type will be defaulted to `unhandled-error`
      */
-    constructor(errorCode: number, e: Error, classification?: string);
+    constructor(errorCode: number, e: Error & {
+        code?: string;
+    }, classification?: string);
 }

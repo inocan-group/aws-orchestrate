@@ -21,6 +21,7 @@ export declare class HandledError extends Error {
      * takes on the string `handled-error`
      */
     code: string;
+    type: string;
     classification: string;
     functionName: string;
     /** the HTTP errorCode */

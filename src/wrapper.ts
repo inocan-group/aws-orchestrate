@@ -39,7 +39,7 @@ import {
 import { sequenceStatus, buildOrchestratedRequest } from "./sequences/index";
 import { invoke } from "./invoke";
 import { ISequenceTrackerStatus } from "./exported-functions/SequenceTracker";
-import get = require("lodash.get");
+import get from "lodash.get";
 
 /**
  * **wrapper**
