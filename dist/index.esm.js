@@ -1,6 +1,6 @@
 import { HttpStatusCodes, isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest } from 'common-types';
 import { compress as compress$1, decompress as decompress$1 } from 'lzutf8';
-import { logger, invoke as invoke$1, getCorrelationId } from 'aws-log';
+import { logger, getCorrelationId, invoke as invoke$1 } from 'aws-log';
 import get from 'lodash.get';
 import flatten from 'lodash.flatten';
 import set from 'lodash.set';
@@ -638,14 +638,6 @@ function maskLoggingForSecrets(modules, log) {
   }
 }
 
-/**
- * Wraps the functionality provided by the `aws-log`'s **invoke()** function
- * that ensures that improper self-calling is prohibited unless expressly enabled
- *
- * @param fnArn the Function's ARN
- * @param request The request object to pass to the next function
- */
-
 function _async$1(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
@@ -660,35 +652,12 @@ function _async$1(f) {
   };
 }
 
-var invoke = _async$1(function (fnArn, request) {
-  return invoke$1(fnArn, request);
-});
-
-function _async$2(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var invokeNewSequence = _async$2(function () {
-  var results = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+var invokeNewSequence = _async$1(function () {
 
   if (!newSequence) {
     return;
   }
-
-  results = results || {};
-  return invoke.apply(void 0, _toConsumableArray(newSequence.next(_typeof(results) === "object" ? results : {
-    data: results
-  })));
+  return newSequence.start();
 });
 var newSequence;
 /**
@@ -888,7 +857,7 @@ function _invoke(body, then) {
   return then(result);
 }
 
-function _async$3(f) {
+function _async$2(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -902,7 +871,7 @@ function _async$3(f) {
   };
 }
 
-var database = _async$3(function (config) {
+var database = _async$2(function (config) {
   var log = logger().reloadContext();
   return _invoke(function () {
     if (!_database) {
@@ -1050,6 +1019,32 @@ additionalHeaders) {
   };
 }
 
+/**
+ * Wraps the functionality provided by the `aws-log`'s **invoke()** function
+ * that ensures that improper self-calling is prohibited unless expressly enabled
+ *
+ * @param fnArn the Function's ARN
+ * @param request The request object to pass to the next function
+ */
+
+function _async$3(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var invoke = _async$3(function (fnArn, request) {
+  return invoke$1(fnArn, request);
+});
+
 var LambdaSequence =
 /*#__PURE__*/
 function () {
@@ -1060,6 +1055,11 @@ function () {
      * The steps defined in the sequence
      */
     this._steps = [];
+    /**
+     * The responses from completed functions in a sequence
+     */
+
+    this._responses = {};
   }
   /**
    * **add** (static initializer)
@@ -1126,16 +1126,29 @@ function () {
     value: function next() {
       var currentFnResponse = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       this.finishStep(currentFnResponse);
+      return this.getInvocationParameters();
+    }
+  }, {
+    key: "getInvocationParameters",
+    value: function getInvocationParameters() {
       /**
        * Because `activeFn` has been moved forward to the "next function"
        * using the `activeFn` reference is correct
        **/
-
       var body = this.resolveRequestProperties(this.activeFn);
       var arn = this.activeFn.arn;
       this.validateCallDepth();
       var request = buildOrchestratedRequest(body, this);
       return [arn, request];
+    }
+    /**
+     * Invokes the first function in a new sequence.
+     */
+
+  }, {
+    key: "start",
+    value: function start() {
+      return invoke.apply(void 0, _toConsumableArray(this.getInvocationParameters()));
     }
     /**
      * Ensures that you can't call yourself in a sequence unless this has been
@@ -1412,6 +1425,10 @@ function () {
   }, {
     key: "activeFn",
     get: function get() {
+      if (!this._steps.length) {
+        return;
+      }
+
       var log = logger().reloadContext();
       var active = this._steps ? this._steps.filter(function (s) {
         return s.status === "active";
@@ -1427,6 +1444,10 @@ function () {
         var step = this._steps.find(function (i) {
           return i.status === "assigned";
         });
+
+        if (!step) {
+          throw new Error("Problem resolving activeFn: no step with status \"assigned\" found. \n\n ".concat(JSON.stringify(this._steps)));
+        }
 
         step.status = "active";
         return this.activeFn;
