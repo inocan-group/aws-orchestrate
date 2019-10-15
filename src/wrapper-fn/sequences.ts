@@ -30,10 +30,6 @@ export async function invokeNewSequence(results: any = {}) {
     return;
   }
   results = results || {};
-  const response = await invoke(
-    ...newSequence.next(
-      typeof results === "object" ? results : { data: results }
-    )
-  );
+  const response = await newSequence.start();
   return response;
 }
