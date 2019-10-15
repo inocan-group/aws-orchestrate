@@ -26,6 +26,7 @@ import {
 } from "./sequences";
 import get from "lodash.get";
 import { logger as awsLogger, logger } from "aws-log";
+import { invoke } from "./invoke";
 
 export class LambdaSequence {
   /**
@@ -109,7 +110,7 @@ export function handler(event, context, callback) {
   /**
    * The responses from completed functions in a sequence
    */
-  private _responses: IDictionary;
+  private _responses: IDictionary = {};
 
   /**
    * **add**
@@ -162,6 +163,10 @@ export function handler(event, context, callback) {
   ): ILambdaSequenceNextTuple<T> {
     this.finishStep(currentFnResponse);
 
+    return this.getInvocationParameters<T>();
+  }
+
+  private getInvocationParameters<T extends IDictionary>() {
     /**
      * Because `activeFn` has been moved forward to the "next function"
      * using the `activeFn` reference is correct
@@ -172,6 +177,13 @@ export function handler(event, context, callback) {
     const request = buildOrchestratedRequest<T>(body, this);
 
     return [arn, request] as ILambdaSequenceNextTuple<T>;
+  }
+
+  /**
+   * Invokes the first function in a new sequence.
+   */
+  public start<T extends IDictionary = IDictionary>() {
+    return invoke(...this.getInvocationParameters<T>());
   }
 
   /**
@@ -299,6 +311,9 @@ export function handler(event, context, callback) {
   }
 
   public get activeFn(): ILambdaSequenceStep {
+    if (!this._steps.length) {
+      return;
+    }
     const log = logger().reloadContext();
     const active = this._steps
       ? this._steps.filter(s => s.status === "active")
@@ -313,6 +328,13 @@ export function handler(event, context, callback) {
 
     if (active.length === 0) {
       const step = this._steps.find(i => i.status === "assigned");
+      if (!step) {
+        throw new Error(
+          `Problem resolving activeFn: no step with status "assigned" found. \n\n ${JSON.stringify(
+            this._steps
+          )}`
+        );
+      }
       step.status = "active";
       return this.activeFn;
     }

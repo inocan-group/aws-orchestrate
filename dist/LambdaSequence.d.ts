@@ -95,6 +95,11 @@ export declare class LambdaSequence {
     next<T extends IDictionary>(
     /** the _current_ function's response */
     currentFnResponse?: Partial<T>): ILambdaSequenceNextTuple<T>;
+    private getInvocationParameters;
+    /**
+     * Invokes the first function in a new sequence.
+     */
+    start<T extends IDictionary = IDictionary>(): Promise<import("aws-sdk/clients/lambda").InvocationResponse>;
     /**
      * Ensures that you can't call yourself in a sequence unless this has been
      * enabled explicitly.
