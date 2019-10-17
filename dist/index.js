@@ -1885,7 +1885,7 @@ function convertToApiGatewayError(e) {
   var defaultCode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_ERROR_CODE;
   return {
     headers: getResponseHeaders(),
-    errorCode: e.errorCode || defaultCode,
+    errorCode: e.errorCode || e.httpStatus || defaultCode,
     errorType: e.name || e.code || "Error",
     errorMessage: e.message,
     stackTrace: e.stack
@@ -1971,6 +1971,7 @@ function (_Error) {
     _this.code = get(err, "code");
     _this.name = get(err, "name");
     _this.stack = get(err, "stack");
+    _this.type = get(err, "type");
     _this.httpStatus = get(err, "httpStatus", commonTypes.HttpStatusCodes.InternalServerError);
     return _this;
   }
@@ -2481,8 +2482,15 @@ var wrapper = function wrapper(fn) {
               return "default-error";
             }, function () {
               //#region default-error
+
+              /**
+               * This handles situations where the user stated that if an
+               * "unknown" error occurred that _this_ error should be thrown
+               * in it's place.
+               */
               handling.error.message = handling.error.message || e.message;
               handling.error.stack = e.stack;
+              handling.error.type = "default-error";
 
               if (isApiGatewayRequest) {
                 return convertToApiGatewayError(handling.error);
@@ -2519,7 +2527,7 @@ var wrapper = function wrapper(fn) {
         }();
       }, function (eOfE) {
         // Catch errors in error handlers
-        if (eOfE.type === "unhandled-error" || eOfE.type === "handled-error") {
+        if (eOfE.type === "unhandled-error" || eOfE.type === "handled-error" || eOfE.type === "default-error") {
           throw new RethrowError(eOfE);
         }
 

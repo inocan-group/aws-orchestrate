@@ -280,8 +280,14 @@ export const wrapper = function<I, O>(
 
             case "default-error":
               //#region default-error
+              /**
+               * This handles situations where the user stated that if an
+               * "unknown" error occurred that _this_ error should be thrown
+               * in it's place.
+               */
               handling.error.message = handling.error.message || e.message;
               handling.error.stack = e.stack;
+              handling.error.type = "default-error";
               if (isApiGatewayRequest) {
                 return convertToApiGatewayError(handling.error);
               } else {
@@ -317,7 +323,11 @@ export const wrapper = function<I, O>(
         }
       } catch (eOfE) {
         // Catch errors in error handlers
-        if (eOfE.type === "unhandled-error" || eOfE.type === "handled-error") {
+        if (
+          eOfE.type === "unhandled-error" ||
+          eOfE.type === "handled-error" ||
+          eOfE.type === "default-error"
+        ) {
           throw new RethrowError(eOfE);
         }
         throw new ErrorWithinError(e, eOfE);
