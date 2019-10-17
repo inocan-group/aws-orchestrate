@@ -349,6 +349,9 @@ export interface IErrorWithExtraProperties extends Error {
 export type IErrorHandlerFunction = (err: Error) => boolean;
 export interface IErrorClass extends Error {
   type?: string;
+  code?: string;
+  errorCode?: number;
+  httpStatus?: number;
 }
 
 export interface IDefaultHandlingBase {

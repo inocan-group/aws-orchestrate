@@ -1885,7 +1885,7 @@ function convertToApiGatewayError(e) {
   var defaultCode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_ERROR_CODE;
   return {
     headers: getResponseHeaders(),
-    errorCode: e.errorCode || defaultCode,
+    errorCode: e.errorCode || e.httpStatus || defaultCode,
     errorType: e.name || e.code || "Error",
     errorMessage: e.message,
     stackTrace: e.stack
@@ -1971,6 +1971,7 @@ function (_Error) {
     _this.code = get(err, "code");
     _this.name = get(err, "name");
     _this.stack = get(err, "stack");
+    _this.type = get(err, "type");
     _this.httpStatus = get(err, "httpStatus", commonTypes.HttpStatusCodes.InternalServerError);
     return _this;
   }

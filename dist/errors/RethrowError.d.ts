@@ -1,3 +1,4 @@
+import { IErrorClass } from "../@types";
 /**
  * Rethrows an error which has a `code` property set
  * such as `HandledError` or `HandledError`; preserving
@@ -6,7 +7,6 @@
 export declare class RethrowError extends Error {
     code: string;
     httpStatus: number;
-    constructor(err: Error & {
-        code?: string;
-    });
+    type: string;
+    constructor(err: IErrorClass);
 }
