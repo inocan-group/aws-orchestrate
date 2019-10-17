@@ -293,6 +293,7 @@ export interface IErrorWithExtraProperties extends Error {
 }
 export declare type IErrorHandlerFunction = (err: Error) => boolean;
 export interface IErrorClass extends Error {
+    type?: string;
 }
 export interface IDefaultHandlingBase {
     type: "error-forwarding" | "handler-fn" | "default-error" | "default";
