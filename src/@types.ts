@@ -6,8 +6,7 @@ import {
   arn,
   IServerlessFunction,
   IHttpResponseHeaders,
-  IHttpRequestHeaders,
-  IAwsLambdaEvent
+  IHttpRequestHeaders
 } from "common-types";
 import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
@@ -16,7 +15,6 @@ import { getSecrets, getSecret } from "./wrapper-fn/secrets";
 import { IFirebaseAdminConfig } from "abstracted-firebase";
 type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
-import { ISequenceTrackerStatus } from "./exported-functions/SequenceTracker";
 
 export type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 
