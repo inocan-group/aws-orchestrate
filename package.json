@@ -1,7 +1,7 @@
 {
   "name": "aws-orchestrate",
   "description": "This library is intended to help projects intending to build a \"micro-service architecture\" to achieve those ambitions with some handy orchestration classes and types.",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "typings": "dist/index.d.ts",
@@ -9,6 +9,7 @@
     "dist"
   ],
   "scripts": {
+    "clean:nuclear": "yarn rimraf node_modules yarn.lock && yarn cache clean && yarn && yarn upgrade",
     "test": "node_modules/.bin/ts-node scripts/test",
     "docs": "node_modules/.bin/vuepress dev docs",
     "docs:build": "node_modules/.bin/vuepress build docs",
@@ -33,7 +34,7 @@
     "lodash.get": "^4.4.2",
     "lodash.set": "^4.3.2",
     "lzutf8": "^0.5.5",
-    "mermaid": "^8.3.1"
+    "mermaid": "^8.4.0"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
@@ -43,12 +44,12 @@
     "@types/mermaid": "^8.2.0",
     "@types/mocha": "^5.2.7",
     "@types/rimraf": "^2.0.2",
-    "@vuepress/plugin-back-to-top": "^1.1.0",
-    "@vuepress/plugin-last-updated": "^1.1.0",
-    "@vuepress/plugin-medium-zoom": "^1.1.0",
-    "@vuepress/plugin-pwa": "^1.1.0",
-    "abstracted-admin": "^0.33.0",
-    "abstracted-firebase": "^0.33.0",
+    "@vuepress/plugin-back-to-top": "^1.2.0",
+    "@vuepress/plugin-last-updated": "^1.2.0",
+    "@vuepress/plugin-medium-zoom": "^1.2.0",
+    "@vuepress/plugin-pwa": "^1.2.0",
+    "abstracted-admin": "^0.33.1",
+    "abstracted-firebase": "^0.33.2",
     "async-shelljs": "^0.1.2",
     "bili": "^4.8.1",
     "chai": "^4.2.0",
@@ -57,11 +58,11 @@
     "firemodel": "^0.33.2",
     "mocha": "^6.2.0",
     "rimraf": "^3.0.0",
-    "rollup-plugin-typescript2": "^0.24.2",
-    "ts-node": "^8.3.0",
+    "rollup-plugin-typescript2": "^0.24.3",
+    "ts-node": "^8.4.1",
     "tslint": "^5.20.0",
-    "typescript": "^3.6.3",
-    "vuepress": "^1.1.0",
+    "typescript": "^3.6.4",
+    "vuepress": "^1.2.0",
     "vuepress-plugin-autometa": "^0.1.12"
   }
 }
