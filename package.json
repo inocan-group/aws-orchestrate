@@ -1,7 +1,7 @@
 {
   "name": "aws-orchestrate",
   "description": "This library is intended to help projects intending to build a \"micro-service architecture\" to achieve those ambitions with some handy orchestration classes and types.",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "typings": "dist/index.d.ts",
@@ -9,6 +9,7 @@
     "dist"
   ],
   "scripts": {
+    "clean:nuclear": "yarn rimraf node_modules yarn.lock && yarn cache clean && yarn && yarn upgrade",
     "test": "node_modules/.bin/ts-node scripts/test",
     "docs": "node_modules/.bin/vuepress dev docs",
     "docs:build": "node_modules/.bin/vuepress build docs",

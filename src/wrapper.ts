@@ -1,9 +1,9 @@
 import {
   IAWSLambaContext,
-  IApiGatewayErrorResponse,
-  HttpStatusCodes,
+  isLambdaProxyRequest,
   IApiGatewayResponse,
-  isLambdaProxyRequest
+  IApiGatewayErrorResponse,
+  HttpStatusCodes
 } from "common-types";
 import { logger } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
