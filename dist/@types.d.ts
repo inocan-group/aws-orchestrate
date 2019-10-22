@@ -3,7 +3,7 @@ import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
 import { getSecrets, getSecret } from "./wrapper-fn/secrets";
-import { IFirebaseAdminConfig } from "abstracted-firebase";
+declare type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 declare type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
 export declare type IWrapperFunction = Omit<IServerlessFunction, "handler">;
