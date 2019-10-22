@@ -1,4 +1,4 @@
-import { IAWSLambaContext, IApiGatewayErrorResponse, IApiGatewayResponse } from "common-types";
+import { IAWSLambaContext, IApiGatewayResponse, IApiGatewayErrorResponse } from "common-types";
 import { IHandlerContext, IWrapperOptions, IOrchestrationRequestTypes } from "./@types";
 /**
  * **wrapper**
