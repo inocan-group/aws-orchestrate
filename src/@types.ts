@@ -215,7 +215,6 @@ export interface IErrorIdentification {
   messageContains?: string;
 }
 
-export type arn = string;
 export interface IErrorHandling {
   /** forward to another lambda function */
   forwardTo?: arn;
