@@ -170,7 +170,6 @@ export interface IErrorIdentification {
     name?: string;
     messageContains?: string;
 }
-export declare type arn = string;
 export interface IErrorHandling {
     /** forward to another lambda function */
     forwardTo?: arn;
