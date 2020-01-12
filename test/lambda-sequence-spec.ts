@@ -83,14 +83,22 @@ describe("Lambda Sequence => ", () => {
         func2: dynamic("fn2", "data")
       });
 
-    expect(sequenceDefn.steps.length).to.equal(sequenceDefn.remaining.length);
+    expect(sequenceDefn.activeFn.arn).to.equal("fn1");
+    expect(sequenceDefn.steps.length).to.equal(
+      sequenceDefn.remaining.length + 1,
+      `The remaining steps should be one less than the total when starting`
+    );
 
-    // initiate call to first function in sequence
-    let [fn, conductorEvent] = sequenceDefn.next<IDictionary>({
+    // NEXT
+    const f1Response = {
       data: { foo: "bar" }
-    });
+    };
+    let [fn2, fn1Event] = sequenceDefn.next<IDictionary>(f1Response);
 
-    let { sequence: s, body: b, headers: h } = conductorEvent;
+    //#region fn2
+    expect(fn2).to.equal("fn2");
+
+    let { sequence: s, body: b, headers: h } = fn1Event;
     // way too small to be compressed
     expect(isCompressedSection(b)).to.equal(false);
     const { sequence, body, headers } = {
@@ -99,83 +107,45 @@ describe("Lambda Sequence => ", () => {
       body: decompress<IDictionary>(b)
     };
 
-    //#region Conductor next()
-    expect(fn).to.equal("fn1");
-    // body tests
-    expect(Object.keys(body)).to.include("a");
-    expect(Object.keys(body)).to.include("b");
-    expect(Object.keys(body)).to.include("c");
-    expect(body.b).to.equal(2);
-    expect(body.c).to.equal("see");
-    // expect(Object.keys(body)).to.include("data");
+    // fn2 body
+    const fn2Body = decompress<IDictionary>(fn1Event.body, true);
+    expect(fn2Body.c).to.equal(3);
+    expect(fn2Body.a).to.be.a("undefined");
+    expect(fn2Body.temperature).to.equal(f1Response.data);
 
-    // sequence tests
-    expect(sequence.isSequence).to.equal(true);
-    if (sequence.isSequence) {
-      // Function is not made active until ingested with `from()`
-      expect(sequence.activeFn).to.equal(undefined);
-      expect(sequence.totalSteps).to.equal(3);
-      expect(sequence.completedSteps).to.equal(0);
-    }
-
-    // header tests
-    expect(headers["X-Correlation-Id"]).to.be.a("string");
-    //#endregion
-
-    //#region Fn1 from()
-    const fn1 = LambdaSequence.from<IDictionary>(conductorEvent);
-
-    expect(fn1.request.a).to.equal(1);
-    expect(fn1.request.b).to.equal(2);
-    expect(fn1.request.c).to.equal("see");
-    expect(fn1.headers["X-Correlation-Id"]).to.equal(
-      headers["X-Correlation-Id"]
+    // fn2 sequence
+    const fn2Sequence = LambdaSequence.deserialize(
+      decompress(fn1Event.sequence, true)
     );
-    //#endregion
-
-    //#region fn1.next() - aka, moving toward fn2
-    const [fn1NextFn, fn1Event] = fn1.sequence.next({ data: "70 degrees" });
-    expect(fn1NextFn).to.equal("fn2");
-
-    // body
-    const fn1NextBody = decompress<IDictionary>(fn1Event.body, true);
-    expect(fn1NextBody.c).to.equal(3);
-    expect(fn1NextBody.a).to.be.a("undefined");
-    expect(fn1NextBody.temperature).to.equal("70 degrees");
-
-    // sequence
-    const fn1NextSequence = decompress(fn1Event.sequence, true);
-    expect(fn1NextSequence.isSequence).to.equal(true);
-    if (fn1NextSequence.isSequence) {
-      expect(fn1NextSequence.completedSteps).to.equal(1);
+    expect(fn2Sequence.isSequence).to.equal(true);
+    if (fn2Sequence.isSequence) {
+      expect(fn2Sequence.completed.length).to.equal(1);
       // the first function is completed but fn2 has not YET been set to active
-      expect(fn1NextSequence.activeFn).equal(undefined);
-      expect(fn1NextSequence.completed).to.include("fn1");
+      expect(fn2Sequence.activeFn.arn).equal("fn2");
+      const f2Completed = fn2Sequence.completed.map(i => i.arn);
+      expect(f2Completed).to.include("fn1");
       // while we have not yet made 'fn2' active yet, 'fn1' should be marked completed
-      expect(fn1NextSequence.completed).to.include("fn1");
+      expect(f2Completed).to.not.include("fn2");
     }
     //#endregion
 
-    //#region fn2 from()
-    const fn2 = LambdaSequence.from<IDictionary>(fn1Event);
-    expect(fn2.headers).to.haveOwnProperty("X-Correlation-Id");
-    expect(fn2.sequence.activeFn.arn).to.equal("fn2");
-    expect(fn2.request.c).to.equal(3);
-    expect(fn2.request.temperature).to.equal("70 degrees");
-    //#endregion
+    // NEXT
+    const f2Response = {
+      data: "70 degrees"
+    };
+    let [fn3next, fn2Event] = fn2Sequence.next<IDictionary>(f2Response);
+    expect(fn3next).to.equal("fn3");
+    expect(fn2Sequence.activeFn.arn).to.equal("fn3");
 
-    //#region fn2.next()
-    const [fn2next, fn2Event] = fn2.sequence.next({ data: "hello world" });
-    expect(fn2next).to.equal("fn3");
-    const fn2Body = decompress<IDictionary>(fn2Event.body);
-    expect(fn2Body.d).equals(4);
-    //##endregion
-
-    //#region fn3.from()
+    //#region fn3
     const fn3 = LambdaSequence.from<IDictionary>(fn2Event);
-    expect(fn3.request.d).equals(4);
-    expect(fn3.request.func1).equals("70 degrees");
-    expect(fn3.request.func2).equals("hello world");
+    console.log(fn3.request);
+
+    expect(fn3.headers).to.haveOwnProperty("X-Correlation-Id");
+    expect(fn3.sequence.activeFn.arn).to.equal("fn3");
+    expect(fn3.request.c).to.equal(undefined);
+    expect(fn3.request.d).to.equal(4);
+    expect(fn3.request.func2).to.equal("70 degrees");
     //#endregion
   });
 });
