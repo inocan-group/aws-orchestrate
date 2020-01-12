@@ -1,5 +1,5 @@
 import { IDictionary, IHttpResponseHeaders } from "common-types";
-import { IWrapperResponseHeaders } from "../@types";
+import { IOrchestratedHeaders } from "../@types";
 import { sequenceStatus, serializeSequence } from "../sequences";
 import { saveSecretsLocally, getLocalSecrets } from "./secrets";
 import set from "lodash.set";
@@ -125,7 +125,7 @@ export function setFnHeaders(headers: IDictionary<string>) {
   fnHeaders = headers;
 }
 
-function getBaseHeaders(opts: IHttpResponseHeaders) {
+function getBaseHeaders(opts: IHttpResponseHeaders & IDictionary) {
   const correlationId = getCorrelationId();
   const sequenceInfo = opts.sequence
     ? {
@@ -147,7 +147,7 @@ function getBaseHeaders(opts: IHttpResponseHeaders) {
  */
 export function getResponseHeaders(
   opts: IHttpResponseHeaders = {}
-): IWrapperResponseHeaders {
+): IOrchestratedHeaders {
   return {
     ...getBaseHeaders(opts),
     ...CORS_HEADERS,
@@ -161,7 +161,7 @@ export function getResponseHeaders(
  */
 export function getRequestHeaders(
   opts: IHttpResponseHeaders = {}
-): IWrapperResponseHeaders {
+): IOrchestratedHeaders {
   return {
     ...getHeaderSecrets(),
     ...getBaseHeaders(opts)

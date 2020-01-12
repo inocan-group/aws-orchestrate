@@ -58,7 +58,7 @@ export declare class ErrorMeta {
     /**
      * Returns the list of errors being managed.
      */
-    readonly list: ErrorHandler[];
+    get list(): ErrorHandler[];
     /**
      * Allows you to set a default code for unhandled errors; the default is
      * `500`. This method follows the _fluent_ conventions and returns and instance
@@ -98,13 +98,13 @@ export declare class ErrorMeta {
      * States how to deal with the default error handling. Default
      * error handling is used once all "known errors" have been exhausted.
      */
-    readonly defaultHandling: IDefaultHandling;
+    get defaultHandling(): IDefaultHandling;
     /**
      * The default code for unhandled errors.
      *
      * Note: if an unhandled error has the property of `httpStatus` set and is a number
      * then it will be respected over the default.
      */
-    readonly defaultErrorCode: number;
+    get defaultErrorCode(): number;
     toString(): string;
 }

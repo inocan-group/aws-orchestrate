@@ -115,26 +115,26 @@ export declare class LambdaSequence {
      * boolean flag which indicates whether the current execution of the function
      * is part of a _sequence_.
      */
-    readonly isSequence: boolean;
-    readonly isDone: boolean;
+    get isSequence(): boolean;
+    get isDone(): boolean;
     /**
      * the tasks in the sequence that still remain in the
      * "assigned" category. This excludes those which are
      * completed _and_ any which are _active_.
      */
-    readonly remaining: ILambdaSequenceStep<IDictionary<any>>[];
+    get remaining(): ILambdaSequenceStep<IDictionary<any>>[];
     /** the tasks which have been completed */
-    readonly completed: ILambdaSequenceStep<IDictionary<any>>[];
+    get completed(): ILambdaSequenceStep<IDictionary<any>>[];
     /** the total number of _steps_ in the sequence */
-    readonly length: number;
+    get length(): number;
     /**
      * **steps**
      *
      * returns the list of steps which have been accumulated
      * so far
      */
-    readonly steps: ILambdaSequenceStep<IDictionary<any>>[];
-    readonly nextFn: ILambdaSequenceStep<IDictionary<any>>;
+    get steps(): ILambdaSequenceStep<IDictionary<any>>[];
+    get nextFn(): ILambdaSequenceStep<IDictionary<any>>;
     /**
      * Sets the currently _active_ function to `completed` and registers
      * the active functions results into the `_responses` dictionary.
@@ -142,7 +142,7 @@ export declare class LambdaSequence {
      * @param results the results from the activeFn's execution
      */
     finishStep(results: any): void;
-    readonly activeFn: ILambdaSequenceStep;
+    get activeFn(): ILambdaSequenceStep;
     /**
      * Ingests a set of steps into the current sequence; resolving
      * dynamic properties into real values at the same time.
@@ -161,7 +161,7 @@ export declare class LambdaSequence {
      * character this is an indicator that it is a "dynamic property" and
      * it's true value should be looked up from the sequence results.
      */
-    readonly dynamicProperties: Array<{
+    get dynamicProperties(): Array<{
         key: string;
         from: string;
     }>;

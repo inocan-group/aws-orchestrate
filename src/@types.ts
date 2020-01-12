@@ -11,7 +11,7 @@ import {
 import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
-import { getSecrets, getSecret } from "./wrapper-fn/secrets";
+import { getSecrets } from "./wrapper-fn/secrets";
 type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
@@ -44,15 +44,20 @@ export interface IWrapperOptions {
   sequenceTracker?: arn;
 }
 
+export type IExpectedHeaders = IHttpRequestHeaders & IDictionary;
+
 /**
  * Highlights the most likely props coming in from a request but allows
  * additional properties to be defined too.
  */
 export type IWrapperRequestHeaders =
-  | IHttpRequestHeaders
-  | IAWSLambdaProxyIntegrationRequest;
+  | IExpectedHeaders
+  | IOrchestratedHeaders
+  | IAWSLambdaProxyIntegrationRequest["headers"];
 
-export interface IWrapperResponseHeaders extends IHttpResponseHeaders {
+export interface IOrchestratedHeaders
+  extends IHttpResponseHeaders,
+    IDictionary {
   ["X-Correlation-Id"]: string;
   /**
    * The transport for firemodel's **service account** when
@@ -149,7 +154,7 @@ export interface IOrchestratedRequest<T> {
   type: "orchestrated-message-body";
   body: T | ICompressedSection;
   sequence: ISerializedSequence | ICompressedSection;
-  headers: IWrapperResponseHeaders | ICompressedSection;
+  headers: IOrchestratedHeaders | ICompressedSection;
 }
 
 /**
@@ -189,9 +194,7 @@ export interface ILambaSequenceFromResponse<T> {
   request: T;
   apiGateway?: IAWSLambdaProxyIntegrationRequest;
   sequence: LambdaSequence;
-  headers:
-    | Omit<IWrapperResponseHeaders, "X-Correlation-ID">
-    | IHttpRequestHeaders;
+  headers: Omit<IOrchestratedHeaders, "X-Correlation-Id"> | IHttpRequestHeaders;
 }
 
 /**
