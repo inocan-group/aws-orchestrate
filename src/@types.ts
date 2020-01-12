@@ -15,6 +15,7 @@ import { getSecrets, getSecret } from "./wrapper-fn/secrets";
 type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
+import { invoke } from "./invoke";
 
 export type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 
@@ -315,6 +316,13 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * function needs to send additional headers then you can add them here.
    */
   setHeaders: typeof setFnHeaders;
+  /**
+   * Invokes another Lambda function
+   *
+   * @param fnArn the Function's ARN (can use full ARN name or shortcut name if ENV vars are set)
+   * @param request The request object to pass to the next function
+   */
+  invoke: typeof invoke;
   /**
    * Allows the handler author to _register_ a new `LambdaSequence` for execution.
    *

@@ -2281,7 +2281,8 @@ var wrapper = function wrapper(fn) {
         getSecret: getSecret,
         getSecrets: getSecrets,
         isApiGatewayRequest: isLambdaProxyRequest(event),
-        errorMgmt: errorMeta
+        errorMgmt: errorMeta,
+        invoke: invoke
       }); //#endregion
       //#region CALL the HANDLER FUNCTION
 

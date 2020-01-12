@@ -108,7 +108,8 @@ export const wrapper = function<I, O>(
         getSecret,
         getSecrets,
         isApiGatewayRequest: isLambdaProxyRequest(event),
-        errorMgmt: errorMeta
+        errorMgmt: errorMeta,
+        invoke
       };
       //#endregion
 
