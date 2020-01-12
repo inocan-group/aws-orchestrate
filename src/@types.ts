@@ -275,21 +275,10 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * **SSM** if needed.
    *
    * ```typescript
-   * const secrets = await context.getSecrets(['firebase', 'netlify'])
+   * const secrets = await context.getSecrets('firebase', 'netlify')
    * ```
    */
   getSecrets: typeof getSecrets;
-  /**
-   * **getSecret**
-   *
-   * gets a single secret; ideally using local secrets but will go to AWS's
-   * **SSM** if needed.
-   *
-   * ```typescript
-   * const serviceAccount = await context.getSecret('firebase/SERVICE_ACCOUNT')
-   * ```
-   */
-  getSecret: typeof getSecret;
   /**
    * The API Gateway "proxy integration" request data; this is left blank if the call was not
    * made from API Gateway (or the function is not using proxy integration)
