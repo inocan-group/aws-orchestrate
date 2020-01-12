@@ -1,5 +1,5 @@
 import { IDictionary, IHttpResponseHeaders } from "common-types";
-import { IWrapperResponseHeaders } from "../@types";
+import { IOrchestratedHeaders } from "../@types";
 import { ILoggerApi } from "aws-log";
 /**
  * Ensures that frontend clients who call Lambda's
@@ -51,9 +51,9 @@ export declare function setFnHeaders(headers: IDictionary<string>): void;
 /**
  * All the HTTP _Response_ headers to send when returning to API Gateway
  */
-export declare function getResponseHeaders(opts?: IHttpResponseHeaders): IWrapperResponseHeaders;
+export declare function getResponseHeaders(opts?: IHttpResponseHeaders): IOrchestratedHeaders;
 /**
  * All the HTTP _Request_ headers to send when calling
  * another function
  */
-export declare function getRequestHeaders(opts?: IHttpResponseHeaders): IWrapperResponseHeaders;
+export declare function getRequestHeaders(opts?: IHttpResponseHeaders): IOrchestratedHeaders;

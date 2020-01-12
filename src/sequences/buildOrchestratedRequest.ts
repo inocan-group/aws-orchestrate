@@ -5,7 +5,7 @@ import { compress } from "./compress";
 import {
   IOrchestratedRequest,
   ISerializedSequence,
-  IWrapperResponseHeaders
+  IOrchestratedHeaders
 } from "../@types";
 
 export function buildOrchestratedRequest<T>(
@@ -30,6 +30,6 @@ export function buildOrchestratedRequest<T>(
     type: "orchestrated-message-body",
     body: compress<T>(body, 4096),
     sequence: compress<ISerializedSequence>(sequence.toObject(), 4096),
-    headers: compress<IWrapperResponseHeaders>(headers, 4096)
+    headers: compress<IOrchestratedHeaders>(headers, 4096)
   };
 }

@@ -1,9 +1,9 @@
 import { HttpStatusCodes, isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest } from 'common-types';
 import { compress as compress$1, decompress as decompress$1 } from 'lzutf8';
 import { logger, getCorrelationId, invoke as invoke$1 } from 'aws-log';
-import get from 'lodash.get';
 import flatten from 'lodash.flatten';
 import set from 'lodash.set';
+import get from 'lodash.get';
 
 function _typeof(obj) {
   if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
@@ -464,8 +464,19 @@ function findError(e, expectedErrors) {
 }
 
 /**
- * Allows getting a single secret out of either _locally_ stored secrets -- or
- * if not found -- going to **SSM** and pulling the module containing this secret.
+ * **getSecrets**
+ *
+ * Gets the needed secrets for this function -- using locally available information
+ * if available (_params_ and/or _cached_ values from prior calls) -- otherwise
+ * goes out to **SSM** to get.
+ *
+ * In addition, all secrets requested (within the given function as well as
+ * _prior_ function's secrets in a sequence) will be auto-forwarded to subsequent
+ * functions in the currently executing sequence. Secrets _will not_ be passed back
+ * in the function's response.
+ *
+ * @param modules the modules which are have secrets that are needed; you may add an array
+ * as the first parameter passed in or you can destructure values across the input
  */
 function _await(value, then, direct) {
   if (direct) {
@@ -479,19 +490,8 @@ function _await(value, then, direct) {
   return then ? value.then(then) : value;
 }
 /**
- * **getSecrets**
- *
- * Gets the needed secrets for this function -- using locally available information
- * if available (_params_ and/or _cached_ values from prior calls) -- otherwise
- * goes out **SSM** to get it.
- *
- * In addition, all secrets requested (within the given function as well as
- * _prior_ function's secrets in a sequence) will be auto-forwarded to subsequent
- * functions in the currently executing sequence. Secrets _will not_ be passed back
- * in the function's response.
- *
- * @param modules the modules which are have secrets that are needed; you may add an array
- * as the first parameter passed in or you can destructure values across the input
+ * Goes through a set of secrets -- organized by `[module].[name] = secret` --
+ * and masks the values so that they don't leak into the log files.
  */
 
 
@@ -555,49 +555,6 @@ var getSecrets = _async(function () {
       return secrets;
     });
   });
-});
-/**
- * Goes through a set of secrets -- organized by `[module].[name] = secret` --
- * and masks the values so that they don't leak into the log files.
- */
-
-var getSecret = _async(function (moduleAndName) {
-  var log = logger().reloadContext();
-  var localSecrets = getLocalSecrets();
-
-  if (!moduleAndName.includes("/")) {
-    throw new Error("When using getSecret() you must state both the module and the NAME of the secret where the two are delimited by a \"/\" character. Instead \"".concat(moduleAndName, "\" was passed in. If you want to get all the secrets for a given module you should be using getSecrets() instead."));
-  }
-
-  var _moduleAndName$split = moduleAndName.split("/"),
-      _moduleAndName$split2 = _slicedToArray(_moduleAndName$split, 2),
-      module = _moduleAndName$split2[0],
-      name = _moduleAndName$split2[1];
-
-  if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
-    log.debug("getSecret(\"".concat(moduleAndName, "\") found secret locally"), {
-      module: module,
-      name: name
-    });
-    return get(localSecrets, "".concat(module, ".").concat(name));
-  } else {
-    log.debug("getSecret(\"".concat(moduleAndName, "\") did not find locally so asking SSM for module \"").concat(module, "\""), {
-      module: module,
-      name: name,
-      localModules: Object.keys(localSecrets)
-    });
-    return _await(getSecrets(module), function () {
-      if (get(localSecrets, "".concat(module, ".").concat(name), false)) {
-        log.debug("after SSM call for module \"".concat(module, "\" the secret was found"), {
-          module: module,
-          name: name
-        });
-        return get(localSecrets, "".concat(module, ".").concat(name));
-      } else {
-        throw new Error("Even after asking SSM for module \"".concat(module, "\" the secret \"").concat(name, "\" was not found!"));
-      }
-    });
-  }
 });
 var localSecrets = {};
 /**
@@ -1997,6 +1954,12 @@ function _invokeIgnored(body) {
   }
 }
 
+function _awaitIgnored(value, direct) {
+  if (!direct) {
+    return value && value.then ? value.then(_empty) : Promise.resolve();
+  }
+}
+
 function _settle(pact, state, value) {
   if (!pact.s) {
     if (value instanceof _Pact) {
@@ -2278,10 +2241,10 @@ var wrapper = function wrapper(fn) {
         isSequence: sequence.isSequence,
         isDone: sequence.isDone,
         apiGateway: apiGateway,
-        getSecret: getSecret,
         getSecrets: getSecrets,
         isApiGatewayRequest: isLambdaProxyRequest(event),
-        errorMgmt: errorMeta
+        errorMgmt: errorMeta,
+        invoke: invoke
       }); //#endregion
       //#region CALL the HANDLER FUNCTION
 
@@ -2396,7 +2359,6 @@ var wrapper = function wrapper(fn) {
               }
             });
           } else {
-            var _interrupt2 = false;
             //#region UNFOUND ERROR
             log.debug("An error is being processed by the default handling mechanism", {
               defaultHandling: get(errorMeta, "defaultHandling"),
@@ -2441,8 +2403,6 @@ var wrapper = function wrapper(fn) {
                   return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
                 }
               }
-
-              _interrupt2 = true;
             }], [function () {
               return "error-forwarding";
             }, function () {
@@ -2450,9 +2410,7 @@ var wrapper = function wrapper(fn) {
               log.debug("The error will be forwarded to another function for handling", {
                 arn: handling.arn
               });
-              return _await$2(invoke(handling.arn, e), function () {
-                _interrupt2 = true;
-              });
+              return _awaitIgnored(invoke(handling.arn, e));
             }], [function () {
               return "default-error";
             }, function () {
@@ -2472,8 +2430,6 @@ var wrapper = function wrapper(fn) {
               } else {
                 throw handling.error;
               }
-
-              _interrupt2 = true;
             }], [function () {
               return "default";
             }, function () {
@@ -2489,8 +2445,6 @@ var wrapper = function wrapper(fn) {
               } else {
                 throw new UnhandledError(errorMeta.defaultErrorCode, e);
               }
-
-              _interrupt2 = true;
             }], [void 0, function () {
               log.debug("Unknown handling technique for unhandled error", {
                 type: handling.type,

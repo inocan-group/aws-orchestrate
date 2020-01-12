@@ -20,7 +20,6 @@ import {
   invokeNewSequence,
   findError,
   getSecrets,
-  getSecret,
   database,
   setFnHeaders,
   setContentType,
@@ -105,10 +104,10 @@ export const wrapper = function<I, O>(
         isSequence: sequence.isSequence,
         isDone: sequence.isDone,
         apiGateway,
-        getSecret,
         getSecrets,
         isApiGatewayRequest: isLambdaProxyRequest(event),
-        errorMgmt: errorMeta
+        errorMgmt: errorMeta,
+        invoke
       };
       //#endregion
 

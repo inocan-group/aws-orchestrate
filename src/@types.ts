@@ -11,10 +11,11 @@ import {
 import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
-import { getSecrets, getSecret } from "./wrapper-fn/secrets";
+import { getSecrets } from "./wrapper-fn/secrets";
 type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
+import { invoke } from "./invoke";
 
 export type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 
@@ -43,15 +44,20 @@ export interface IWrapperOptions {
   sequenceTracker?: arn;
 }
 
+export type IExpectedHeaders = IHttpRequestHeaders & IDictionary;
+
 /**
  * Highlights the most likely props coming in from a request but allows
  * additional properties to be defined too.
  */
 export type IWrapperRequestHeaders =
-  | IHttpRequestHeaders
-  | IAWSLambdaProxyIntegrationRequest;
+  | IExpectedHeaders
+  | IOrchestratedHeaders
+  | IAWSLambdaProxyIntegrationRequest["headers"];
 
-export interface IWrapperResponseHeaders extends IHttpResponseHeaders {
+export interface IOrchestratedHeaders
+  extends IHttpResponseHeaders,
+    IDictionary {
   ["X-Correlation-Id"]: string;
   /**
    * The transport for firemodel's **service account** when
@@ -148,7 +154,7 @@ export interface IOrchestratedRequest<T> {
   type: "orchestrated-message-body";
   body: T | ICompressedSection;
   sequence: ISerializedSequence | ICompressedSection;
-  headers: IWrapperResponseHeaders | ICompressedSection;
+  headers: IOrchestratedHeaders | ICompressedSection;
 }
 
 /**
@@ -188,9 +194,7 @@ export interface ILambaSequenceFromResponse<T> {
   request: T;
   apiGateway?: IAWSLambdaProxyIntegrationRequest;
   sequence: LambdaSequence;
-  headers:
-    | Omit<IWrapperResponseHeaders, "X-Correlation-ID">
-    | IHttpRequestHeaders;
+  headers: Omit<IOrchestratedHeaders, "X-Correlation-Id"> | IHttpRequestHeaders;
 }
 
 /**
@@ -274,21 +278,10 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * **SSM** if needed.
    *
    * ```typescript
-   * const secrets = await context.getSecrets(['firebase', 'netlify'])
+   * const secrets = await context.getSecrets('firebase', 'netlify')
    * ```
    */
   getSecrets: typeof getSecrets;
-  /**
-   * **getSecret**
-   *
-   * gets a single secret; ideally using local secrets but will go to AWS's
-   * **SSM** if needed.
-   *
-   * ```typescript
-   * const serviceAccount = await context.getSecret('firebase/SERVICE_ACCOUNT')
-   * ```
-   */
-  getSecret: typeof getSecret;
   /**
    * The API Gateway "proxy integration" request data; this is left blank if the call was not
    * made from API Gateway (or the function is not using proxy integration)
@@ -315,6 +308,13 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * function needs to send additional headers then you can add them here.
    */
   setHeaders: typeof setFnHeaders;
+  /**
+   * Invokes another Lambda function
+   *
+   * @param fnArn the Function's ARN (can use full ARN name or shortcut name if ENV vars are set)
+   * @param request The request object to pass to the next function
+   */
+  invoke: typeof invoke;
   /**
    * Allows the handler author to _register_ a new `LambdaSequence` for execution.
    *

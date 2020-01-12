@@ -17,16 +17,11 @@ export declare function addSecretToLocalCache(name: string, value: any): void;
  */
 export declare function getLocalSecrets(): IDictionary<any>;
 /**
- * Allows getting a single secret out of either _locally_ stored secrets -- or
- * if not found -- going to **SSM** and pulling the module containing this secret.
- */
-export declare function getSecret(moduleAndName: string): Promise<any>;
-/**
  * **getSecrets**
  *
  * Gets the needed secrets for this function -- using locally available information
  * if available (_params_ and/or _cached_ values from prior calls) -- otherwise
- * goes out **SSM** to get it.
+ * goes out to **SSM** to get.
  *
  * In addition, all secrets requested (within the given function as well as
  * _prior_ function's secrets in a sequence) will be auto-forwarded to subsequent
