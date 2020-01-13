@@ -22,4 +22,4 @@ export declare const ArchiveTrackerConfig: IWrapperFunction;
  * partial arn so long as you are using the appropriate ENV variables to activate
  * partial arns.
  */
-export declare const handler: (event: import("../@types").IOrchestrationRequestTypes<void>, context: import("common-types").IAWSLambaContext) => Promise<void | import("common-types").IApiGatewayResponse | import("common-types").IApiGatewayErrorResponse<any>>;
+export declare const handler: any;

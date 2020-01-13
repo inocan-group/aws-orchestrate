@@ -25,8 +25,7 @@ import {
   buildOrchestratedRequest
 } from "./sequences";
 import get from "lodash.get";
-import { logger as awsLogger, logger } from "aws-log";
-import { invoke } from "./invoke";
+import { logger as awsLogger, logger, invoke as invokeLambda } from "aws-log";
 
 export class LambdaSequence {
   /**
@@ -127,7 +126,6 @@ export function handler(event, context, callback) {
    * - `AWS_STAGE`
    * - `AWS_ACCOUNT_ID`
    * - `AWS_REGION`
-   * - `AWS_MOVE_SERVICES`
    *
    * These should relatively static and therefore should be placed in your `env.yml` file if
    * you're using the Serverless framework.
@@ -183,7 +181,7 @@ export function handler(event, context, callback) {
    * Invokes the first function in a new sequence.
    */
   public start<T extends IDictionary = IDictionary>() {
-    return invoke(...this.getInvocationParameters<T>());
+    return invokeLambda(...this.getInvocationParameters<T>());
   }
 
   /**
