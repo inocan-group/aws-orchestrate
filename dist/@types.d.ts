@@ -217,9 +217,9 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
      */
     log: ILoggerApi;
     /**
-     * Provides a handy utility function of providing you access to a Firebase
-     * database connection. This is loaded asynchronously so there is no code
-     * penality for Firebase if you aren't using it.
+     * Gives you access to a Firebase `DB` instance via `abstracted-admin`.
+     * This is loaded synchronously so should be included in a serverless functions
+     * main dependency bundle (but _tree-shaken_ away if this function is not called).
      */
     database: (config?: IFirebaseAdminConfig) => Promise<DB>;
     /**

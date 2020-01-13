@@ -1,7 +1,7 @@
 import { IDictionary } from "common-types";
 import { LambdaSequence } from "./LambdaSequence";
 declare type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
-export declare type LambdaInvocation<T> = (fnArn: string, request: T, additionalHeaders?: UnconstrainedHttpHeaders) => Promise<InvocationResponse>;
+export declare type LambdaInvocation<T = IDictionary, H = UnconstrainedHttpHeaders> = (fnArn: string, request: T, additionalHeaders?: H) => Promise<InvocationResponse>;
 export declare type UnconstrainedHttpHeaders = IDictionary<string | number | boolean>;
 /**
  * A higher-order function which accepts a _sequence_ as an input first.
@@ -14,5 +14,5 @@ export declare type UnconstrainedHttpHeaders = IDictionary<string | number | boo
  * takes the ARN and request params (optionally allowing additional
  * _headers_ too).
  */
-export declare function invoke<T>(sequence: LambdaSequence): <H = UnconstrainedHttpHeaders>(fnArn: string, request: T, additionalHeaders?: H) => Promise<import("aws-sdk/clients/lambda").InvocationResponse>;
+export declare function invoke(sequence: LambdaSequence): <T = IDictionary<any>, H = UnconstrainedHttpHeaders>(fnArn: string, request: T, additionalHeaders?: H) => Promise<import("aws-sdk/clients/lambda").InvocationResponse>;
 export {};

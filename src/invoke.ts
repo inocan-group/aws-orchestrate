@@ -5,10 +5,10 @@ import { buildOrchestratedRequest } from "./sequences";
 import { LambdaSequence } from "./LambdaSequence";
 type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 
-export type LambdaInvocation<T> = (
+export type LambdaInvocation<T = IDictionary, H = UnconstrainedHttpHeaders> = (
   fnArn: string,
   request: T,
-  additionalHeaders?: UnconstrainedHttpHeaders
+  additionalHeaders?: H
 ) => Promise<InvocationResponse>;
 
 export type UnconstrainedHttpHeaders = IDictionary<string | number | boolean>;
@@ -24,8 +24,8 @@ export type UnconstrainedHttpHeaders = IDictionary<string | number | boolean>;
  * takes the ARN and request params (optionally allowing additional
  * _headers_ too).
  */
-export function invoke<T>(sequence: LambdaSequence) {
-  return <H = UnconstrainedHttpHeaders>(
+export function invoke(sequence: LambdaSequence) {
+  return <T = IDictionary, H = UnconstrainedHttpHeaders>(
     fnArn: string,
     request: T,
     additionalHeaders?: H
