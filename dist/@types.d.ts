@@ -6,7 +6,7 @@ import { getSecrets } from "./wrapper-fn/secrets";
 declare type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 declare type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
-import { invoke } from "./invoke";
+import { LambdaInvocation } from "./invoke";
 export declare type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 /**
  * The API Gateway's _proxy integration request_ structure with the
@@ -265,7 +265,7 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
      * @param fnArn the Function's ARN (can use full ARN name or shortcut name if ENV vars are set)
      * @param request The request object to pass to the next function
      */
-    invoke: typeof invoke;
+    invoke: LambdaInvocation<T>;
     /**
      * Allows the handler author to _register_ a new `LambdaSequence` for execution.
      *

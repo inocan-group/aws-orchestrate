@@ -36,7 +36,8 @@ import {
   RethrowError
 } from "./errors/index";
 import { sequenceStatus, buildOrchestratedRequest } from "./sequences/index";
-import { invoke } from "./invoke";
+import { invoke as invokeHigherOrder } from "./invoke";
+import { invoke as invokeLambda } from "aws-log";
 import { ISequenceTrackerStatus } from "./exported-functions/SequenceTracker";
 import get from "lodash.get";
 
@@ -92,6 +93,7 @@ export const wrapper = function<I, O>(
       workflowStatus = "prep-starting";
       const status = sequenceStatus(log.getCorrelationId());
       const registerSequence = register(log, context);
+      const invoke = invokeHigherOrder<I>(sequence);
       const handlerContext: IHandlerContext<I> = {
         ...context,
         log,
@@ -107,6 +109,18 @@ export const wrapper = function<I, O>(
         getSecrets,
         isApiGatewayRequest: isLambdaProxyRequest(event),
         errorMgmt: errorMeta,
+        /**
+         * In most cases you'll want to invoke other functions as
+         * part of `LambdaSequence` (e.g., `sequence.add()` or `sequence.fanOut()`)
+         * but if you have a good reason to not pass execution this way then
+         * the more basic "invoke" command is available.
+         *
+         * **Note:** that you can use abbreviated ARN names if the property environment
+         * variables are set.
+         *
+         * **Note:** also "secrets" accumulated to this point in a sequence will be passed
+         * forward to the invoked function; as will the _correlation id_.
+         */
         invoke
       };
       //#endregion
@@ -124,7 +138,7 @@ export const wrapper = function<I, O>(
         workflowStatus = "invoke-started";
         const [fn, requestBody] = sequence.next<O>(result);
         msg.startingInvocation(fn, requestBody);
-        const invokeParams = await invoke(fn, requestBody);
+        const invokeParams = await invokeLambda(fn, requestBody);
         msg.completingInvocation(fn, invokeParams);
         workflowStatus = "invoke-complete";
       } else {
@@ -148,7 +162,7 @@ export const wrapper = function<I, O>(
       if (options.sequenceTracker && sequence.isSequence) {
         workflowStatus = "sequence-tracker-starting";
         msg.sequenceTracker(options.sequenceTracker, workflowStatus);
-        await invoke(
+        await invokeLambda(
           options.sequenceTracker,
           buildOrchestratedRequest<ISequenceTrackerStatus>(status(sequence))
         );
@@ -201,7 +215,7 @@ export const wrapper = function<I, O>(
           }
 
           if (found.handling.forwardTo) {
-            await invoke(found.handling.forwardTo, e);
+            await invokeLambda(found.handling.forwardTo, e);
             log.info(
               `Forwarded error to the function "${found.handling.forwardTo}"`,
               { error: e, forwardTo: found.handling.forwardTo }
@@ -273,7 +287,7 @@ export const wrapper = function<I, O>(
                 "The error will be forwarded to another function for handling",
                 { arn: handling.arn }
               );
-              await invoke(handling.arn, e);
+              await invokeLambda(handling.arn, e);
               break;
             //#endregion
 

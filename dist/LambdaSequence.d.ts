@@ -70,7 +70,6 @@ export declare class LambdaSequence {
      * - `AWS_STAGE`
      * - `AWS_ACCOUNT_ID`
      * - `AWS_REGION`
-     * - `AWS_MOVE_SERVICES`
      *
      * These should relatively static and therefore should be placed in your `env.yml` file if
      * you're using the Serverless framework.

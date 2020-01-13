@@ -1001,32 +1001,6 @@ additionalHeaders) {
   };
 }
 
-/**
- * Wraps the functionality provided by the `aws-log`'s **invoke()** function
- * that ensures that improper self-calling is prohibited unless expressly enabled
- *
- * @param fnArn the Function's ARN
- * @param request The request object to pass to the next function
- */
-
-function _async$3(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var invoke = _async$3(function (fnArn, request) {
-  return awsLog.invoke(fnArn, request);
-});
-
 var LambdaSequence =
 /*#__PURE__*/
 function () {
@@ -1068,7 +1042,6 @@ function () {
      * - `AWS_STAGE`
      * - `AWS_ACCOUNT_ID`
      * - `AWS_REGION`
-     * - `AWS_MOVE_SERVICES`
      *
      * These should relatively static and therefore should be placed in your `env.yml` file if
      * you're using the Serverless framework.
@@ -1130,7 +1103,7 @@ function () {
   }, {
     key: "start",
     value: function start() {
-      return invoke.apply(void 0, _toConsumableArray(this.getInvocationParameters()));
+      return awsLog.invoke.apply(void 0, _toConsumableArray(this.getInvocationParameters()));
     }
     /**
      * Ensures that you can't call yourself in a sequence unless this has been
@@ -1937,6 +1910,25 @@ function (_Error) {
 }(_wrapNativeSuper(Error));
 
 /**
+ * A higher-order function which accepts a _sequence_ as an input first.
+ * In essence, this just provides useful configuration which the _wrapper
+ * function_ can provide and then it passes the remaining function down
+ * to the consumer of this library to use in the handler function (aka, as
+ * part of the `context` object passed into the handler).
+ *
+ * Calling the first function returns a _invocation_ function which just
+ * takes the ARN and request params (optionally allowing additional
+ * _headers_ too).
+ */
+
+function invoke(sequence) {
+  return function (fnArn, request, additionalHeaders) {
+    var boxedRequest = buildOrchestratedRequest(request, sequence, additionalHeaders);
+    return awsLog.invoke(fnArn, boxedRequest);
+  };
+}
+
+/**
  * **wrapper**
  *
  * A higher order function which wraps a serverless _handler_-function with the aim of providing
@@ -2213,7 +2205,7 @@ function _catch(body, recover) {
   return result;
 }
 
-function _async$4(f) {
+function _async$3(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -2231,7 +2223,7 @@ var wrapper = function wrapper(fn) {
   var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
   /** this is the core Lambda event which the wrapper takes as an input */
-  return _async$4(function (event, context) {
+  return _async$3(function (event, context) {
     var result;
     var workflowStatus;
     workflowStatus = "initializing";
@@ -2255,6 +2247,7 @@ var wrapper = function wrapper(fn) {
       workflowStatus = "prep-starting";
       var status = sequenceStatus(log.getCorrelationId());
       var registerSequence$1 = registerSequence(log, context);
+      var invoke$1 = invoke(sequence);
       var handlerContext = Object.assign(Object.assign({}, context), {
         log: log,
         headers: headers,
@@ -2269,7 +2262,20 @@ var wrapper = function wrapper(fn) {
         getSecrets: getSecrets,
         isApiGatewayRequest: commonTypes.isLambdaProxyRequest(event),
         errorMgmt: errorMeta,
-        invoke: invoke
+
+        /**
+         * In most cases you'll want to invoke other functions as
+         * part of `LambdaSequence` (e.g., `sequence.add()` or `sequence.fanOut()`)
+         * but if you have a good reason to not pass execution this way then
+         * the more basic "invoke" command is available.
+         *
+         * **Note:** that you can use abbreviated ARN names if the property environment
+         * variables are set.
+         *
+         * **Note:** also "secrets" accumulated to this point in a sequence will be passed
+         * forward to the invoked function; as will the _correlation id_.
+         */
+        invoke: invoke$1
       }); //#endregion
       //#region CALL the HANDLER FUNCTION
 
@@ -2292,7 +2298,7 @@ var wrapper = function wrapper(fn) {
                 requestBody = _sequence$next2[1];
 
             msg.startingInvocation(_fn2, requestBody);
-            return _await$2(invoke(_fn2, requestBody), function (invokeParams) {
+            return _await$2(awsLog.invoke(_fn2, requestBody), function (invokeParams) {
               msg.completingInvocation(_fn2, invokeParams);
               workflowStatus = "invoke-complete";
             });
@@ -2320,7 +2326,7 @@ var wrapper = function wrapper(fn) {
               if (options.sequenceTracker && sequence.isSequence) {
                 workflowStatus = "sequence-tracker-starting";
                 msg.sequenceTracker(options.sequenceTracker, workflowStatus);
-                return _await$2(invoke(options.sequenceTracker, buildOrchestratedRequest(status(sequence))), function () {
+                return _await$2(awsLog.invoke(options.sequenceTracker, buildOrchestratedRequest(status(sequence))), function () {
                   if (sequence.isDone) {
                     msg.sequenceTrackerComplete(true);
                   } else {
@@ -2375,7 +2381,7 @@ var wrapper = function wrapper(fn) {
 
             return _invokeIgnored(function () {
               if (found.handling.forwardTo) {
-                return _await$2(invoke(found.handling.forwardTo, e), function () {
+                return _await$2(awsLog.invoke(found.handling.forwardTo, e), function () {
                   log.info("Forwarded error to the function \"".concat(found.handling.forwardTo, "\""), {
                     error: e,
                     forwardTo: found.handling.forwardTo
@@ -2435,7 +2441,7 @@ var wrapper = function wrapper(fn) {
               log.debug("The error will be forwarded to another function for handling", {
                 arn: handling.arn
               });
-              return _awaitIgnored(invoke(handling.arn, e));
+              return _awaitIgnored(awsLog.invoke(handling.arn, e));
             }], [function () {
               return "default-error";
             }, function () {
