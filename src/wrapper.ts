@@ -94,7 +94,7 @@ export const wrapper = function<I, O>(
       workflowStatus = "prep-starting";
       const status = sequenceStatus(log.getCorrelationId());
       const registerSequence = register(log, context);
-      const invoke = invokeHigherOrder<I>(sequence);
+      const invoke = invokeHigherOrder(sequence);
       const handlerContext: IHandlerContext<I> = {
         ...context,
         log,
