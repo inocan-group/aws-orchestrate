@@ -235,6 +235,11 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
      */
     getSecrets: typeof getSecrets;
     /**
+     * Allows the status code of a _successful_ handler execution to be stated; if
+     * left off then it will return `200`.
+     */
+    setSuccessCode: (code: number) => void;
+    /**
      * The API Gateway "proxy integration" request data; this is left blank if the call was not
      * made from API Gateway (or the function is not using proxy integration)
      */
