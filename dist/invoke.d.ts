@@ -1,19 +1,6 @@
 import { IDictionary } from "common-types";
 import { LambdaSequence } from "./LambdaSequence";
 declare type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
-/**
- * Invokes another Lambda function, using the IOrchestratedRequest format
- * (which provides a collision-proof way of sending payload, headers, and
- * sequence data).
- *
- * @param fnArn the Function's ARN
- * @param request The request object to pass to the next function
- * @param sequence passing in a sequence ensures that secrets are
- * forwarded
- *
- * **Note:** the sequence id is also forwarded but NOT as `X-Correlation-Id`
- * but rather as `X-Originating-Correlation-Id`; this is done because if you
- */
 export declare type LambdaInvocation<T> = (fnArn: string, request: T, additionalHeaders?: UnconstrainedHttpHeaders) => Promise<InvocationResponse>;
 export declare type UnconstrainedHttpHeaders = IDictionary<string | number | boolean>;
 /**

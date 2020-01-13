@@ -1,3 +1,4 @@
+import { DB } from "abstracted-admin";
 /**
  * **database**
  *
@@ -9,4 +10,4 @@
  * load the `abstracted-admin` library (as this library only lists it as
  * a devDep)
  */
-export declare const database: (config?: import("abstracted-firebase").IFirebaseAdminConfig) => Promise<import("abstracted-admin").DB>;
+export declare const database: (config?: import("abstracted-firebase").IFirebaseAdminConfig) => Promise<DB>;

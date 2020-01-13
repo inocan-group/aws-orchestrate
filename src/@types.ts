@@ -309,10 +309,14 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    */
   setHeaders: typeof setFnHeaders;
   /**
-   * Invokes another Lambda function
+   * Invokes another Lambda function.
    *
-   * @param fnArn the Function's ARN (can use full ARN name or shortcut name if ENV vars are set)
-   * @param request The request object to pass to the next function
+   * @param fnArn the Function's ARN
+   * @param request the request parameters to pass into next fn
+   * @param additionalHeaders optionally pass additional header name/values
+   *
+   * **Note:** this function automatically forwards `X-Correlation-Id`
+   * and any secrets that the execution function has gotten
    */
   invoke: LambdaInvocation<T>;
   /**
