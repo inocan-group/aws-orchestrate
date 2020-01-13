@@ -1032,6 +1032,15 @@ function () {
 
       return this;
     }
+  }, {
+    key: "fanOut",
+    value: function fanOut() {
+      try {
+        throw new Error("the fanOut functionality is not yet available");
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    }
     /**
      * **next**
      *

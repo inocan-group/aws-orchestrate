@@ -15,8 +15,8 @@ import { getSecrets } from "./wrapper-fn/secrets";
 type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
-import { invoke, LambdaInvocation } from "./invoke";
-
+import { invoke, LambdaInvocation, UnconstrainedHttpHeaders } from "./invoke";
+type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 export type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 
 /**
@@ -318,7 +318,11 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * **Note:** this function automatically forwards `X-Correlation-Id`
    * and any secrets that the execution function has gotten
    */
-  invoke: LambdaInvocation<T>;
+  invoke: <T = IDictionary, H = UnconstrainedHttpHeaders>(
+    fnArn: string,
+    request: T,
+    additionalHeaders?: H
+  ) => Promise<InvocationResponse>;
   /**
    * Allows the handler author to _register_ a new `LambdaSequence` for execution.
    *
@@ -427,3 +431,8 @@ export type IOrchestratedDynamicProperty = {
 export type IOrchestratedProperties<T> = {
   [P in keyof T]: T[P] | IOrchestratedDynamicProperty;
 };
+
+export type IFanOutTuple<T = IDictionary> = [string, T];
+export interface IFanOutResponse<T> {
+  failures?: T[];
+}

@@ -15,7 +15,9 @@ import {
   ISerializedSequence,
   IOrchestratedDynamicProperty,
   IOrchestratedProperties,
-  IOrchestrationRequestTypes
+  IOrchestrationRequestTypes,
+  IFanOutTuple,
+  IFanOutResponse
 } from "./@types";
 import { isOrchestratedRequest } from "./sequences/isOrchestratedMessageBody";
 import {
@@ -137,6 +139,44 @@ export function handler(event, context, callback) {
   ) {
     this._steps.push({ arn, params, type, status: "assigned" });
     return this;
+  }
+
+  /**
+   * Fans the sequence out to parallel tracks of execution. Each
+   * tuple in the array represents a different function and parameter stack.
+   *
+   * @param tuples an array of tuples, each in the format of `[arn: string, params: T}]`
+   *
+   * **Note:** each downstream execution will be passed the same `X-Correlation-Id` to keep
+   * the ability to see the full set of functions from it's origin. It will also send all
+   * functions the `X-Fan-Out: true` header which will ensure that each function will establish
+   * a `X-Child-CorrelationId` which will be unique to that child's execution but will be
+   * propagated forward if that function is part of a sequence.
+   */
+  public async fanOut<T = IDictionary>(
+    ...tuples: Array<IFanOutTuple<T>>
+  ): Promise<IFanOutResponse<T>>;
+  /**
+   * Fans the sequence out to parallel tracks of execution. Each instance
+   * of execution is sent to the _same_ serverless handler but the parameters passed in
+   * will be (or at least _can be_ different for each).
+   *
+   * @param arn the arn which is being called multiple times in parallel
+   * @param instanceParams the parameters to pass each execution of the function (which is
+   * defined by `arn`)
+   *
+   * **Note:** each downstream execution will be passed the same `X-Correlation-Id` to keep
+   * the ability to see the full set of functions from it's origin. It will also send all
+   * functions the `X-Fan-Out: true` header which will ensure that each function will establish
+   * a `X-Child-CorrelationId` which will be unique to that child's execution but will be
+   * propagated forward if that function is part of a sequence.
+   */
+  public async fanOut<T = IDictionary>(
+    arn: string,
+    instanceParams: T[]
+  ): Promise<IFanOutResponse<T>>;
+  public async fanOut<T>(...args: any[]): Promise<IFanOutResponse<T>> {
+    throw new Error("the fanOut functionality is not yet available");
   }
 
   /**

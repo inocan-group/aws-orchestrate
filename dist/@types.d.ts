@@ -6,7 +6,8 @@ import { getSecrets } from "./wrapper-fn/secrets";
 declare type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 declare type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
-import { LambdaInvocation } from "./invoke";
+import { UnconstrainedHttpHeaders } from "./invoke";
+declare type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 export declare type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 /**
  * The API Gateway's _proxy integration request_ structure with the
@@ -269,7 +270,7 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
      * **Note:** this function automatically forwards `X-Correlation-Id`
      * and any secrets that the execution function has gotten
      */
-    invoke: LambdaInvocation<T>;
+    invoke: <T = IDictionary, H = UnconstrainedHttpHeaders>(fnArn: string, request: T, additionalHeaders?: H) => Promise<InvocationResponse>;
     /**
      * Allows the handler author to _register_ a new `LambdaSequence` for execution.
      *
@@ -360,4 +361,8 @@ export declare type IOrchestratedDynamicProperty = {
 export declare type IOrchestratedProperties<T> = {
     [P in keyof T]: T[P] | IOrchestratedDynamicProperty;
 };
+export declare type IFanOutTuple<T = IDictionary> = [string, T];
+export interface IFanOutResponse<T> {
+    failures?: T[];
+}
 export {};
