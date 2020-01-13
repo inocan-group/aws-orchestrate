@@ -1,6 +1,7 @@
 import { HttpStatusCodes, isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest } from 'common-types';
 import { compress as compress$1, decompress as decompress$1 } from 'lzutf8';
 import { logger, getCorrelationId, invoke as invoke$1 } from 'aws-log';
+import { SSM } from 'aws-ssm';
 import flatten from 'lodash.flatten';
 import set from 'lodash.set';
 import { DB } from 'abstracted-admin';
@@ -537,24 +538,21 @@ var getSecrets = _async(function () {
   log.debug("Some modules requested were not found locally, requesting from SSM.", {
     modules: mods
   });
-  return _await(import('aws-ssm'), function (_temp) {
-    var SSM = _temp.SSM;
-    return _await(SSM.modules(mods), function (newSecrets) {
-      mods.forEach(function (m) {
-        if (!newSecrets[m]) {
-          throw new Error("Failure to retrieve the SSM module \"".concat(m, "\""));
-        }
+  return _await(SSM.modules(mods), function (newSecrets) {
+    mods.forEach(function (m) {
+      if (!newSecrets[m]) {
+        throw new Error("Failure to retrieve the SSM module \"".concat(m, "\""));
+      }
 
-        if (Object.keys(newSecrets[m]).length === 0) {
-          log.warn("Attempt to retrieve module \"".concat(m, "\" returned but had no "));
-        }
-      });
-      log.debug("new SSM modules retrieved");
-      var secrets = Object.assign(Object.assign({}, localSecrets), newSecrets);
-      saveSecretsLocally(secrets);
-      maskLoggingForSecrets(newSecrets, log);
-      return secrets;
+      if (Object.keys(newSecrets[m]).length === 0) {
+        log.warn("Attempt to retrieve module \"".concat(m, "\" returned but had no "));
+      }
     });
+    log.debug("new SSM modules retrieved");
+    var secrets = Object.assign(Object.assign({}, localSecrets), newSecrets);
+    saveSecretsLocally(secrets);
+    maskLoggingForSecrets(newSecrets, log);
+    return secrets;
   });
 });
 var localSecrets = {};

@@ -1,6 +1,6 @@
 import { IDictionary } from "common-types";
 import { logger, ILoggerApi } from "aws-log";
-import get from "lodash.get";
+import { SSM } from "aws-ssm";
 import flatten from "lodash.flatten";
 
 let localSecrets: IDictionary = {};
@@ -69,7 +69,6 @@ export async function getSecrets(
     `Some modules requested were not found locally, requesting from SSM.`,
     { modules: mods }
   );
-  const SSM = (await import("aws-ssm")).SSM;
   const newSecrets = await SSM.modules(mods);
   mods.forEach(m => {
     if (!newSecrets[m]) {
