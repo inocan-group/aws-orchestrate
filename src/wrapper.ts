@@ -81,6 +81,8 @@ export const wrapper = function<I, O>(
     const log = logger().lambda(event, context);
     const msg = loggedMessages(log);
     const errorMeta: ErrorMeta = new ErrorMeta();
+    /** the code to use for successful requests */
+    let statusCode: number = HttpStatusCodes.Success;
     try {
       workflowStatus = "starting-try-catch";
       const { request, sequence, apiGateway, headers } = LambdaSequence.from<I>(
@@ -108,6 +110,7 @@ export const wrapper = function<I, O>(
         isDone: sequence.isDone,
         apiGateway,
         getSecrets,
+        setSuccessCode: (code: number) => (statusCode = code),
         isApiGatewayRequest: isLambdaProxyRequest(event),
         errorMgmt: errorMeta,
         invoke
@@ -167,7 +170,7 @@ export const wrapper = function<I, O>(
       workflowStatus = "returning-values";
       if (handlerContext.isApiGatewayRequest) {
         const response: IApiGatewayResponse = {
-          statusCode: HttpStatusCodes.Success,
+          statusCode,
           headers: getResponseHeaders(),
           body: typeof result === "string" ? result : JSON.stringify(result)
         };

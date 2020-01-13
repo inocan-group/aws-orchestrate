@@ -2217,6 +2217,9 @@ var wrapper = function wrapper(fn) {
     var log = awsLog.logger().lambda(event, context);
     var msg = loggedMessages(log);
     var errorMeta = new ErrorMeta();
+    /** the code to use for successful requests */
+
+    var statusCode = commonTypes.HttpStatusCodes.Success;
     return _catch(function () {
       workflowStatus = "starting-try-catch";
 
@@ -2248,6 +2251,9 @@ var wrapper = function wrapper(fn) {
         isDone: sequence.isDone,
         apiGateway: apiGateway,
         getSecrets: getSecrets,
+        setSuccessCode: function setSuccessCode(code) {
+          return statusCode = code;
+        },
         isApiGatewayRequest: commonTypes.isLambdaProxyRequest(event),
         errorMgmt: errorMeta,
         invoke: invoke$1
@@ -2316,7 +2322,7 @@ var wrapper = function wrapper(fn) {
 
               if (handlerContext.isApiGatewayRequest) {
                 var response = {
-                  statusCode: commonTypes.HttpStatusCodes.Success,
+                  statusCode: statusCode,
                   headers: getResponseHeaders(),
                   body: typeof result === "string" ? result : JSON.stringify(result)
                 };
