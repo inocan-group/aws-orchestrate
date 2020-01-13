@@ -28,6 +28,7 @@ var lzutf8 = require('lzutf8');
 var awsLog = require('aws-log');
 var flatten = _interopDefault(require('lodash.flatten'));
 var set = _interopDefault(require('lodash.set'));
+var abstractedAdmin = require('abstracted-admin');
 var get = _interopDefault(require('lodash.get'));
 
 function _typeof(obj) {
@@ -886,11 +887,8 @@ var database = _async$2(function (config) {
           }();
         }
       }, function (_result2) {
-        return  _await$1(new Promise(function (resolve) { resolve(_interopNamespace(require('abstracted-admin'))); }), function (_temp) {
-          var DB = _temp.DB;
-          return _await$1(DB.connect(config), function (_DB$connect) {
-            _database = _DB$connect;
-          });
+        return  _await$1(abstractedAdmin.DB.connect(config), function (_DB$connect) {
+          _database = _DB$connect;
         });
       });
     }
@@ -2253,7 +2251,9 @@ var wrapper = function wrapper(fn) {
         headers: headers,
         setHeaders: setFnHeaders,
         setContentType: setContentType,
-        database: database,
+        database: function database$1(config) {
+          return database(config);
+        },
         sequence: sequence,
         registerSequence: registerSequence$1,
         isSequence: sequence.isSequence,
@@ -2262,19 +2262,6 @@ var wrapper = function wrapper(fn) {
         getSecrets: getSecrets,
         isApiGatewayRequest: commonTypes.isLambdaProxyRequest(event),
         errorMgmt: errorMeta,
-
-        /**
-         * In most cases you'll want to invoke other functions as
-         * part of `LambdaSequence` (e.g., `sequence.add()` or `sequence.fanOut()`)
-         * but if you have a good reason to not pass execution this way then
-         * the more basic "invoke" command is available.
-         *
-         * **Note:** that you can use abbreviated ARN names if the property environment
-         * variables are set.
-         *
-         * **Note:** also "secrets" accumulated to this point in a sequence will be passed
-         * forward to the invoked function; as will the _correlation id_.
-         */
         invoke: invoke$1
       }); //#endregion
       //#region CALL the HANDLER FUNCTION

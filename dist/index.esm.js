@@ -3,6 +3,7 @@ import { compress as compress$1, decompress as decompress$1 } from 'lzutf8';
 import { logger, getCorrelationId, invoke as invoke$1 } from 'aws-log';
 import flatten from 'lodash.flatten';
 import set from 'lodash.set';
+import { DB } from 'abstracted-admin';
 import get from 'lodash.get';
 
 function _typeof(obj) {
@@ -861,11 +862,8 @@ var database = _async$2(function (config) {
           }();
         }
       }, function (_result2) {
-        return  _await$1(import('abstracted-admin'), function (_temp) {
-          var DB = _temp.DB;
-          return _await$1(DB.connect(config), function (_DB$connect) {
-            _database = _DB$connect;
-          });
+        return  _await$1(DB.connect(config), function (_DB$connect) {
+          _database = _DB$connect;
         });
       });
     }
@@ -2228,7 +2226,9 @@ var wrapper = function wrapper(fn) {
         headers: headers,
         setHeaders: setFnHeaders,
         setContentType: setContentType,
-        database: database,
+        database: function database$1(config) {
+          return database(config);
+        },
         sequence: sequence,
         registerSequence: registerSequence$1,
         isSequence: sequence.isSequence,
@@ -2237,19 +2237,6 @@ var wrapper = function wrapper(fn) {
         getSecrets: getSecrets,
         isApiGatewayRequest: isLambdaProxyRequest(event),
         errorMgmt: errorMeta,
-
-        /**
-         * In most cases you'll want to invoke other functions as
-         * part of `LambdaSequence` (e.g., `sequence.add()` or `sequence.fanOut()`)
-         * but if you have a good reason to not pass execution this way then
-         * the more basic "invoke" command is available.
-         *
-         * **Note:** that you can use abbreviated ARN names if the property environment
-         * variables are set.
-         *
-         * **Note:** also "secrets" accumulated to this point in a sequence will be passed
-         * forward to the invoked function; as will the _correlation id_.
-         */
         invoke: invoke$2
       }); //#endregion
       //#region CALL the HANDLER FUNCTION

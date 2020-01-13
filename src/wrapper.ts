@@ -40,6 +40,7 @@ import { invoke as invokeHigherOrder } from "./invoke";
 import { invoke as invokeLambda } from "aws-log";
 import { ISequenceTrackerStatus } from "./exported-functions/SequenceTracker";
 import get from "lodash.get";
+type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 
 /**
  * **wrapper**
@@ -100,7 +101,7 @@ export const wrapper = function<I, O>(
         headers,
         setHeaders: setFnHeaders,
         setContentType,
-        database,
+        database: (config?: IFirebaseAdminConfig) => database(config),
         sequence,
         registerSequence,
         isSequence: sequence.isSequence,
@@ -109,18 +110,6 @@ export const wrapper = function<I, O>(
         getSecrets,
         isApiGatewayRequest: isLambdaProxyRequest(event),
         errorMgmt: errorMeta,
-        /**
-         * In most cases you'll want to invoke other functions as
-         * part of `LambdaSequence` (e.g., `sequence.add()` or `sequence.fanOut()`)
-         * but if you have a good reason to not pass execution this way then
-         * the more basic "invoke" command is available.
-         *
-         * **Note:** that you can use abbreviated ARN names if the property environment
-         * variables are set.
-         *
-         * **Note:** also "secrets" accumulated to this point in a sequence will be passed
-         * forward to the invoked function; as will the _correlation id_.
-         */
         invoke
       };
       //#endregion

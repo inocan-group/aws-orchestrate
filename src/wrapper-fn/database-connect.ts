@@ -1,7 +1,9 @@
 import { getSecrets } from "./secrets";
 import { logger } from "aws-log";
+import { DB } from "abstracted-admin";
 
-let _database: import("abstracted-admin").DB;
+let _database: DB;
+
 type IFirebaseConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 
 /**
@@ -49,7 +51,6 @@ export const database = async (config?: IFirebaseConfig) => {
       }
     }
 
-    const DB = (await import("abstracted-admin")).DB;
     _database = await DB.connect(config);
   }
 
