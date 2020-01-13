@@ -4,28 +4,10 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-function _interopNamespace(e) {
-  if (e && e.__esModule) { return e; } else {
-    var n = {};
-    if (e) {
-      Object.keys(e).forEach(function (k) {
-        var d = Object.getOwnPropertyDescriptor(e, k);
-        Object.defineProperty(n, k, d.get ? d : {
-          enumerable: true,
-          get: function () {
-            return e[k];
-          }
-        });
-      });
-    }
-    n['default'] = e;
-    return n;
-  }
-}
-
 var commonTypes = require('common-types');
 var lzutf8 = require('lzutf8');
 var awsLog = require('aws-log');
+var awsSsm = require('aws-ssm');
 var flatten = _interopDefault(require('lodash.flatten'));
 var set = _interopDefault(require('lodash.set'));
 var abstractedAdmin = require('abstracted-admin');
@@ -562,24 +544,21 @@ var getSecrets = _async(function () {
   log.debug("Some modules requested were not found locally, requesting from SSM.", {
     modules: mods
   });
-  return _await(new Promise(function (resolve) { resolve(_interopNamespace(require('aws-ssm'))); }), function (_temp) {
-    var SSM = _temp.SSM;
-    return _await(SSM.modules(mods), function (newSecrets) {
-      mods.forEach(function (m) {
-        if (!newSecrets[m]) {
-          throw new Error("Failure to retrieve the SSM module \"".concat(m, "\""));
-        }
+  return _await(awsSsm.SSM.modules(mods), function (newSecrets) {
+    mods.forEach(function (m) {
+      if (!newSecrets[m]) {
+        throw new Error("Failure to retrieve the SSM module \"".concat(m, "\""));
+      }
 
-        if (Object.keys(newSecrets[m]).length === 0) {
-          log.warn("Attempt to retrieve module \"".concat(m, "\" returned but had no "));
-        }
-      });
-      log.debug("new SSM modules retrieved");
-      var secrets = Object.assign(Object.assign({}, localSecrets), newSecrets);
-      saveSecretsLocally(secrets);
-      maskLoggingForSecrets(newSecrets, log);
-      return secrets;
+      if (Object.keys(newSecrets[m]).length === 0) {
+        log.warn("Attempt to retrieve module \"".concat(m, "\" returned but had no "));
+      }
     });
+    log.debug("new SSM modules retrieved");
+    var secrets = Object.assign(Object.assign({}, localSecrets), newSecrets);
+    saveSecretsLocally(secrets);
+    maskLoggingForSecrets(newSecrets, log);
+    return secrets;
   });
 });
 var localSecrets = {};
@@ -2238,6 +2217,9 @@ var wrapper = function wrapper(fn) {
     var log = awsLog.logger().lambda(event, context);
     var msg = loggedMessages(log);
     var errorMeta = new ErrorMeta();
+    /** the code to use for successful requests */
+
+    var statusCode = commonTypes.HttpStatusCodes.Success;
     return _catch(function () {
       workflowStatus = "starting-try-catch";
 
@@ -2269,6 +2251,9 @@ var wrapper = function wrapper(fn) {
         isDone: sequence.isDone,
         apiGateway: apiGateway,
         getSecrets: getSecrets,
+        setSuccessCode: function setSuccessCode(code) {
+          return statusCode = code;
+        },
         isApiGatewayRequest: commonTypes.isLambdaProxyRequest(event),
         errorMgmt: errorMeta,
         invoke: invoke$1
@@ -2337,7 +2322,7 @@ var wrapper = function wrapper(fn) {
 
               if (handlerContext.isApiGatewayRequest) {
                 var response = {
-                  statusCode: commonTypes.HttpStatusCodes.Success,
+                  statusCode: statusCode,
                   headers: getResponseHeaders(),
                   body: typeof result === "string" ? result : JSON.stringify(result)
                 };
