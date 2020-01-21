@@ -2213,7 +2213,7 @@ var wrapper = function wrapper(fn) {
     var errorMeta = new ErrorMeta();
     /** the code to use for successful requests */
 
-    var statusCode = HttpStatusCodes.Success;
+    var statusCode;
     return _catch(function () {
       workflowStatus = "starting-try-catch";
 
@@ -2316,7 +2316,7 @@ var wrapper = function wrapper(fn) {
 
               if (handlerContext.isApiGatewayRequest) {
                 var response = {
-                  statusCode: statusCode,
+                  statusCode: statusCode ? statusCode : result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
                   headers: getResponseHeaders(),
                   body: typeof result === "string" ? result : JSON.stringify(result)
                 };

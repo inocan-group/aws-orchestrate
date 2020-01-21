@@ -284,7 +284,7 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
   getSecrets: typeof getSecrets;
   /**
    * Allows the status code of a _successful_ handler execution to be stated; if
-   * left off then it will return `200`.
+   * left off then it will return `200` (or `204` if no content is returned)
    */
   setSuccessCode: (code: number) => void;
   /**
