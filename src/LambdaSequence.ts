@@ -2,7 +2,8 @@ import {
   IAWSLambdaProxyIntegrationRequest,
   IDictionary,
   isLambdaProxyRequest,
-  getBodyFromPossibleLambdaProxyRequest
+  getBodyFromPossibleLambdaProxyRequest,
+  arn
 } from "common-types";
 
 import {
@@ -17,7 +18,9 @@ import {
   IOrchestratedProperties,
   IOrchestrationRequestTypes,
   IFanOutTuple,
-  IFanOutResponse
+  IFanOutResponse,
+  OrchestratedErrorHandler,
+  OrchestratedCondition
 } from "./@types";
 import { isOrchestratedRequest } from "./sequences/isOrchestratedMessageBody";
 import {
@@ -27,7 +30,7 @@ import {
   buildOrchestratedRequest
 } from "./sequences";
 import get from "lodash.get";
-import { logger as awsLogger, logger, invoke as invokeLambda } from "aws-log";
+import { logger, invoke as invokeLambda } from "aws-log";
 
 export class LambdaSequence {
   /**
@@ -142,6 +145,48 @@ export function handler(event, context, callback) {
   }
 
   /**
+   * Passes execution to an AWS handler function when an error condition is encountered
+   * in the prior Task step. This function will be treated as being a part of the sequence 
+   * but it will become the last step in the sequence as the remaining steps (if they exist) 
+   * will _not_ be executed.
+   * 
+   * @param arn the AWS ARN identifier for the function; this _can_ be a shortened name if 
+   * the appropriate ENV variables are set
+   * 
+   * @param params the handler will always get an `error` property forwarded onto the function 
+   * but you may state additional parameters you want to pass to the downstream handler function
+   */
+  public onError<T extends IDictionary = IDictionary>(arn: arn, params?: Partial<IOrchestratedProperties<T>>): Promise<false>;
+  /**
+   * Run a local -- _local to the erroring serverless function_ -- handler function to determine whether the
+   * sequence should continue.
+   * 
+   * @param handler the handler function 
+   */
+  public onError<T extends Error = Error>(handler: OrchestratedErrorHandler): Promise<boolean>;
+  /**
+   * Assigns error handling to last added **Task** in the sequence
+   */
+  public onError<T>(...args: any[]): Promise<boolean> {
+    //
+    return
+  }
+
+  /**
+   * Adds a Task to the sequence who's execution is conditional on the evaluation
+   * of a supplied function (which is run directly prior to invocation if you're
+   * using the `wrapper` function for your **handler**).
+   * 
+   * @param fn the conditional evaluation function
+   * @param arn the AWS ARN for the function to call (conditionally); you may use shortcut ARN
+   * names so long as you've set the proper ENV variables.
+   * @param params the _static_ or _dynamic_ values you want passed to this function
+   */
+  public onCondition<T extends IDictionary = IDictionary>(fn: OrchestratedCondition, arn: arn, params: Partial<IOrchestratedProperties<T>>) {
+    this._steps.push({ arn, params, onCondition: fn, type: "task", status: "assigned" });
+  }
+
+  /**
    * Fans the sequence out to parallel tracks of execution. Each
    * tuple in the array represents a different function and parameter stack.
    *
@@ -153,9 +198,9 @@ export function handler(event, context, callback) {
    * a `X-Child-CorrelationId` which will be unique to that child's execution but will be
    * propagated forward if that function is part of a sequence.
    */
-  public async fanOut<T = IDictionary>(
+  public fanOut<T = IDictionary>(
     ...tuples: Array<IFanOutTuple<T>>
-  ): Promise<IFanOutResponse<T>>;
+  ): IFanOutResponse<T>;
   /**
    * Fans the sequence out to parallel tracks of execution. Each instance
    * of execution is sent to the _same_ serverless handler but the parameters passed in
@@ -171,11 +216,11 @@ export function handler(event, context, callback) {
    * a `X-Child-CorrelationId` which will be unique to that child's execution but will be
    * propagated forward if that function is part of a sequence.
    */
-  public async fanOut<T = IDictionary>(
+  public fanOut<T = IDictionary>(
     arn: string,
     instanceParams: T[]
-  ): Promise<IFanOutResponse<T>>;
-  public async fanOut<T>(...args: any[]): Promise<IFanOutResponse<T>> {
+  ): IFanOutResponse<T>;
+  public fanOut<T>(...args: any[]): IFanOutResponse<T> {
     throw new Error("the fanOut functionality is not yet available");
   }
 
@@ -267,11 +312,11 @@ export function handler(event, context, callback) {
       request =
         typeof event === "object" && event._sequence
           ? (Object.keys(event).reduce((props: T, prop: keyof T & string) => {
-              if (prop !== "_sequence") {
-                props[prop] = event[prop];
-              }
-              return props;
-            }, {}) as T)
+            if (prop !== "_sequence") {
+              props[prop] = event[prop];
+            }
+            return props;
+          }, {}) as T)
           : event;
     }
 
@@ -282,7 +327,7 @@ export function handler(event, context, callback) {
       typeof request === "object"
         ? ({ ...activeFn, ...request } as T)
         : // TODO: This may have to deal with the case where request type is a non-object but there ARE props from `activeFn` which are needed
-          request;
+        request;
 
     return {
       request: request as T,
@@ -508,7 +553,7 @@ export function handler(event, context, callback) {
           if (typeof value === undefined) {
             throw new Error(
               `The property "${key}" was set as a dynamic property by the Orchestrator but it was dependant on getting a value from ${
-                (fn.params as IOrchestratedProperties<T>)[key]
+              (fn.params as IOrchestratedProperties<T>)[key]
               } which could not be found.`
             );
           }

@@ -94,17 +94,21 @@ module.exports = {
     },
     nav: [
       {
-        text: "wrapper",
+        text: "Handler Wrapper",
         link: "/wrapper"
       },
       {
-        text: "sequence",
-        link: "/lambda-sequence"
+        text: "Sequences",
+        link: "/sequence"
       },
       {
-        text: "transaction",
+        text: "HTTP Transactions",
         link: "/transaction"
       }
+    ],
+    sidebar: [
+      '/wrapper',
+      '/sequence'
     ]
   }
 };
