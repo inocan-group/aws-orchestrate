@@ -12,13 +12,6 @@ let head = [
       name: "apple-mobile-web-app-capable",
       content: true
     }
-  ],
-  [
-    "meta",
-    {
-      name: "robots",
-      content: "noindex,nofollow"
-    }
   ]
 ];
 const appleIcons = [

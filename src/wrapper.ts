@@ -54,12 +54,12 @@ type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
  * @param context the contextual props and functions which AWS provides plus additional
  * features brought in by the wrapper function
  */
-export const wrapper = function <I, O>(
+export const wrapper = function<I, O>(
   fn: (req: I, context: IHandlerContext) => Promise<O>,
   options: IWrapperOptions = {}
 ) {
   /** this is the core Lambda event which the wrapper takes as an input */
-  return async function (
+  return async function(
     event: IOrchestrationRequestTypes<I>,
     context: IAWSLambaContext
   ): Promise<O | IApiGatewayResponse | IApiGatewayErrorResponse> {
@@ -85,7 +85,6 @@ export const wrapper = function <I, O>(
     const msg = loggedMessages(log);
     const errorMeta: ErrorMeta = new ErrorMeta();
 
-
     /** the code to use for successful requests */
     let statusCode: number;
     workflowStatus = "unboxing-from-prior-function";
@@ -105,8 +104,10 @@ export const wrapper = function <I, O>(
       const status = sequenceStatus(log.getCorrelationId());
       const registerSequence = register(log, context);
       const invoke = invokeHigherOrder(sequence);
+      const claims = apiGateway?.requestContext?.authorizer?.customClaims;
       const handlerContext: IHandlerContext<I> = {
         ...context,
+        claims: claims ? JSON.parse(claims) : {},
         log,
         headers,
         setHeaders: setFnHeaders,
@@ -181,8 +182,8 @@ export const wrapper = function <I, O>(
           statusCode: statusCode
             ? statusCode
             : result
-              ? HttpStatusCodes.Success
-              : HttpStatusCodes.NoContent,
+            ? HttpStatusCodes.Success
+            : HttpStatusCodes.NoContent,
           headers: getResponseHeaders(),
           body: typeof result === "string" ? result : JSON.stringify(result)
         };
@@ -202,7 +203,6 @@ export const wrapper = function <I, O>(
         const found = findError(e, errorMeta);
         const isApiGatewayRequest: boolean = isLambdaProxyRequest(event);
 
-
         if (found) {
           if (found.handling.callback) {
             const resolvedLocally = found.handling.callback(e);
@@ -217,7 +217,10 @@ export const wrapper = function <I, O>(
               }
             } else {
               // Known Error was resolved
-              log.info(`There was an error which was resolved by a locally defined error handler`, { error: e })
+              log.info(
+                `There was an error which was resolved by a locally defined error handler`,
+                { error: e }
+              );
             }
           }
 
@@ -256,9 +259,9 @@ export const wrapper = function <I, O>(
                 if (passed === true) {
                   log.debug(
                     `The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${
-                    result
-                      ? HttpStatusCodes.Accepted
-                      : HttpStatusCodes.NoContent
+                      result
+                        ? HttpStatusCodes.Accepted
+                        : HttpStatusCodes.NoContent
                     } ].`
                   );
                   if (isApiGatewayRequest) {
@@ -284,7 +287,7 @@ export const wrapper = function <I, O>(
                     new UnhandledError(errorMeta.defaultErrorCode, e)
                   );
                 } else {
-                  throw new UnhandledError(errorMeta.defaultErrorCode, e)
+                  throw new UnhandledError(errorMeta.defaultErrorCode, e);
                 }
               }
               break;
@@ -349,21 +352,24 @@ export const wrapper = function <I, O>(
          * error handling can get involved in the error processing flow
          */
 
-        const conductorErrorHandler: OrchestratedErrorHandler | false = sequence.activeFn
-          && sequence.activeFn.onError
-          && typeof sequence.activeFn.onError === 'function'
-          ? sequence.activeFn.onError as OrchestratedErrorHandler
-          : false;
-        const resolvedByConductor = async () => conductorErrorHandler ? conductorErrorHandler(e) : false;
+        const conductorErrorHandler: OrchestratedErrorHandler | false =
+          sequence.activeFn &&
+          sequence.activeFn.onError &&
+          typeof sequence.activeFn.onError === "function"
+            ? (sequence.activeFn.onError as OrchestratedErrorHandler)
+            : false;
+        const resolvedByConductor = async () =>
+          conductorErrorHandler ? conductorErrorHandler(e) : false;
 
-        const forwardedByConductor: OrchestratedErrorForwarder | false = sequence.activeFn
-          && sequence.activeFn.onError
-          && Array.isArray(sequence.activeFn.onError)
-          ? sequence.activeFn.onError as OrchestratedErrorForwarder
-          : false
+        const forwardedByConductor: OrchestratedErrorForwarder | false =
+          sequence.activeFn &&
+          sequence.activeFn.onError &&
+          Array.isArray(sequence.activeFn.onError)
+            ? (sequence.activeFn.onError as OrchestratedErrorForwarder)
+            : false;
 
         if (forwardedByConductor) {
-          await invokeLambda(...forwardedByConductor)
+          await invokeLambda(...forwardedByConductor);
         } else {
           // Catch errors in error handlers
           if (

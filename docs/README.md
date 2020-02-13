@@ -17,5 +17,3 @@ features:
 
 footer: MIT Licensed | Copyright © Inocan Group
 ---
-
-
