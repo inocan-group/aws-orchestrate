@@ -12,13 +12,6 @@ let head = [
       name: "apple-mobile-web-app-capable",
       content: true
     }
-  ],
-  [
-    "meta",
-    {
-      name: "robots",
-      content: "noindex,nofollow"
-    }
   ]
 ];
 const appleIcons = [
@@ -94,17 +87,21 @@ module.exports = {
     },
     nav: [
       {
-        text: "wrapper",
+        text: "Handler Wrapper",
         link: "/wrapper"
       },
       {
-        text: "sequence",
-        link: "/lambda-sequence"
+        text: "Sequences",
+        link: "/sequence"
       },
       {
-        text: "transaction",
+        text: "HTTP Transactions",
         link: "/transaction"
       }
+    ],
+    sidebar: [
+      '/wrapper',
+      '/sequence'
     ]
   }
 };

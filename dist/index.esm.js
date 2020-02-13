@@ -1030,14 +1030,42 @@ function () {
 
       return this;
     }
+    /**
+     * Assigns error handling to last added **Task** in the sequence
+     */
+
+  }, {
+    key: "onError",
+    value: function onError() {
+      //
+      return;
+    }
+    /**
+     * Adds a Task to the sequence who's execution is conditional on the evaluation
+     * of a supplied function (which is run directly prior to invocation if you're
+     * using the `wrapper` function for your **handler**).
+     *
+     * @param fn the conditional evaluation function
+     * @param arn the AWS ARN for the function to call (conditionally); you may use shortcut ARN
+     * names so long as you've set the proper ENV variables.
+     * @param params the _static_ or _dynamic_ values you want passed to this function
+     */
+
+  }, {
+    key: "onCondition",
+    value: function onCondition(fn, arn, params) {
+      this._steps.push({
+        arn: arn,
+        params: params,
+        onCondition: fn,
+        type: "task",
+        status: "assigned"
+      });
+    }
   }, {
     key: "fanOut",
     value: function fanOut() {
-      try {
-        throw new Error("the fanOut functionality is not yet available");
-      } catch (e) {
-        return Promise.reject(e);
-      }
+      throw new Error("the fanOut functionality is not yet available");
     }
     /**
      * **next**
@@ -1943,17 +1971,17 @@ function _invoke$1(body, then) {
 
 function _empty() {}
 
+function _awaitIgnored(value, direct) {
+  if (!direct) {
+    return value && value.then ? value.then(_empty) : Promise.resolve();
+  }
+}
+
 function _invokeIgnored(body) {
   var result = body();
 
   if (result && result.then) {
     return result.then(_empty);
-  }
-}
-
-function _awaitIgnored(value, direct) {
-  if (!direct) {
-    return value && value.then ? value.then(_empty) : Promise.resolve();
   }
 }
 
@@ -2204,6 +2232,8 @@ var wrapper = function wrapper(fn) {
 
   /** this is the core Lambda event which the wrapper takes as an input */
   return _async$3(function (event, context) {
+    var _a, _b, _c;
+
     var result;
     var workflowStatus;
     workflowStatus = "initializing";
@@ -2213,16 +2243,17 @@ var wrapper = function wrapper(fn) {
     var errorMeta = new ErrorMeta();
     /** the code to use for successful requests */
 
-    var statusCode = HttpStatusCodes.Success;
+    var statusCode;
+    workflowStatus = "unboxing-from-prior-function";
+
+    var _LambdaSequence$from = LambdaSequence.from(event),
+        request = _LambdaSequence$from.request,
+        sequence = _LambdaSequence$from.sequence,
+        apiGateway = _LambdaSequence$from.apiGateway,
+        headers = _LambdaSequence$from.headers;
+
     return _catch(function () {
       workflowStatus = "starting-try-catch";
-
-      var _LambdaSequence$from = LambdaSequence.from(event),
-          request = _LambdaSequence$from.request,
-          sequence = _LambdaSequence$from.sequence,
-          apiGateway = _LambdaSequence$from.apiGateway,
-          headers = _LambdaSequence$from.headers;
-
       msg.start(request, headers, context, sequence, apiGateway);
       saveSecretHeaders(headers, log);
       maskLoggingForSecrets(getLocalSecrets(), log); //#region PREP
@@ -2231,7 +2262,9 @@ var wrapper = function wrapper(fn) {
       var status = sequenceStatus(log.getCorrelationId());
       var registerSequence$1 = registerSequence(log, context);
       var invoke$2 = invoke(sequence);
+      var claims = (_c = (_b = (_a = apiGateway) === null || _a === void 0 ? void 0 : _a.requestContext) === null || _b === void 0 ? void 0 : _b.authorizer) === null || _c === void 0 ? void 0 : _c.customClaims;
       var handlerContext = Object.assign(Object.assign({}, context), {
+        claims: claims ? JSON.parse(claims) : {},
         log: log,
         headers: headers,
         setHeaders: setFnHeaders,
@@ -2316,7 +2349,7 @@ var wrapper = function wrapper(fn) {
 
               if (handlerContext.isApiGatewayRequest) {
                 var response = {
-                  statusCode: statusCode,
+                  statusCode: statusCode ? statusCode : result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
                   headers: getResponseHeaders(),
                   body: typeof result === "string" ? result : JSON.stringify(result)
                 };
@@ -2342,26 +2375,30 @@ var wrapper = function wrapper(fn) {
         return function () {
           if (found) {
             if (found.handling.callback) {
-              var resolved = found.handling.callback(e);
+              var resolvedLocally = found.handling.callback(e);
 
-              if (!resolved) {
+              if (!resolvedLocally) {
+                // Unresolved Known Error!
                 if (isApiGatewayRequest) {
                   return convertToApiGatewayError(new HandledError(found.code, e, log.getContext()));
                 } else {
-                  console.log(e.name, e.code);
                   throw new HandledError(found.code, e, log.getContext());
                 }
+              } else {
+                // Known Error was resolved
+                log.info("There was an error which was resolved by a locally defined error handler", {
+                  error: e
+                });
               }
             }
 
             return _invokeIgnored(function () {
               if (found.handling.forwardTo) {
-                return _await$2(invoke$1(found.handling.forwardTo, e), function () {
-                  log.info("Forwarded error to the function \"".concat(found.handling.forwardTo, "\""), {
-                    error: e,
-                    forwardTo: found.handling.forwardTo
-                  });
+                log.info("Forwarding error to the function \"".concat(found.handling.forwardTo, "\""), {
+                  error: e,
+                  forwardTo: found.handling.forwardTo
                 });
+                return _awaitIgnored(invoke$1(found.handling.forwardTo, e));
               }
             });
           } else {
@@ -2389,11 +2426,11 @@ var wrapper = function wrapper(fn) {
                 var passed = handling.defaultHandlerFn(e);
 
                 if (passed === true) {
-                  log.debug("The error was fully handled by the handling function/callback; resulting in a successful condition [ ".concat(result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent, " ]."));
+                  log.debug("The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ".concat(result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent, " ]."));
 
                   if (isApiGatewayRequest) {
                     return {
-                      statusCode: result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
+                      statusCode: result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent,
                       headers: getResponseHeaders(),
                       body: result ? JSON.stringify(result) : ""
                     };
@@ -2407,6 +2444,8 @@ var wrapper = function wrapper(fn) {
                 // handler threw an error
                 if (isApiGatewayRequest) {
                   return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
+                } else {
+                  throw new UnhandledError(errorMeta.defaultErrorCode, e);
                 }
               }
             }], [function () {
@@ -2460,13 +2499,26 @@ var wrapper = function wrapper(fn) {
             }]]);
           }
         }();
-      }, function (eOfE) {
-        // Catch errors in error handlers
-        if (eOfE.type === "unhandled-error" || eOfE.type === "handled-error" || eOfE.type === "default-error") {
-          throw new RethrowError(eOfE);
-        }
+      }, function (errorOfError) {
+        /**
+         * All errors end up here and it is the location where conductor-based
+         * error handling can get involved in the error processing flow
+         */
+        var conductorErrorHandler = sequence.activeFn && sequence.activeFn.onError && typeof sequence.activeFn.onError === "function" ? sequence.activeFn.onError : false;
 
-        throw new ErrorWithinError(e, eOfE);
+        var forwardedByConductor = sequence.activeFn && sequence.activeFn.onError && Array.isArray(sequence.activeFn.onError) ? sequence.activeFn.onError : false;
+        return function () {
+          if (forwardedByConductor) {
+            return _awaitIgnored(invoke$1.apply(void 0, _toConsumableArray(forwardedByConductor)));
+          } else {
+            // Catch errors in error handlers
+            if (errorOfError.type === "unhandled-error" || errorOfError.type === "handled-error" || errorOfError.type === "default-error") {
+              throw new RethrowError(errorOfError);
+            }
+
+            throw new ErrorWithinError(e, errorOfError);
+          }
+        }();
       });
     });
   }); //#endregion

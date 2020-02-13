@@ -5,6 +5,7 @@ import { LambdaSequence } from "../src/LambdaSequence";
 import { HandledError } from "../src/errors/HandledError";
 import { UnhandledError } from "../src/errors/UnhandledError";
 import { DEFAULT_ERROR_CODE } from "../src/errors/ErrorMeta";
+import { HttpStatusCodes } from "common-types";
 
 interface IRequest {
   foo: string;

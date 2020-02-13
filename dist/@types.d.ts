@@ -142,9 +142,28 @@ export declare type IOrchestrationRequestTypes<T> = IOrchestratedRequest<T> | IB
  */
 export interface ILambdaSequenceStep<T = IDictionary> {
     arn: string;
+    /**
+     * Dynamic or static value references to fill out the request object
+     * for consuming **handler** functions
+     */
     params: IOrchestratedProperties<T>;
     type: ILambdaFunctionType;
-    status: "assigned" | "active" | "completed";
+    status: "assigned" | "active" | "completed" | "skipped";
+    /**
+     * if error handling is passed in as part of the sequence, the wrapper
+     * function will ensure that these error handlers are applied before handing
+     * execution control to the consuming **handler** function.
+     */
+    onError?: OrchestratedErrorHandler | [arn, IDictionary & {
+        error: Error;
+    }];
+    /**
+     * Tasks can be assigned by the conductor to be _conditional_ and therefore
+     * when the `LambdaSequence.next()` function is evaluated by the `wrapper`, it will
+     * evaluate the next set of functions for conditions and skip over those that don't
+     * evaluate to `true`.
+     */
+    onCondition?: any;
 }
 export declare type ILambdaFunctionType = "task" | "fan-out" | "step-start" | "fan-in" | "other";
 export interface ILambaSequenceFromResponse<T> {
@@ -195,7 +214,20 @@ export interface IErrorHandlingDefault {
  * "secrets" returned.
  */
 export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
+    /**
+     * The HTTP headers variables passed in via API Gateway or forwarded along
+     * by `aws-orchestrate`.
+     */
     headers: IWrapperRequestHeaders;
+    /**
+     * The custom claims which this function received from API Gateway.
+     *
+     * **Note:** the claims property is sourced from a deeply nested property in the API Gateway
+     * request _body_ -- `apiGateway.requestContext.authorizer.customClaims` -- variables so
+     * this item is just serving as a convenience function to the conductor or HTTP event
+     * function (who is typically responsible for ).
+     */
+    claims: IDictionary;
     /**
      * The sequence which this execution is part of
      */
@@ -236,7 +268,7 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
     getSecrets: typeof getSecrets;
     /**
      * Allows the status code of a _successful_ handler execution to be stated; if
-     * left off then it will return `200`.
+     * left off then it will return `200` (or `204` if no content is returned)
      */
     setSuccessCode: (code: number) => void;
     /**
@@ -353,9 +385,9 @@ export declare type IOrchestratedDynamicProperty = {
  * look something like:
  *
  * ```typescript
- * Lambda
+ * LambdaSequence
  *  .add('firstThis')
- *  .add('thenThis')
+ *  .add<IRequestThenThis>('thenThis', { foo: 456 })
  *  .add('andNow', {
  *     title: 'something static',
  *     data: dynamic('firstThis', 'data'),
@@ -370,4 +402,10 @@ export declare type IFanOutTuple<T = IDictionary> = [string, T];
 export interface IFanOutResponse<T> {
     failures?: T[];
 }
+export declare type OrchestratedErrorHandler = <T extends Error = Error>(error: T) => Promise<boolean>;
+/**
+ * An ARN and function parameters to specify where errors should be forwarded to
+ */
+export declare type OrchestratedErrorForwarder<T extends IDictionary = IDictionary> = [arn, T];
+export declare type OrchestratedCondition = <T>(params: T, seq: LambdaSequence) => Promise<boolean>;
 export {};
