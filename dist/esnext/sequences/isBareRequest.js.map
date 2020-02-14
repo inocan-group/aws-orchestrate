@@ -1,0 +1,1 @@
+{"version":3,"file":"isBareRequest.js","sourceRoot":"","sources":["../../../src/sequences/isBareRequest.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,oBAAoB,EAAE,MAAM,cAAc,CAAC;AACpD,OAAO,EAAE,qBAAqB,EAAE,MAAM,6BAA6B,CAAC;AAEpE,MAAM,UAAU,aAAa,CAC3B,KAAoC;IAEpC,OAAO,CAAC,oBAAoB,CAAC,KAAK,CAAC,IAAI,CAAC,qBAAqB,CAAC,KAAK,CAAC;QAClE,CAAC,CAAC,IAAI;QACN,CAAC,CAAC,KAAK,CAAC;AACZ,CAAC"}
