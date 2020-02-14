@@ -72,7 +72,7 @@ exports.loggedMessages = (log) => ({
     processingError: (e, workflowStatus, isApiGateway = false) => {
         const stack = lodash_get_1.default(e, "stack") || new Error().stack;
         const errorMessage = lodash_get_1.default(e, "message", "no-message");
-        log.info(`Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}}${isApiGateway ? ", ApiGateway" : ""} ]`, {
+        log.info(`Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}${isApiGateway ? ", ApiGateway" : ""} ]`, {
             errorMessage,
             stack,
             workflowStatus

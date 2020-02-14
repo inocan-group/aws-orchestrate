@@ -200,6 +200,7 @@ export const wrapper = function<I, O>(
           if (!found.handling) {
             const err = new HandledError(found.code, e, log.getContext());
             if (isApiGatewayRequest) {
+              log.debug("converting to API Gateway Error", { err, converted: convertToApiGatewayError(err) });
               convertToApiGatewayError(err);
             } else {
               throw err;

@@ -92,7 +92,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
     const stack = get(e, "stack") || new Error().stack;
     const errorMessage = get(e, "message", "no-message");
     log.info(
-      `Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}}${
+      `Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}${
         isApiGateway ? ", ApiGateway" : ""
       } ]`,
       {

@@ -132,6 +132,7 @@ exports.wrapper = function (fn, options = {}) {
                     if (!found.handling) {
                         const err = new HandledError_1.HandledError(found.code, e, log.getContext());
                         if (isApiGatewayRequest) {
+                            log.debug("converting to API Gateway Error", { err, converted: index_2.convertToApiGatewayError(err) });
                             index_2.convertToApiGatewayError(err);
                         }
                         else {

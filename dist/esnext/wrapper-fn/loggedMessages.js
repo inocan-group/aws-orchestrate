@@ -67,7 +67,7 @@ export const loggedMessages = (log) => ({
     processingError: (e, workflowStatus, isApiGateway = false) => {
         const stack = get(e, "stack") || new Error().stack;
         const errorMessage = get(e, "message", "no-message");
-        log.info(`Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}}${isApiGateway ? ", ApiGateway" : ""} ]`, {
+        log.info(`Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}${isApiGateway ? ", ApiGateway" : ""} ]`, {
             errorMessage,
             stack,
             workflowStatus
