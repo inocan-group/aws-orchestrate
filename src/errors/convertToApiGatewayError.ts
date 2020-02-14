@@ -6,15 +6,15 @@ import { IErrorClass } from "../@types";
  * converts an `Error` (or subclass) into a error hash
  * which **API Gateway** can process.
  */
-export function convertToApiGatewayError(
-  e: IErrorClass,
-  defaultCode: number = DEFAULT_ERROR_CODE
-): IApiGatewayErrorResponse {
+export function convertToApiGatewayError(e: IErrorClass, defaultCode: number = DEFAULT_ERROR_CODE): any {
   return {
+    isBase64Encoded: false,
     headers: getResponseHeaders(),
-    errorCode: e.errorCode || e.httpStatus || defaultCode,
-    errorType: e.name || e.code || "Error",
-    errorMessage: e.message,
-    stackTrace: e.stack
+    statusCode: e.errorCode || e.httpStatus || defaultCode,
+    body: JSON.stringify({
+      errorType: e.name || e.code || "Error",
+      errorMessage: e.message,
+      stackTrace: e.stack
+    })
   };
 }

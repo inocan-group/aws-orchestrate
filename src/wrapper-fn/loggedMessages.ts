@@ -20,15 +20,11 @@ export const loggedMessages = (log: ILoggerApi) => ({
   ) {
     log.info(
       `The handler function ${get(context, "functionName")} has started.  ${
-        get(sequence, "isSequence", false)
-          ? ` [ ${log.getCorrelationId()} ].`
-          : " [ not part of sequence ]."
+        get(sequence, "isSequence", false) ? ` [ ${log.getCorrelationId()} ].` : " [ not part of sequence ]."
       }`,
       {
         request,
-        sequence: sequence
-          ? sequence.toObject()
-          : LambdaSequence.notASequence(),
+        sequence: sequence ? sequence.toObject() : LambdaSequence.notASequence(),
         headers,
         apiGateway
       }
@@ -37,20 +33,14 @@ export const loggedMessages = (log: ILoggerApi) => ({
 
   sequenceStarting() {
     const s = getNewSequence();
-    log.debug(
-      `The NEW sequence this function/conductor registered is about to be invoked`,
-      {
-        sequence: s.toObject(),
-        headersForwarded: Object.keys(getRequestHeaders() || {})
-      }
-    );
+    log.debug(`The NEW sequence this function/conductor registered is about to be invoked`, {
+      sequence: s.toObject(),
+      headersForwarded: Object.keys(getRequestHeaders() || {})
+    });
   },
 
   sequenceStarted(seqResponse: any) {
-    log.debug(
-      `The NEW sequence this function registered was successfully invoked`,
-      { seqResponse }
-    );
+    log.debug(`The NEW sequence this function registered was successfully invoked`, { seqResponse });
   },
 
   startingInvocation(arn: string, params: IDictionary) {
@@ -64,9 +54,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
   },
 
   notPartOfExistingSequence() {
-    log.debug(
-      `This function is not part of a (continuing) sequence so skipping the next() invocation code path`
-    );
+    log.debug(`This function is not part of a (continuing) sequence so skipping the next() invocation code path`);
   },
 
   notPartOfNewSequence() {
@@ -77,13 +65,10 @@ export const loggedMessages = (log: ILoggerApi) => ({
    * right before forwarding the sequence status to the `sequenceTracker` lambda
    */
   sequenceTracker: (sequenceTracker: string, workflowStatus: string) => {
-    log.info(
-      `About to send the LambdaSequence's status to the sequenceTracker [ ${sequenceTracker} ]`,
-      {
-        sequenceTracker,
-        workflowStatus
-      }
-    );
+    log.info(`About to send the LambdaSequence's status to the sequenceTracker [ ${sequenceTracker} ]`, {
+      sequenceTracker,
+      workflowStatus
+    });
   },
 
   sequenceTrackerComplete(isDone: boolean) {
@@ -103,11 +88,13 @@ export const loggedMessages = (log: ILoggerApi) => ({
   /**
    * as soon as an error is detected in the wrapper, write a log message about the error
    */
-  processingError: (e: IErrorClass, workflowStatus: string) => {
+  processingError: (e: IErrorClass, workflowStatus: string, isApiGateway: boolean = false) => {
     const stack = get(e, "stack") || new Error().stack;
     const errorMessage = get(e, "message", "no-message");
     log.info(
-      `Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}} ]`,
+      `Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}${
+        isApiGateway ? ", ApiGateway" : ""
+      } ]`,
       {
         errorMessage,
         stack,
