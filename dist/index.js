@@ -14,6 +14,8 @@ var abstractedAdmin = require('abstracted-admin');
 var get = _interopDefault(require('lodash.get'));
 
 function _typeof(obj) {
+  "@babel/helpers - typeof";
+
   if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
     _typeof = function (obj) {
       return typeof obj;
