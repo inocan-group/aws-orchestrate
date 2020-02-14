@@ -14,7 +14,7 @@ export function findError(e: Error & { code?: string }, expectedErrors: ErrorMet
       (e.code && e.code === i.identifiedBy.code) ||
       (e.name && e.name == i.identifiedBy.name) ||
       (e.message && e.message.includes(i.identifiedBy.messageContains)) ||
-      e instanceof i.identifiedBy.errorClass
+      (i.identifiedBy.errorClass && e instanceof i.identifiedBy.errorClass)
     ) {
       found = i;
     }
