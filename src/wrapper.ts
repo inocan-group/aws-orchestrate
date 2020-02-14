@@ -180,6 +180,7 @@ export const wrapper = function<I, O>(
           body: result ? (typeof result === "string" ? result : JSON.stringify(result)) : ""
         };
         msg.returnToApiGateway(result, getResponseHeaders());
+        log.debug("the response will be", response);
         return response;
       } else {
         log.debug(`Returning results to non-API Gateway caller`, { result });
@@ -304,6 +305,10 @@ export const wrapper = function<I, O>(
               //   stack: e.stack
               // });
               log.info(`the default error code is ${errorMeta.defaultErrorCode}`);
+              log.warn(
+                `the error response will look like:`,
+                convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e))
+              );
 
               if (isApiGatewayRequest) {
                 return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
