@@ -108,7 +108,7 @@ exports.wrapper = function (fn, options = {}) {
                 const response = {
                     statusCode: statusCode ? statusCode : result ? common_types_1.HttpStatusCodes.Success : common_types_1.HttpStatusCodes.NoContent,
                     headers: index_1.getResponseHeaders(),
-                    body: typeof result === "string" ? result : JSON.stringify(result)
+                    body: result ? (typeof result === "string" ? result : JSON.stringify(result)) : ""
                 };
                 msg.returnToApiGateway(result, index_1.getResponseHeaders());
                 return response;
