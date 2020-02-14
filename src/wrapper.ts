@@ -103,7 +103,7 @@ export const wrapper = function<I, O>(
       const status = sequenceStatus(log.getCorrelationId());
       const registerSequence = register(log, context);
       const invoke = invokeHigherOrder(sequence);
-      const claims: IDictionary = JSON.parse(get(apiGateway, "requestContext.authorizer.customClaims", ""));
+      const claims: IDictionary = JSON.parse(get(apiGateway, "requestContext.authorizer.customClaims", "{}"));
       const handlerContext: IHandlerContext<I> = {
         ...context,
         claims,

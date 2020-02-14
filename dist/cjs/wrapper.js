@@ -51,7 +51,7 @@ exports.wrapper = function (fn, options = {}) {
             const status = index_3.sequenceStatus(log.getCorrelationId());
             const registerSequence = index_1.registerSequence(log, context);
             const invoke = invoke_1.invoke(sequence);
-            const claims = JSON.parse(lodash_get_1.default(apiGateway, "requestContext.authorizer.customClaims", ""));
+            const claims = JSON.parse(lodash_get_1.default(apiGateway, "requestContext.authorizer.customClaims", "{}"));
             const handlerContext = Object.assign(Object.assign({}, context), { claims,
                 log,
                 headers, setHeaders: index_1.setFnHeaders, setContentType: index_1.setContentType, database: (config) => index_1.database(config), sequence,
