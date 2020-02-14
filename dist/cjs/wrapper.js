@@ -127,13 +127,11 @@ exports.wrapper = function (fn, options = {}) {
                 const isApiGatewayRequest = common_types_1.isLambdaProxyRequest(apiGateway);
                 msg.processingError(e, workflowStatus, isApiGatewayRequest);
                 const found = index_1.findError(e, errorMeta);
-                log.debug("found", { found });
                 if (found) {
                     if (!found.handling) {
                         const err = new HandledError_1.HandledError(found.code, e, log.getContext());
                         if (isApiGatewayRequest) {
-                            log.debug("converting to API Gateway Error", { err, converted: index_2.convertToApiGatewayError(err) });
-                            index_2.convertToApiGatewayError(err);
+                            return index_2.convertToApiGatewayError(err);
                         }
                         else {
                             throw err;
