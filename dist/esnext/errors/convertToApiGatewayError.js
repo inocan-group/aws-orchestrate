@@ -6,11 +6,14 @@ import { getResponseHeaders } from "../wrapper-fn/headers";
  */
 export function convertToApiGatewayError(e, defaultCode = DEFAULT_ERROR_CODE) {
     return {
+        isBase64Encoded: false,
         headers: getResponseHeaders(),
         statusCode: e.errorCode || e.httpStatus || defaultCode,
-        errorType: e.name || e.code || "Error",
-        errorMessage: e.message,
-        stackTrace: e.stack
+        body: {
+            errorType: e.name || e.code || "Error",
+            errorMessage: e.message,
+            stackTrace: e.stack
+        }
     };
 }
 //# sourceMappingURL=convertToApiGatewayError.js.map
