@@ -87,5 +87,5 @@ export declare const loggedMessages: (log: {
     /**
      * as soon as an error is detected in the wrapper, write a log message about the error
      */
-    processingError: (e: IErrorClass, workflowStatus: string) => void;
+    processingError: (e: IErrorClass, workflowStatus: string, isApiGateway?: boolean) => void;
 };

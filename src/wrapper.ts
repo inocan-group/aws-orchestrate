@@ -191,10 +191,10 @@ export const wrapper = function<I, O>(
       //#region ERROR-HANDLING
       // wrap all error handling in it's own try-catch
       try {
-        msg.processingError(e, workflowStatus);
-
-        const found = findError(e, errorMeta);
         const isApiGatewayRequest: boolean = isLambdaProxyRequest(event);
+        msg.processingError(e, workflowStatus, isApiGatewayRequest);
+        const found = findError(e, errorMeta);
+        log.debug("found", { found });
 
         if (found) {
           if (!found.handling) {

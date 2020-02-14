@@ -14,13 +14,9 @@ const lodash_get_1 = __importDefault(require("lodash.get"));
 exports.loggedMessages = (log) => ({
     /** a handler function just started executing */
     start(request, headers, context, sequence, apiGateway) {
-        log.info(`The handler function ${lodash_get_1.default(context, "functionName")} has started.  ${lodash_get_1.default(sequence, "isSequence", false)
-            ? ` [ ${log.getCorrelationId()} ].`
-            : " [ not part of sequence ]."}`, {
+        log.info(`The handler function ${lodash_get_1.default(context, "functionName")} has started.  ${lodash_get_1.default(sequence, "isSequence", false) ? ` [ ${log.getCorrelationId()} ].` : " [ not part of sequence ]."}`, {
             request,
-            sequence: sequence
-                ? sequence.toObject()
-                : index_1.LambdaSequence.notASequence(),
+            sequence: sequence ? sequence.toObject() : index_1.LambdaSequence.notASequence(),
             headers,
             apiGateway
         });
@@ -73,10 +69,10 @@ exports.loggedMessages = (log) => ({
     /**
      * as soon as an error is detected in the wrapper, write a log message about the error
      */
-    processingError: (e, workflowStatus) => {
+    processingError: (e, workflowStatus, isApiGateway = false) => {
         const stack = lodash_get_1.default(e, "stack") || new Error().stack;
         const errorMessage = lodash_get_1.default(e, "message", "no-message");
-        log.info(`Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}} ]`, {
+        log.info(`Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}}${isApiGateway ? ", ApiGateway" : ""} ]`, {
             errorMessage,
             stack,
             workflowStatus

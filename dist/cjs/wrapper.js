@@ -124,9 +124,10 @@ exports.wrapper = function (fn, options = {}) {
             //#region ERROR-HANDLING
             // wrap all error handling in it's own try-catch
             try {
-                msg.processingError(e, workflowStatus);
-                const found = index_1.findError(e, errorMeta);
                 const isApiGatewayRequest = common_types_1.isLambdaProxyRequest(event);
+                msg.processingError(e, workflowStatus, isApiGatewayRequest);
+                const found = index_1.findError(e, errorMeta);
+                log.debug("found", { found });
                 if (found) {
                     if (!found.handling) {
                         const err = new HandledError_1.HandledError(found.code, e, log.getContext());
