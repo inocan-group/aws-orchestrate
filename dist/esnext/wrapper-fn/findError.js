@@ -8,9 +8,9 @@
 export function findError(e, expectedErrors) {
     let found = false;
     expectedErrors.list.forEach(i => {
-        if (e.code === i.identifiedBy.code ||
-            e.name == i.identifiedBy.name ||
-            e.message.includes(i.identifiedBy.messageContains) ||
+        if ((e.code && e.code === i.identifiedBy.code) ||
+            (e.name && e.name == i.identifiedBy.name) ||
+            (e.message && e.message.includes(i.identifiedBy.messageContains)) ||
             e instanceof i.identifiedBy.errorClass) {
             found = i;
         }
