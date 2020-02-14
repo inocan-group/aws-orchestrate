@@ -46,10 +46,10 @@ export const wrapper = function (fn, options = {}) {
             const status = sequenceStatus(log.getCorrelationId());
             const registerSequence = register(log, context);
             const invoke = invokeHigherOrder(sequence);
-            const claims = get(apiGateway, "requestContext.authorizer.customClaims", {});
+            const claims = JSON.parse(get(apiGateway, "requestContext.authorizer.customClaims", ""));
             const handlerContext = {
                 ...context,
-                claims: claims ? JSON.parse(claims) : {},
+                claims,
                 log,
                 headers,
                 setHeaders: setFnHeaders,

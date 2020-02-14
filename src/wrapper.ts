@@ -38,8 +38,8 @@ import { invoke as invokeHigherOrder } from "./invoke";
 import { invoke as invokeLambda } from "aws-log";
 import { ISequenceTrackerStatus } from "./exported-functions/SequenceTracker";
 import get from "lodash.get";
+import { IDictionary } from "firemock";
 // import xray from "aws-xray-sdk-core";
-
 // export const segment = xray.getSegment();
 
 type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
@@ -103,10 +103,10 @@ export const wrapper = function<I, O>(
       const status = sequenceStatus(log.getCorrelationId());
       const registerSequence = register(log, context);
       const invoke = invokeHigherOrder(sequence);
-      const claims = get(apiGateway, "requestContext.authorizer.customClaims", {});
+      const claims: IDictionary = JSON.parse(get(apiGateway, "requestContext.authorizer.customClaims", ""));
       const handlerContext: IHandlerContext<I> = {
         ...context,
-        claims: claims ? JSON.parse(claims) : {},
+        claims,
         log,
         headers,
         setHeaders: setFnHeaders,
