@@ -128,7 +128,16 @@ exports.wrapper = function (fn, options = {}) {
                 const found = index_1.findError(e, errorMeta);
                 const isApiGatewayRequest = common_types_1.isLambdaProxyRequest(event);
                 if (found) {
-                    if (found.handling.callback) {
+                    if (!found.handling) {
+                        const err = new HandledError_1.HandledError(found.code, e, log.getContext());
+                        if (isApiGatewayRequest) {
+                            index_2.convertToApiGatewayError(err);
+                        }
+                        else {
+                            throw err;
+                        }
+                    }
+                    if (found.handling && found.handling.callback) {
                         const resolvedLocally = found.handling.callback(e);
                         if (!resolvedLocally) {
                             // Unresolved Known Error!
@@ -144,7 +153,7 @@ exports.wrapper = function (fn, options = {}) {
                             log.info(`There was an error which was resolved by a locally defined error handler`, { error: e });
                         }
                     }
-                    if (found.handling.forwardTo) {
+                    if (found.handling && found.handling.forwardTo) {
                         log.info(`Forwarding error to the function "${found.handling.forwardTo}"`, {
                             error: e,
                             forwardTo: found.handling.forwardTo

@@ -23,10 +23,7 @@ export type IWrapperFunction = Omit<IServerlessFunction, "handler">;
  * The API Gateway's _proxy integration request_ structure with the
  * `body` and `headers` removed
  */
-export type IApiGateway = Omit<
-  IAWSLambdaProxyIntegrationRequest,
-  "body" | "headers"
->;
+export type IApiGateway = Omit<IAWSLambdaProxyIntegrationRequest, "body" | "headers">;
 
 export interface IWrapperOptions {
   /**
@@ -55,9 +52,7 @@ export type IWrapperRequestHeaders =
   | IOrchestratedHeaders
   | IAWSLambdaProxyIntegrationRequest["headers"];
 
-export interface IOrchestratedHeaders
-  extends IHttpResponseHeaders,
-    IDictionary {
+export interface IOrchestratedHeaders extends IHttpResponseHeaders, IDictionary {
   ["X-Correlation-Id"]: string;
   /**
    * The transport for firemodel's **service account** when
@@ -89,9 +84,7 @@ export interface IServerlessFunctionSignature {
   params: IDictionary<any | IOrchestratedDynamicProperty>;
 }
 
-export type ISerializedSequence =
-  | ISerializedSequenceFalse
-  | ISerializedSequenceTrue;
+export type ISerializedSequence = ISerializedSequenceFalse | ISerializedSequenceTrue;
 
 export interface ISerializedSequenceFalse {
   isSequence: false;
@@ -200,12 +193,7 @@ export interface ILambdaSequenceStep<T = IDictionary> {
   onCondition?: any;
 }
 
-export type ILambdaFunctionType =
-  | "task"
-  | "fan-out"
-  | "step-start"
-  | "fan-in"
-  | "other";
+export type ILambdaFunctionType = "task" | "fan-out" | "step-start" | "fan-in" | "other";
 
 export interface ILambaSequenceFromResponse<T> {
   request: T;
@@ -378,10 +366,7 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
  * requires that you state explicitly the **Request**<`E`> and **Response**<`R`> types
  * as generics passed in.
  */
-export type IHandlerFunction<E, R> = (
-  event: E,
-  context: IHandlerContext<E>
-) => Promise<R>;
+export type IHandlerFunction<E, R> = (event: E, context: IHandlerContext<E>) => Promise<R>;
 
 export interface IErrorWithExtraProperties extends Error {
   [key: string]: any;
@@ -473,17 +458,9 @@ export interface IFanOutResponse<T> {
   failures?: T[];
 }
 
-export type OrchestratedErrorHandler = <T extends Error = Error>(
-  error: T
-) => Promise<boolean>;
+export type OrchestratedErrorHandler = <T extends Error = Error>(error: T) => Promise<boolean>;
 /**
  * An ARN and function parameters to specify where errors should be forwarded to
  */
-export type OrchestratedErrorForwarder<T extends IDictionary = IDictionary> = [
-  arn,
-  T
-];
-export type OrchestratedCondition = <T>(
-  params: T,
-  seq: LambdaSequence
-) => Promise<boolean>;
+export type OrchestratedErrorForwarder<T extends IDictionary = IDictionary> = [arn, T];
+export type OrchestratedCondition = <T>(params: T, seq: LambdaSequence) => Promise<boolean>;

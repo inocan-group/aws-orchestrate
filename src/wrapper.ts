@@ -197,7 +197,15 @@ export const wrapper = function<I, O>(
         const isApiGatewayRequest: boolean = isLambdaProxyRequest(event);
 
         if (found) {
-          if (found.handling.callback) {
+          if (!found.handling) {
+            const err = new HandledError(found.code, e, log.getContext());
+            if (isApiGatewayRequest) {
+              convertToApiGatewayError(err);
+            } else {
+              throw err;
+            }
+          }
+          if (found.handling && found.handling.callback) {
             const resolvedLocally = found.handling.callback(e);
             if (!resolvedLocally) {
               // Unresolved Known Error!
@@ -212,7 +220,7 @@ export const wrapper = function<I, O>(
             }
           }
 
-          if (found.handling.forwardTo) {
+          if (found.handling && found.handling.forwardTo) {
             log.info(`Forwarding error to the function "${found.handling.forwardTo}"`, {
               error: e,
               forwardTo: found.handling.forwardTo
