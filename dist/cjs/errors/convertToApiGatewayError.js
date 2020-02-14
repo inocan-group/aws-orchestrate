@@ -11,11 +11,11 @@ function convertToApiGatewayError(e, defaultCode = ErrorMeta_1.DEFAULT_ERROR_COD
         isBase64Encoded: false,
         headers: headers_1.getResponseHeaders(),
         statusCode: e.errorCode || e.httpStatus || defaultCode,
-        body: {
+        body: JSON.stringify({
             errorType: e.name || e.code || "Error",
             errorMessage: e.message,
             stackTrace: e.stack
-        }
+        })
     };
 }
 exports.convertToApiGatewayError = convertToApiGatewayError;
