@@ -108,11 +108,7 @@ exports.wrapper = function (fn, options = {}) {
             workflowStatus = "returning-values";
             if (handlerContext.isApiGatewayRequest) {
                 const response = {
-                    statusCode: statusCode
-                        ? statusCode
-                        : result
-                            ? common_types_1.HttpStatusCodes.Success
-                            : common_types_1.HttpStatusCodes.NoContent,
+                    statusCode: statusCode ? statusCode : result ? common_types_1.HttpStatusCodes.Success : common_types_1.HttpStatusCodes.NoContent,
                     headers: index_1.getResponseHeaders(),
                     body: typeof result === "string" ? result : JSON.stringify(result)
                 };
@@ -150,7 +146,10 @@ exports.wrapper = function (fn, options = {}) {
                         }
                     }
                     if (found.handling.forwardTo) {
-                        log.info(`Forwarding error to the function "${found.handling.forwardTo}"`, { error: e, forwardTo: found.handling.forwardTo });
+                        log.info(`Forwarding error to the function "${found.handling.forwardTo}"`, {
+                            error: e,
+                            forwardTo: found.handling.forwardTo
+                        });
                         await aws_log_2.invoke(found.handling.forwardTo, e);
                     }
                 }
@@ -176,14 +175,10 @@ exports.wrapper = function (fn, options = {}) {
                             try {
                                 const passed = handling.defaultHandlerFn(e);
                                 if (passed === true) {
-                                    log.debug(`The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${result
-                                        ? common_types_1.HttpStatusCodes.Accepted
-                                        : common_types_1.HttpStatusCodes.NoContent} ].`);
+                                    log.debug(`The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${result ? common_types_1.HttpStatusCodes.Accepted : common_types_1.HttpStatusCodes.NoContent} ].`);
                                     if (isApiGatewayRequest) {
                                         return {
-                                            statusCode: result
-                                                ? common_types_1.HttpStatusCodes.Accepted
-                                                : common_types_1.HttpStatusCodes.NoContent,
+                                            statusCode: result ? common_types_1.HttpStatusCodes.Accepted : common_types_1.HttpStatusCodes.NoContent,
                                             headers: index_1.getResponseHeaders(),
                                             body: result ? JSON.stringify(result) : ""
                                         };
@@ -260,15 +255,11 @@ exports.wrapper = function (fn, options = {}) {
                  * All errors end up here and it is the location where conductor-based
                  * error handling can get involved in the error processing flow
                  */
-                const conductorErrorHandler = sequence.activeFn &&
-                    sequence.activeFn.onError &&
-                    typeof sequence.activeFn.onError === "function"
+                const conductorErrorHandler = sequence.activeFn && sequence.activeFn.onError && typeof sequence.activeFn.onError === "function"
                     ? sequence.activeFn.onError
                     : false;
-                const resolvedByConductor = async () => conductorErrorHandler ? conductorErrorHandler(e) : false;
-                const forwardedByConductor = sequence.activeFn &&
-                    sequence.activeFn.onError &&
-                    Array.isArray(sequence.activeFn.onError)
+                const resolvedByConductor = async () => (conductorErrorHandler ? conductorErrorHandler(e) : false);
+                const forwardedByConductor = sequence.activeFn && sequence.activeFn.onError && Array.isArray(sequence.activeFn.onError)
                     ? sequence.activeFn.onError
                     : false;
                 if (forwardedByConductor) {

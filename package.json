@@ -33,7 +33,7 @@
     "aws-sdk": "^2.601.0",
     "aws-ssm": "^0.3.11",
     "aws-xray-sdk-core": "^2.5.0",
-    "common-types": "^1.12.18",
+    "common-types": "^1.12.25",
     "lodash.flatten": "^4.4.0",
     "lodash.get": "^4.4.2",
     "lodash.set": "^4.3.2",

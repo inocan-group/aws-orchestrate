@@ -32,11 +32,7 @@ import {
   maskLoggingForSecrets,
   getLocalSecrets
 } from "./wrapper-fn/index";
-import {
-  convertToApiGatewayError,
-  ErrorWithinError,
-  RethrowError
-} from "./errors/index";
+import { convertToApiGatewayError, ErrorWithinError, RethrowError } from "./errors/index";
 import { sequenceStatus, buildOrchestratedRequest } from "./sequences/index";
 import { invoke as invokeHigherOrder } from "./invoke";
 import { invoke as invokeLambda } from "aws-log";
@@ -92,9 +88,7 @@ export const wrapper = function<I, O>(
     /** the code to use for successful requests */
     let statusCode: number;
     workflowStatus = "unboxing-from-prior-function";
-    const { request, sequence, apiGateway, headers } = LambdaSequence.from<I>(
-      event
-    );
+    const { request, sequence, apiGateway, headers } = LambdaSequence.from<I>(event);
 
     try {
       workflowStatus = "starting-try-catch";
@@ -168,10 +162,7 @@ export const wrapper = function<I, O>(
       if (options.sequenceTracker && sequence.isSequence) {
         workflowStatus = "sequence-tracker-starting";
         msg.sequenceTracker(options.sequenceTracker, workflowStatus);
-        await invokeLambda(
-          options.sequenceTracker,
-          buildOrchestratedRequest<ISequenceTrackerStatus>(status(sequence))
-        );
+        await invokeLambda(options.sequenceTracker, buildOrchestratedRequest<ISequenceTrackerStatus>(status(sequence)));
         if (sequence.isDone) {
           msg.sequenceTrackerComplete(true);
         } else {
@@ -184,11 +175,7 @@ export const wrapper = function<I, O>(
       workflowStatus = "returning-values";
       if (handlerContext.isApiGatewayRequest) {
         const response: IApiGatewayResponse = {
-          statusCode: statusCode
-            ? statusCode
-            : result
-            ? HttpStatusCodes.Success
-            : HttpStatusCodes.NoContent,
+          statusCode: statusCode ? statusCode : result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
           headers: getResponseHeaders(),
           body: typeof result === "string" ? result : JSON.stringify(result)
         };
@@ -214,38 +201,30 @@ export const wrapper = function<I, O>(
             if (!resolvedLocally) {
               // Unresolved Known Error!
               if (isApiGatewayRequest) {
-                return convertToApiGatewayError(
-                  new HandledError(found.code, e, log.getContext())
-                );
+                return convertToApiGatewayError(new HandledError(found.code, e, log.getContext()));
               } else {
                 throw new HandledError(found.code, e, log.getContext());
               }
             } else {
               // Known Error was resolved
-              log.info(
-                `There was an error which was resolved by a locally defined error handler`,
-                { error: e }
-              );
+              log.info(`There was an error which was resolved by a locally defined error handler`, { error: e });
             }
           }
 
           if (found.handling.forwardTo) {
-            log.info(
-              `Forwarding error to the function "${found.handling.forwardTo}"`,
-              { error: e, forwardTo: found.handling.forwardTo }
-            );
+            log.info(`Forwarding error to the function "${found.handling.forwardTo}"`, {
+              error: e,
+              forwardTo: found.handling.forwardTo
+            });
             await invokeLambda(found.handling.forwardTo, e);
           }
         } else {
           //#region UNFOUND ERROR
-          log.debug(
-            `An error is being processed by the default handling mechanism`,
-            {
-              defaultHandling: get(errorMeta, "defaultHandling"),
-              errorMessage: get(e, "message", "no error messsage"),
-              stack: get(e, "stack", "no stack available")
-            }
-          );
+          log.debug(`An error is being processed by the default handling mechanism`, {
+            defaultHandling: get(errorMeta, "defaultHandling"),
+            errorMessage: get(e, "message", "no error messsage"),
+            stack: get(e, "stack", "no stack available")
+          });
           //#endregion
 
           const handling = errorMeta.defaultHandling;
@@ -264,16 +243,12 @@ export const wrapper = function<I, O>(
                 if (passed === true) {
                   log.debug(
                     `The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${
-                      result
-                        ? HttpStatusCodes.Accepted
-                        : HttpStatusCodes.NoContent
+                      result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
                     } ].`
                   );
                   if (isApiGatewayRequest) {
                     return {
-                      statusCode: result
-                        ? HttpStatusCodes.Accepted
-                        : HttpStatusCodes.NoContent,
+                      statusCode: result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent,
                       headers: getResponseHeaders(),
                       body: result ? JSON.stringify(result) : ""
                     };
@@ -288,9 +263,7 @@ export const wrapper = function<I, O>(
               } catch (e2) {
                 // handler threw an error
                 if (isApiGatewayRequest) {
-                  return convertToApiGatewayError(
-                    new UnhandledError(errorMeta.defaultErrorCode, e)
-                  );
+                  return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
                 } else {
                   throw new UnhandledError(errorMeta.defaultErrorCode, e);
                 }
@@ -300,10 +273,7 @@ export const wrapper = function<I, O>(
 
             case "error-forwarding":
               //#region error-forwarding
-              log.debug(
-                "The error will be forwarded to another function for handling",
-                { arn: handling.arn }
-              );
+              log.debug("The error will be forwarded to another function for handling", { arn: handling.arn });
               await invokeLambda(handling.arn, e);
               break;
             //#endregion
@@ -334,9 +304,7 @@ export const wrapper = function<I, O>(
                 stack: e.stack
               });
               if (isApiGatewayRequest) {
-                return convertToApiGatewayError(
-                  new UnhandledError(errorMeta.defaultErrorCode, e)
-                );
+                return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
               } else {
                 throw new UnhandledError(errorMeta.defaultErrorCode, e);
               }
@@ -358,18 +326,13 @@ export const wrapper = function<I, O>(
          */
 
         const conductorErrorHandler: OrchestratedErrorHandler | false =
-          sequence.activeFn &&
-          sequence.activeFn.onError &&
-          typeof sequence.activeFn.onError === "function"
+          sequence.activeFn && sequence.activeFn.onError && typeof sequence.activeFn.onError === "function"
             ? (sequence.activeFn.onError as OrchestratedErrorHandler)
             : false;
-        const resolvedByConductor = async () =>
-          conductorErrorHandler ? conductorErrorHandler(e) : false;
+        const resolvedByConductor = async () => (conductorErrorHandler ? conductorErrorHandler(e) : false);
 
         const forwardedByConductor: OrchestratedErrorForwarder | false =
-          sequence.activeFn &&
-          sequence.activeFn.onError &&
-          Array.isArray(sequence.activeFn.onError)
+          sequence.activeFn && sequence.activeFn.onError && Array.isArray(sequence.activeFn.onError)
             ? (sequence.activeFn.onError as OrchestratedErrorForwarder)
             : false;
 
