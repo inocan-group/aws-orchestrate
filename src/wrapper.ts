@@ -103,7 +103,7 @@ export const wrapper = function<I, O>(
       const status = sequenceStatus(log.getCorrelationId());
       const registerSequence = register(log, context);
       const invoke = invokeHigherOrder(sequence);
-      const claims = apiGateway?.requestContext?.authorizer?.customClaims;
+      const claims = get(apiGateway, "requestContext.authorizer.customClaims", {});
       const handlerContext: IHandlerContext<I> = {
         ...context,
         claims: claims ? JSON.parse(claims) : {},
@@ -298,11 +298,11 @@ export const wrapper = function<I, O>(
 
             case "default":
               //#region default
-              log.debug(`Error handled by default policy`, {
-                code: errorMeta.defaultErrorCode,
-                message: e.message,
-                stack: e.stack
-              });
+              // log.debug(`Error handled by default policy`, {
+              //   code: errorMeta.defaultErrorCode,
+              //   message: e.message,
+              //   stack: e.stack
+              // });
               if (isApiGatewayRequest) {
                 return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
               } else {

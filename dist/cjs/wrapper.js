@@ -30,7 +30,6 @@ exports.segment = aws_xray_sdk_core_1.default.getSegment();
 exports.wrapper = function (fn, options = {}) {
     /** this is the core Lambda event which the wrapper takes as an input */
     return async function (event, context) {
-        var _a, _b, _c;
         let result;
         let workflowStatus;
         workflowStatus = "initializing";
@@ -54,7 +53,7 @@ exports.wrapper = function (fn, options = {}) {
             const status = index_3.sequenceStatus(log.getCorrelationId());
             const registerSequence = index_1.registerSequence(log, context);
             const invoke = invoke_1.invoke(sequence);
-            const claims = (_c = (_b = (_a = apiGateway) === null || _a === void 0 ? void 0 : _a.requestContext) === null || _b === void 0 ? void 0 : _b.authorizer) === null || _c === void 0 ? void 0 : _c.customClaims;
+            const claims = lodash_get_1.default(apiGateway, "requestContext.authorizer.customClaims", {});
             const handlerContext = Object.assign(Object.assign({}, context), { claims: claims ? JSON.parse(claims) : {}, log,
                 headers, setHeaders: index_1.setFnHeaders, setContentType: index_1.setContentType, database: (config) => index_1.database(config), sequence,
                 registerSequence, isSequence: sequence.isSequence, isDone: sequence.isDone, apiGateway,
@@ -228,11 +227,11 @@ exports.wrapper = function (fn, options = {}) {
                         //#endregion
                         case "default":
                             //#region default
-                            log.debug(`Error handled by default policy`, {
-                                code: errorMeta.defaultErrorCode,
-                                message: e.message,
-                                stack: e.stack
-                            });
+                            // log.debug(`Error handled by default policy`, {
+                            //   code: errorMeta.defaultErrorCode,
+                            //   message: e.message,
+                            //   stack: e.stack
+                            // });
                             if (isApiGatewayRequest) {
                                 return index_2.convertToApiGatewayError(new UnhandledError_1.UnhandledError(errorMeta.defaultErrorCode, e));
                             }
