@@ -10,8 +10,6 @@ import { sequenceStatus, buildOrchestratedRequest } from "./sequences/index";
 import { invoke as invokeHigherOrder } from "./invoke";
 import { invoke as invokeLambda } from "aws-log";
 import get from "lodash.get";
-import xray from "aws-xray-sdk-core";
-export const segment = xray.getSegment();
 /**
  * **wrapper**
  *
@@ -39,8 +37,8 @@ export const wrapper = function (fn, options = {}) {
         try {
             workflowStatus = "starting-try-catch";
             msg.start(request, headers, context, sequence, apiGateway);
-            const segment = xray.getSegment();
-            segment.addMetadata("initialized", request);
+            // const segment = xray.getSegment();
+            // segment.addMetadata("initialized", request);
             saveSecretHeaders(headers, log);
             maskLoggingForSecrets(getLocalSecrets(), log);
             //#region PREP
@@ -242,6 +240,7 @@ export const wrapper = function (fn, options = {}) {
                             //   message: e.message,
                             //   stack: e.stack
                             // });
+                            log.info(`the default error code is ${errorMeta.defaultErrorCode}`);
                             if (isApiGatewayRequest) {
                                 return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
                             }

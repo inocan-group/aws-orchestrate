@@ -15,8 +15,6 @@ const index_3 = require("./sequences/index");
 const invoke_1 = require("./invoke");
 const aws_log_2 = require("aws-log");
 const lodash_get_1 = __importDefault(require("lodash.get"));
-const aws_xray_sdk_core_1 = __importDefault(require("aws-xray-sdk-core"));
-exports.segment = aws_xray_sdk_core_1.default.getSegment();
 /**
  * **wrapper**
  *
@@ -44,8 +42,8 @@ exports.wrapper = function (fn, options = {}) {
         try {
             workflowStatus = "starting-try-catch";
             msg.start(request, headers, context, sequence, apiGateway);
-            const segment = aws_xray_sdk_core_1.default.getSegment();
-            segment.addMetadata("initialized", request);
+            // const segment = xray.getSegment();
+            // segment.addMetadata("initialized", request);
             index_1.saveSecretHeaders(headers, log);
             index_1.maskLoggingForSecrets(index_1.getLocalSecrets(), log);
             //#region PREP
@@ -232,6 +230,7 @@ exports.wrapper = function (fn, options = {}) {
                             //   message: e.message,
                             //   stack: e.stack
                             // });
+                            log.info(`the default error code is ${errorMeta.defaultErrorCode}`);
                             if (isApiGatewayRequest) {
                                 return index_2.convertToApiGatewayError(new UnhandledError_1.UnhandledError(errorMeta.defaultErrorCode, e));
                             }

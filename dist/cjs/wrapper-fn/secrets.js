@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const aws_log_1 = require("aws-log");
 const aws_ssm_1 = require("aws-ssm");
 const lodash_flatten_1 = __importDefault(require("lodash.flatten"));
-const wrapper_1 = require("../wrapper");
+// import { segment } from "../wrapper";
 let localSecrets = {};
 /**
  * Saves secrets locally so they can be used rather than
@@ -49,14 +49,14 @@ exports.getLocalSecrets = getLocalSecrets;
  * as the first parameter passed in or you can destructure values across the input
  */
 async function getSecrets(...modules) {
-    wrapper_1.segment.addAnnotation("getSecrets", "starting");
+    // segment.addAnnotation("getSecrets", "starting");
     const mods = lodash_flatten_1.default(modules);
     const log = aws_log_1.logger().reloadContext();
     const localSecrets = getLocalSecrets();
     if (mods.every(i => Object.keys(localSecrets).includes(i))) {
         // everything found in local secrets
         log.debug(`Call to getSecrets() resulted in 100% hit rate for modules locally`, { modules: mods });
-        wrapper_1.segment.addAnnotation("getSecrets", "finished:onlyLocal");
+        // segment.addAnnotation("getSecrets", "finished:onlyLocal");
         return mods.reduce((secrets, mod) => {
             secrets[mod] = localSecrets[mod];
             return secrets;
@@ -78,7 +78,7 @@ async function getSecrets(...modules) {
     const secrets = Object.assign(Object.assign({}, localSecrets), newSecrets);
     saveSecretsLocally(secrets);
     maskLoggingForSecrets(newSecrets, log);
-    wrapper_1.segment.addAnnotation("getSecrets", "finished:awsRequest");
+    // segment.addAnnotation("getSecrets", "finished:awsRequest");
     return secrets;
 }
 exports.getSecrets = getSecrets;

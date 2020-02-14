@@ -71,7 +71,7 @@ export declare const loggedMessages: (log: {
     getCorrelationId: typeof import("aws-log").getCorrelationId;
 }) => {
     /** a handler function just started executing */
-    start(request: IDictionary<any>, headers: IDictionary<any>, context: IDictionary<any>, sequence: LambdaSequence, apiGateway: Pick<import("common-types").IAWSLambdaProxyIntegrationRequest, "path" | "resource" | "httpMethod" | "queryStringParameters" | "pathParameters" | "requestContext" | "isBase64Encoded">): void;
+    start(request: IDictionary<any>, headers: IDictionary<any>, context: IDictionary<any>, sequence: LambdaSequence, apiGateway: Pick<import("common-types").IAWSLambdaProxyIntegrationRequest, "resource" | "path" | "httpMethod" | "queryStringParameters" | "pathParameters" | "requestContext" | "isBase64Encoded">): void;
     sequenceStarting(): void;
     sequenceStarted(seqResponse: any): void;
     startingInvocation(arn: string, params: IDictionary<any>): void;

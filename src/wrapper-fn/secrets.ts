@@ -2,7 +2,7 @@ import { IDictionary } from "common-types";
 import { logger, ILoggerApi } from "aws-log";
 import { SSM } from "aws-ssm";
 import flatten from "lodash.flatten";
-import { segment } from "../wrapper";
+// import { segment } from "../wrapper";
 
 let localSecrets: IDictionary = {};
 
@@ -46,20 +46,15 @@ export function getLocalSecrets() {
  * @param modules the modules which are have secrets that are needed; you may add an array
  * as the first parameter passed in or you can destructure values across the input
  */
-export async function getSecrets(
-  ...modules: string[] | string[][]
-): Promise<IDictionary<IDictionary>> {
-  segment.addAnnotation("getSecrets", "starting");
+export async function getSecrets(...modules: string[] | string[][]): Promise<IDictionary<IDictionary>> {
+  // segment.addAnnotation("getSecrets", "starting");
   const mods = flatten(modules);
   const log = logger().reloadContext();
   const localSecrets = getLocalSecrets();
   if (mods.every(i => Object.keys(localSecrets).includes(i))) {
     // everything found in local secrets
-    log.debug(
-      `Call to getSecrets() resulted in 100% hit rate for modules locally`,
-      { modules: mods }
-    );
-    segment.addAnnotation("getSecrets", "finished:onlyLocal");
+    log.debug(`Call to getSecrets() resulted in 100% hit rate for modules locally`, { modules: mods });
+    // segment.addAnnotation("getSecrets", "finished:onlyLocal");
     return mods.reduce((secrets: IDictionary, mod: string) => {
       secrets[mod] = localSecrets[mod];
       return secrets;
@@ -68,10 +63,7 @@ export async function getSecrets(
 
   // at least SOME modules are NOT stored locally, the latency of getting some
   // versus getting them all is negligible so we'll get them all from SSM
-  log.debug(
-    `Some modules requested were not found locally, requesting from SSM.`,
-    { modules: mods }
-  );
+  log.debug(`Some modules requested were not found locally, requesting from SSM.`, { modules: mods });
   const newSecrets = await SSM.modules(mods);
   mods.forEach(m => {
     if (!newSecrets[m]) {
@@ -88,7 +80,7 @@ export async function getSecrets(
   };
   saveSecretsLocally(secrets);
   maskLoggingForSecrets(newSecrets, log);
-  segment.addAnnotation("getSecrets", "finished:awsRequest");
+  // segment.addAnnotation("getSecrets", "finished:awsRequest");
   return secrets;
 }
 
@@ -107,15 +99,10 @@ export function maskLoggingForSecrets(modules: IDictionary, log: ILoggerApi) {
     });
   });
   if (secretPaths.length > 0) {
-    log.debug(
-      `All secret values [ ${secretPaths.length} ] have been masked in logging`,
-      {
-        secretPaths
-      }
-    );
+    log.debug(`All secret values [ ${secretPaths.length} ] have been masked in logging`, {
+      secretPaths
+    });
   } else {
-    log.debug(
-      `No secrets where added in this function's call; no additional log masking needed.`
-    );
+    log.debug(`No secrets where added in this function's call; no additional log masking needed.`);
   }
 }

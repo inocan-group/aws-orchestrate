@@ -1,7 +1,7 @@
 import { logger } from "aws-log";
 import { SSM } from "aws-ssm";
 import flatten from "lodash.flatten";
-import { segment } from "../wrapper";
+// import { segment } from "../wrapper";
 let localSecrets = {};
 /**
  * Saves secrets locally so they can be used rather than
@@ -41,14 +41,14 @@ export function getLocalSecrets() {
  * as the first parameter passed in or you can destructure values across the input
  */
 export async function getSecrets(...modules) {
-    segment.addAnnotation("getSecrets", "starting");
+    // segment.addAnnotation("getSecrets", "starting");
     const mods = flatten(modules);
     const log = logger().reloadContext();
     const localSecrets = getLocalSecrets();
     if (mods.every(i => Object.keys(localSecrets).includes(i))) {
         // everything found in local secrets
         log.debug(`Call to getSecrets() resulted in 100% hit rate for modules locally`, { modules: mods });
-        segment.addAnnotation("getSecrets", "finished:onlyLocal");
+        // segment.addAnnotation("getSecrets", "finished:onlyLocal");
         return mods.reduce((secrets, mod) => {
             secrets[mod] = localSecrets[mod];
             return secrets;
@@ -73,7 +73,7 @@ export async function getSecrets(...modules) {
     };
     saveSecretsLocally(secrets);
     maskLoggingForSecrets(newSecrets, log);
-    segment.addAnnotation("getSecrets", "finished:awsRequest");
+    // segment.addAnnotation("getSecrets", "finished:awsRequest");
     return secrets;
 }
 /**
