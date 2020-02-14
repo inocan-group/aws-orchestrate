@@ -42,6 +42,10 @@ import { invoke as invokeHigherOrder } from "./invoke";
 import { invoke as invokeLambda } from "aws-log";
 import { ISequenceTrackerStatus } from "./exported-functions/SequenceTracker";
 import get from "lodash.get";
+import xray from "aws-xray-sdk-core";
+
+export const segment = xray.getSegment();
+
 type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 
 /**
@@ -95,7 +99,8 @@ export const wrapper = function<I, O>(
     try {
       workflowStatus = "starting-try-catch";
       msg.start(request, headers, context, sequence, apiGateway);
-
+      const segment = xray.getSegment();
+      segment.addMetadata("initialized", request);
       saveSecretHeaders(headers, log);
       maskLoggingForSecrets(getLocalSecrets(), log);
 

@@ -269,9 +269,10 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * The custom claims which this function received from API Gateway.
    *
    * **Note:** the claims property is sourced from a deeply nested property in the API Gateway
-   * request _body_ -- `apiGateway.requestContext.authorizer.customClaims` -- variables so
-   * this item is just serving as a convenience function to the conductor or HTTP event
-   * function (who is typically responsible for ).
+   * _request body_ -- `apiGateway.requestContext.authorizer.customClaims` -- so
+   * this item is just serving as a convenience to the conductor or HTTP event
+   * function (who is typically responsible for validating claims). Also note that if this variable is NOT
+   * set then this is defaulted to an empty hash/dictionary.
    */
   claims: IDictionary;
   /**

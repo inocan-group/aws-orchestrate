@@ -2,6 +2,7 @@ import { IDictionary } from "common-types";
 import { logger, ILoggerApi } from "aws-log";
 import { SSM } from "aws-ssm";
 import flatten from "lodash.flatten";
+import { segment } from "../wrapper";
 
 let localSecrets: IDictionary = {};
 
@@ -48,6 +49,7 @@ export function getLocalSecrets() {
 export async function getSecrets(
   ...modules: string[] | string[][]
 ): Promise<IDictionary<IDictionary>> {
+  segment.addAnnotation("getSecrets", "starting");
   const mods = flatten(modules);
   const log = logger().reloadContext();
   const localSecrets = getLocalSecrets();
@@ -57,6 +59,7 @@ export async function getSecrets(
       `Call to getSecrets() resulted in 100% hit rate for modules locally`,
       { modules: mods }
     );
+    segment.addAnnotation("getSecrets", "finished:onlyLocal");
     return mods.reduce((secrets: IDictionary, mod: string) => {
       secrets[mod] = localSecrets[mod];
       return secrets;
@@ -85,7 +88,7 @@ export async function getSecrets(
   };
   saveSecretsLocally(secrets);
   maskLoggingForSecrets(newSecrets, log);
-
+  segment.addAnnotation("getSecrets", "finished:awsRequest");
   return secrets;
 }
 
