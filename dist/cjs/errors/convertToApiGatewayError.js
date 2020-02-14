@@ -9,7 +9,7 @@ const headers_1 = require("../wrapper-fn/headers");
 function convertToApiGatewayError(e, defaultCode = ErrorMeta_1.DEFAULT_ERROR_CODE) {
     return {
         headers: headers_1.getResponseHeaders(),
-        errorCode: e.errorCode || e.httpStatus || defaultCode,
+        statusCode: e.errorCode || e.httpStatus || defaultCode,
         errorType: e.name || e.code || "Error",
         errorMessage: e.message,
         stackTrace: e.stack

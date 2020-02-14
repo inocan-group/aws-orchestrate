@@ -7,7 +7,7 @@ import { getResponseHeaders } from "../wrapper-fn/headers";
 export function convertToApiGatewayError(e, defaultCode = DEFAULT_ERROR_CODE) {
     return {
         headers: getResponseHeaders(),
-        errorCode: e.errorCode || e.httpStatus || defaultCode,
+        statusCode: e.errorCode || e.httpStatus || defaultCode,
         errorType: e.name || e.code || "Error",
         errorMessage: e.message,
         stackTrace: e.stack

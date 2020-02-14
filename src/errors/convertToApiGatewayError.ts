@@ -12,7 +12,7 @@ export function convertToApiGatewayError(
 ): IApiGatewayErrorResponse {
   return {
     headers: getResponseHeaders(),
-    errorCode: e.errorCode || e.httpStatus || defaultCode,
+    statusCode: e.errorCode || e.httpStatus || defaultCode,
     errorType: e.name || e.code || "Error",
     errorMessage: e.message,
     stackTrace: e.stack
