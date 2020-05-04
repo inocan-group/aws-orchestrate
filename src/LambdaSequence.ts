@@ -3,7 +3,7 @@ import {
   IDictionary,
   isLambdaProxyRequest,
   getBodyFromPossibleLambdaProxyRequest,
-  arn
+  arn,
 } from "common-types";
 
 import {
@@ -20,15 +20,9 @@ import {
   IFanOutTuple,
   IFanOutResponse,
   OrchestratedErrorHandler,
-  OrchestratedCondition
+  OrchestratedCondition,
 } from "./@types";
-import { isOrchestratedRequest } from "./sequences/isOrchestratedMessageBody";
-import {
-  isDynamic,
-  decompress,
-  isBareRequest,
-  buildOrchestratedRequest
-} from "./sequences";
+import { isDynamic, decompress, isBareRequest, buildOrchestratedRequest, isOrchestratedRequest } from "./sequences";
 import get from "lodash.get";
 import { logger, invoke as invokeLambda } from "aws-log";
 
@@ -166,9 +160,7 @@ export function handler(event, context, callback) {
    *
    * @param handler the handler function
    */
-  public onError<T extends Error = Error>(
-    handler: OrchestratedErrorHandler
-  ): Promise<boolean>;
+  public onError<T extends Error = Error>(handler: OrchestratedErrorHandler): Promise<boolean>;
   /**
    * Assigns error handling to last added **Task** in the sequence
    */
@@ -197,7 +189,7 @@ export function handler(event, context, callback) {
       params,
       onCondition: fn,
       type: "task",
-      status: "assigned"
+      status: "assigned",
     });
   }
 
@@ -213,9 +205,7 @@ export function handler(event, context, callback) {
    * a `X-Child-CorrelationId` which will be unique to that child's execution but will be
    * propagated forward if that function is part of a sequence.
    */
-  public fanOut<T = IDictionary>(
-    ...tuples: Array<IFanOutTuple<T>>
-  ): IFanOutResponse<T>;
+  public fanOut<T = IDictionary>(...tuples: Array<IFanOutTuple<T>>): IFanOutResponse<T>;
   /**
    * Fans the sequence out to parallel tracks of execution. Each instance
    * of execution is sent to the _same_ serverless handler but the parameters passed in
@@ -231,10 +221,7 @@ export function handler(event, context, callback) {
    * a `X-Child-CorrelationId` which will be unique to that child's execution but will be
    * propagated forward if that function is part of a sequence.
    */
-  public fanOut<T = IDictionary>(
-    arn: string,
-    instanceParams: T[]
-  ): IFanOutResponse<T>;
+  public fanOut<T = IDictionary>(arn: string, instanceParams: T[]): IFanOutResponse<T>;
   public fanOut<T>(...args: any[]): IFanOutResponse<T> {
     throw new Error("the fanOut functionality is not yet available");
   }
@@ -336,8 +323,7 @@ export function handler(event, context, callback) {
     }
 
     // The active function's output is sent into the params
-    const activeFn =
-      this.activeFn && this.activeFn.params ? this.activeFn.params : {};
+    const activeFn = this.activeFn && this.activeFn.params ? this.activeFn.params : {};
     request =
       typeof request === "object"
         ? ({ ...activeFn, ...request } as T)
@@ -348,7 +334,7 @@ export function handler(event, context, callback) {
       request: request as T,
       apiGateway,
       sequence,
-      headers: headers as IWrapperRequestHeaders
+      headers: headers as IWrapperRequestHeaders,
     };
   }
 
@@ -370,12 +356,12 @@ export function handler(event, context, callback) {
    * completed _and_ any which are _active_.
    */
   public get remaining() {
-    return this._steps ? this._steps.filter(s => s.status === "assigned") : [];
+    return this._steps ? this._steps.filter((s) => s.status === "assigned") : [];
   }
 
   /** the tasks which have been completed */
   public get completed() {
-    return this._steps ? this._steps.filter(s => s.status === "completed") : [];
+    return this._steps ? this._steps.filter((s) => s.status === "completed") : [];
   }
 
   /** the total number of _steps_ in the sequence */
@@ -413,24 +399,17 @@ export function handler(event, context, callback) {
       return;
     }
     const log = logger().reloadContext();
-    const active = this._steps
-      ? this._steps.filter(s => s.status === "active")
-      : [];
+    const active = this._steps ? this._steps.filter((s) => s.status === "active") : [];
 
     if (active.length > 1) {
-      log.warn(
-        `There appears to be more than 1 STEP in the sequence marked as active!`,
-        { steps: this._steps }
-      );
+      log.warn(`There appears to be more than 1 STEP in the sequence marked as active!`, { steps: this._steps });
     }
 
     if (active.length === 0) {
-      const step = this._steps.find(i => i.status === "assigned");
+      const step = this._steps.find((i) => i.status === "assigned");
       if (!step) {
         throw new Error(
-          `Problem resolving activeFn: no step with status "assigned" found. \n\n ${JSON.stringify(
-            this._steps
-          )}`
+          `Problem resolving activeFn: no step with status "assigned" found. \n\n ${JSON.stringify(this._steps)}`
         );
       }
       step.status = "active";
@@ -456,27 +435,20 @@ export function handler(event, context, callback) {
     }
 
     if (this._steps.length > 0) {
-      throw new Error(
-        `Attempt to ingest steps into a LambdaSequence that already has steps!`
-      );
+      throw new Error(`Attempt to ingest steps into a LambdaSequence that already has steps!`);
     }
 
     this._steps = steps;
-    const activeFnParams =
-      this.activeFn && this.activeFn.params ? this.activeFn.params : {};
+    const activeFnParams = this.activeFn && this.activeFn.params ? this.activeFn.params : {};
     const transformedRequest =
-      typeof request === "object"
-        ? { ...activeFnParams, ...request }
-        : { ...activeFnParams, request };
+      typeof request === "object" ? { ...activeFnParams, ...request } : { ...activeFnParams, request };
 
     /**
      * Inject the prior function's request params into
      * active functions params (set in the conductor)
      */
-    this._steps = this._steps.map(s => {
-      return this.activeFn && s.arn === this.activeFn.arn
-        ? { ...s, params: transformedRequest }
-        : s;
+    this._steps = this._steps.map((s) => {
+      return this.activeFn && s.arn === this.activeFn.arn ? { ...s, params: transformedRequest } : s;
     });
 
     return this;
@@ -490,17 +462,12 @@ export function handler(event, context, callback) {
    * it's true value should be looked up from the sequence results.
    */
   public get dynamicProperties(): Array<{ key: string; from: string }> {
-    return Object.keys(this.activeFn ? this.activeFn.params : {}).reduce(
-      (prev, key) => {
-        const currentValue = this.activeFn.params[key];
-        const valueIsDynamic = String(currentValue).slice(0, 1) === ":";
+    return Object.keys(this.activeFn ? this.activeFn.params : {}).reduce((prev, key) => {
+      const currentValue = this.activeFn.params[key];
+      const valueIsDynamic = String(currentValue).slice(0, 1) === ":";
 
-        return valueIsDynamic
-          ? prev.concat({ key, from: currentValue.slice(1) })
-          : prev;
-      },
-      []
-    );
+      return valueIsDynamic ? prev.concat({ key, from: currentValue.slice(1) }) : prev;
+    }, []);
   }
 
   /**
@@ -523,7 +490,7 @@ export function handler(event, context, callback) {
   }
   public toObject(): ISerializedSequence {
     const obj: Partial<ISerializedSequence> = {
-      isSequence: this.isSequence
+      isSequence: this.isSequence,
     };
     if (obj.isSequence) {
       obj.totalSteps = this.steps.length;
@@ -533,10 +500,10 @@ export function handler(event, context, callback) {
         obj.activeFn = this.activeFn.arn;
       }
       if (this.completed) {
-        obj.completed = this.completed.map(i => i.arn);
+        obj.completed = this.completed.map((i) => i.arn);
       }
       if (this.remaining) {
-        obj.remaining = this.remaining.map(i => i.arn);
+        obj.remaining = this.remaining.map((i) => i.arn);
       }
       obj.steps = this._steps;
       obj.responses = this._responses || {};
@@ -555,32 +522,24 @@ export function handler(event, context, callback) {
    *
    */
   private resolveRequestProperties<T>(fn: ILambdaSequenceStep) {
-    return Object.keys(fn.params as IOrchestratedProperties<T>).reduce(
-      (props: T, key: keyof T & string) => {
-        let value = (fn.params as IOrchestratedProperties<T>)[key];
-        if (isDynamic(value)) {
-          value = get(
-            this._responses,
-            (value as IOrchestratedDynamicProperty).lookup,
-            undefined
+    return Object.keys(fn.params as IOrchestratedProperties<T>).reduce((props: T, key: keyof T & string) => {
+      let value = (fn.params as IOrchestratedProperties<T>)[key];
+      if (isDynamic(value)) {
+        value = get(this._responses, (value as IOrchestratedDynamicProperty).lookup, undefined);
+
+        if (typeof value === undefined) {
+          throw new Error(
+            `The property "${key}" was set as a dynamic property by the Orchestrator but it was dependant on getting a value from ${
+              (fn.params as IOrchestratedProperties<T>)[key]
+            } which could not be found.`
           );
-
-          if (typeof value === undefined) {
-            throw new Error(
-              `The property "${key}" was set as a dynamic property by the Orchestrator but it was dependant on getting a value from ${
-                (fn.params as IOrchestratedProperties<T>)[key]
-              } which could not be found.`
-            );
-          }
         }
-        const valueNow = (key: keyof T & string, value: any) =>
-          value as T[typeof key];
+      }
+      const valueNow = (key: keyof T & string, value: any) => value as T[typeof key];
 
-        (props as T)[key] = valueNow(key, value);
+      (props as T)[key] = valueNow(key, value);
 
-        return props;
-      },
-      {} as T
-    );
+      return props;
+    }, {} as T);
   }
 }

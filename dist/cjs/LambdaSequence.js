@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_types_1 = require("common-types");
-const isOrchestratedMessageBody_1 = require("./sequences/isOrchestratedMessageBody");
 const sequences_1 = require("./sequences");
 const lodash_get_1 = __importDefault(require("lodash.get"));
 const aws_log_1 = require("aws-log");
@@ -126,7 +125,7 @@ class LambdaSequence {
             params,
             onCondition: fn,
             type: "task",
-            status: "assigned"
+            status: "assigned",
         });
     }
     fanOut(...args) {
@@ -198,7 +197,7 @@ class LambdaSequence {
             sequence = LambdaSequence.notASequence();
             delete apiGateway.body;
         }
-        else if (isOrchestratedMessageBody_1.isOrchestratedRequest(event)) {
+        else if (sequences_1.isOrchestratedRequest(event)) {
             headers = sequences_1.decompress(event.headers);
             request = sequences_1.decompress(event.body);
             sequence = LambdaSequence.deserialize(sequences_1.decompress(event.sequence));
@@ -230,7 +229,7 @@ class LambdaSequence {
             request: request,
             apiGateway,
             sequence,
-            headers: headers
+            headers: headers,
         };
     }
     /**
@@ -249,11 +248,11 @@ class LambdaSequence {
      * completed _and_ any which are _active_.
      */
     get remaining() {
-        return this._steps ? this._steps.filter(s => s.status === "assigned") : [];
+        return this._steps ? this._steps.filter((s) => s.status === "assigned") : [];
     }
     /** the tasks which have been completed */
     get completed() {
-        return this._steps ? this._steps.filter(s => s.status === "completed") : [];
+        return this._steps ? this._steps.filter((s) => s.status === "completed") : [];
     }
     /** the total number of _steps_ in the sequence */
     get length() {
@@ -286,14 +285,12 @@ class LambdaSequence {
             return;
         }
         const log = aws_log_1.logger().reloadContext();
-        const active = this._steps
-            ? this._steps.filter(s => s.status === "active")
-            : [];
+        const active = this._steps ? this._steps.filter((s) => s.status === "active") : [];
         if (active.length > 1) {
             log.warn(`There appears to be more than 1 STEP in the sequence marked as active!`, { steps: this._steps });
         }
         if (active.length === 0) {
-            const step = this._steps.find(i => i.status === "assigned");
+            const step = this._steps.find((i) => i.status === "assigned");
             if (!step) {
                 throw new Error(`Problem resolving activeFn: no step with status "assigned" found. \n\n ${JSON.stringify(this._steps)}`);
             }
@@ -321,15 +318,13 @@ class LambdaSequence {
         }
         this._steps = steps;
         const activeFnParams = this.activeFn && this.activeFn.params ? this.activeFn.params : {};
-        const transformedRequest = typeof request === "object"
-            ? Object.assign(Object.assign({}, activeFnParams), request) : Object.assign(Object.assign({}, activeFnParams), { request });
+        const transformedRequest = typeof request === "object" ? Object.assign(Object.assign({}, activeFnParams), request) : Object.assign(Object.assign({}, activeFnParams), { request });
         /**
          * Inject the prior function's request params into
          * active functions params (set in the conductor)
          */
-        this._steps = this._steps.map(s => {
-            return this.activeFn && s.arn === this.activeFn.arn
-                ? Object.assign(Object.assign({}, s), { params: transformedRequest }) : s;
+        this._steps = this._steps.map((s) => {
+            return this.activeFn && s.arn === this.activeFn.arn ? Object.assign(Object.assign({}, s), { params: transformedRequest }) : s;
         });
         return this;
     }
@@ -344,9 +339,7 @@ class LambdaSequence {
         return Object.keys(this.activeFn ? this.activeFn.params : {}).reduce((prev, key) => {
             const currentValue = this.activeFn.params[key];
             const valueIsDynamic = String(currentValue).slice(0, 1) === ":";
-            return valueIsDynamic
-                ? prev.concat({ key, from: currentValue.slice(1) })
-                : prev;
+            return valueIsDynamic ? prev.concat({ key, from: currentValue.slice(1) }) : prev;
         }, []);
     }
     /**
@@ -366,7 +359,7 @@ class LambdaSequence {
     }
     toObject() {
         const obj = {
-            isSequence: this.isSequence
+            isSequence: this.isSequence,
         };
         if (obj.isSequence) {
             obj.totalSteps = this.steps.length;
@@ -375,10 +368,10 @@ class LambdaSequence {
                 obj.activeFn = this.activeFn.arn;
             }
             if (this.completed) {
-                obj.completed = this.completed.map(i => i.arn);
+                obj.completed = this.completed.map((i) => i.arn);
             }
             if (this.remaining) {
-                obj.remaining = this.remaining.map(i => i.arn);
+                obj.remaining = this.remaining.map((i) => i.arn);
             }
             obj.steps = this._steps;
             obj.responses = this._responses || {};
