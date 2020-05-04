@@ -1,3 +1,4 @@
+//#autoindex:named
 export * from "./findError";
 export * from "./secrets";
 export * from "./sequences";

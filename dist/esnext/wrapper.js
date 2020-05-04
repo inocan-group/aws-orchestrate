@@ -7,7 +7,7 @@ import { HandledError } from "./errors/HandledError";
 import { registerSequence as register, invokeNewSequence, findError, getSecrets, database, setFnHeaders, setContentType, getResponseHeaders, saveSecretHeaders, loggedMessages, getNewSequence, maskLoggingForSecrets, getLocalSecrets, } from "./wrapper-fn/index";
 import { convertToApiGatewayError, ErrorWithinError, RethrowError } from "./errors/index";
 import { sequenceStatus, buildOrchestratedRequest } from "./sequences/index";
-import { invoke as invokeHigherOrder } from "./invoke";
+import { invoke as invokeHigherOrder } from "./shared/invoke";
 import { invoke as invokeLambda } from "aws-log";
 import get from "lodash.get";
 /**

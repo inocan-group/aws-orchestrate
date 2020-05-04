@@ -1,5 +1,4 @@
-import { ErrorHandler } from "../ErrorHandler";
-import { ErrorMeta } from "../errors/ErrorMeta";
+import { ErrorMeta, ErrorHandler } from "../private";
 /**
  * **findError**
  *
@@ -9,7 +8,7 @@ import { ErrorMeta } from "../errors/ErrorMeta";
  */
 export function findError(e: Error & { code?: string }, expectedErrors: ErrorMeta): false | ErrorHandler {
   let found: false | ErrorHandler = false;
-  expectedErrors.list.forEach(i => {
+  expectedErrors.list.forEach((i) => {
     if (
       (e.code && e.code === i.identifiedBy.code) ||
       (e.name && e.name == i.identifiedBy.name) ||

@@ -6,7 +6,7 @@ import { getSecrets } from "./wrapper-fn/secrets";
 declare type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 declare type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
-import { UnconstrainedHttpHeaders } from "./invoke";
+import { UnconstrainedHttpHeaders } from "./shared/invoke";
 declare type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 export declare type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 /**

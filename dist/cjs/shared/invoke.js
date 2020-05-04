@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const aws_log_1 = require("aws-log");
-const sequences_1 = require("./sequences");
+const sequences_1 = require("../sequences");
 /**
  * A higher-order function which accepts a _sequence_ as an input first.
  * In essence, this just provides useful configuration which the _wrapper

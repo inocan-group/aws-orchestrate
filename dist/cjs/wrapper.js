@@ -12,7 +12,7 @@ const HandledError_1 = require("./errors/HandledError");
 const index_1 = require("./wrapper-fn/index");
 const index_2 = require("./errors/index");
 const index_3 = require("./sequences/index");
-const invoke_1 = require("./invoke");
+const invoke_1 = require("./shared/invoke");
 const aws_log_2 = require("aws-log");
 const lodash_get_1 = __importDefault(require("lodash.get"));
 /**

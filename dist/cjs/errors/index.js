@@ -10,4 +10,5 @@ __export(require("./ErrorWithinError"));
 __export(require("./CallDepthExceeded"));
 __export(require("./RethrowError"));
 __export(require("./ErrorMeta"));
+__export(require("./ErrorHandler"));
 //# sourceMappingURL=index.js.map

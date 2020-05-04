@@ -1,8 +1,6 @@
 import { HttpStatusCodes } from "common-types";
-import { getNewSequence } from "./sequences";
-import { LambdaSequence } from "../index";
-import { getRequestHeaders } from "./headers";
 import get from "lodash.get";
+import { getNewSequence, LambdaSequence, getRequestHeaders } from "../private";
 /**
  * A collection of log messages that the wrapper function will emit
  */
@@ -13,14 +11,14 @@ export const loggedMessages = (log) => ({
             request,
             sequence: sequence ? sequence.toObject() : LambdaSequence.notASequence(),
             headers,
-            apiGateway
+            apiGateway,
         });
     },
     sequenceStarting() {
         const s = getNewSequence();
         log.debug(`The NEW sequence this function/conductor registered is about to be invoked`, {
             sequence: s.toObject(),
-            headersForwarded: Object.keys(getRequestHeaders() || {})
+            headersForwarded: Object.keys(getRequestHeaders() || {}),
         });
     },
     sequenceStarted(seqResponse) {
@@ -31,7 +29,7 @@ export const loggedMessages = (log) => ({
     },
     completingInvocation(arn, inovacationResponse) {
         log.info(`sequence: completed invocation of fn: ${arn}`, {
-            inovacationResponse
+            inovacationResponse,
         });
     },
     notPartOfExistingSequence() {
@@ -46,19 +44,19 @@ export const loggedMessages = (log) => ({
     sequenceTracker: (sequenceTracker, workflowStatus) => {
         log.info(`About to send the LambdaSequence's status to the sequenceTracker [ ${sequenceTracker} ]`, {
             sequenceTracker,
-            workflowStatus
+            workflowStatus,
         });
     },
     sequenceTrackerComplete(isDone) {
         log.debug(`The invocation to the sequence tracker has completed`, {
-            isDone
+            isDone,
         });
     },
     returnToApiGateway: (result, responseHeaders) => {
         log.debug(`Returning results to API Gateway`, {
             statusCode: HttpStatusCodes.Success,
             result: JSON.stringify(result || ""),
-            responseHeaders
+            responseHeaders,
         });
     },
     /**
@@ -70,8 +68,8 @@ export const loggedMessages = (log) => ({
         log.info(`Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}${isApiGateway ? ", ApiGateway" : ""} ]`, {
             errorMessage,
             stack,
-            workflowStatus
+            workflowStatus,
         });
-    }
+    },
 });
 //# sourceMappingURL=loggedMessages.js.map

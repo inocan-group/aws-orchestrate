@@ -1,6 +1,6 @@
 import { IDictionary, IHttpResponseHeaders } from "common-types";
-import { IOrchestratedHeaders } from "../@types";
 import { ILoggerApi } from "aws-log";
+import { IOrchestratedHeaders } from "../private";
 /**
  * Ensures that frontend clients who call Lambda's
  * will be given a CORs friendly response

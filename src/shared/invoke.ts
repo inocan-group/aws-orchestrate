@@ -1,8 +1,8 @@
-import { IOrchestratedRequest } from "./@types";
+import { IOrchestratedRequest } from "../@types";
 import { invoke as invokeLambda } from "aws-log";
 import { IDictionary } from "common-types";
-import { buildOrchestratedRequest } from "./sequences";
-import { LambdaSequence } from "./LambdaSequence";
+import { buildOrchestratedRequest } from "../sequences";
+import { LambdaSequence } from "../LambdaSequence";
 type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 
 export type LambdaInvocation<T = IDictionary, H = UnconstrainedHttpHeaders> = (
@@ -25,16 +25,8 @@ export type UnconstrainedHttpHeaders = IDictionary<string | number | boolean>;
  * _headers_ too).
  */
 export function invoke(sequence: LambdaSequence) {
-  return <T = IDictionary, H = UnconstrainedHttpHeaders>(
-    fnArn: string,
-    request: T,
-    additionalHeaders?: H
-  ) => {
-    const boxedRequest = buildOrchestratedRequest<T>(
-      request,
-      sequence,
-      additionalHeaders
-    );
+  return <T = IDictionary, H = UnconstrainedHttpHeaders>(fnArn: string, request: T, additionalHeaders?: H) => {
+    const boxedRequest = buildOrchestratedRequest<T>(request, sequence, additionalHeaders);
 
     return invokeLambda<IOrchestratedRequest<T>>(fnArn, boxedRequest);
   };

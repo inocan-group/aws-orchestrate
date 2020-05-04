@@ -1,6 +1,6 @@
-import { getSecrets } from "./secrets";
 import { logger } from "aws-log";
 import { DB } from "abstracted-admin";
+import { getSecrets } from "../private";
 let _database;
 /**
  * **database**
@@ -17,9 +17,10 @@ export const database = async (config) => {
     const log = logger().reloadContext();
     if (!_database) {
         if (!config) {
-            if (process.env.FIREBASE_SERVICE_ACCOUNT &&
-                process.env.FIREBASE_DATA_ROOT_URL) {
-                log.debug(`The environment variables are in place to configure database connectivity`, { firebaseDataRootUrl: process.env.FIREBASE_DATA_ROOT_URL });
+            if (process.env.FIREBASE_SERVICE_ACCOUNT && process.env.FIREBASE_DATA_ROOT_URL) {
+                log.debug(`The environment variables are in place to configure database connectivity`, {
+                    firebaseDataRootUrl: process.env.FIREBASE_DATA_ROOT_URL,
+                });
             }
             else {
                 const { firebase } = await getSecrets(["firebase"]);
@@ -32,7 +33,7 @@ export const database = async (config) => {
                 log.debug(`The Firebase service account has been retrieved from SSM and will be used.`);
                 config = {
                     serviceAccount: firebase.SERVICE_ACCOUNT,
-                    databaseUrl: firebase.DATABASE_URL
+                    databaseUrl: firebase.DATABASE_URL,
                 };
             }
         }

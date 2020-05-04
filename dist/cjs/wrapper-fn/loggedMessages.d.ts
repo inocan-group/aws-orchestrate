@@ -1,6 +1,5 @@
 import { IDictionary } from "common-types";
-import { IErrorClass } from "../@types";
-import { LambdaSequence } from "../index";
+import { IErrorClass, LambdaSequence } from "../private";
 /**
  * A collection of log messages that the wrapper function will emit
  */

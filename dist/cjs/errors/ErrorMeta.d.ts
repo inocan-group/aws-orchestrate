@@ -1,4 +1,4 @@
-import { ErrorHandler } from "../ErrorHandler";
+import { ErrorHandler } from "./ErrorHandler";
 import { IErrorIdentification, IErrorHandling, IErrorHandlerFunction, IDefaultHandling } from "../@types";
 export declare const DEFAULT_ERROR_CODE = 500;
 export interface IError {

@@ -1,9 +1,7 @@
 import { IDictionary, IHttpResponseHeaders } from "common-types";
-import { IOrchestratedHeaders } from "../@types";
-import { sequenceStatus, serializeSequence } from "../sequences";
-import { saveSecretsLocally, getLocalSecrets } from "./secrets";
 import set from "lodash.set";
 import { logger, ILoggerApi, getCorrelationId } from "aws-log";
+import { sequenceStatus, saveSecretsLocally, getLocalSecrets, IOrchestratedHeaders } from "../private";
 
 /**
  * Ensures that frontend clients who call Lambda's
@@ -11,7 +9,7 @@ import { logger, ILoggerApi, getCorrelationId } from "aws-log";
  */
 export const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Credentials": true
+  "Access-Control-Allow-Credentials": true,
 };
 
 let contentType = "application/json";
@@ -49,21 +47,18 @@ export function getContentType() {
  */
 export function saveSecretHeaders(headers: IDictionary, log: ILoggerApi) {
   let secrets: string[] = [];
-  const localSecrets = Object.keys(headers).reduce(
-    (headerSecrets: IDictionary, key: keyof typeof headers & string) => {
-      if (key.slice(0, 4) === `O-S-`) {
-        const [module, name] = key.slice(4).split("/");
-        const dotPath = `${module}.${name}`;
-        set(headerSecrets, dotPath, headers[key]);
-        secrets.push(dotPath);
-      }
-      return headerSecrets;
-    },
-    {}
-  );
+  const localSecrets = Object.keys(headers).reduce((headerSecrets: IDictionary, key: keyof typeof headers & string) => {
+    if (key.slice(0, 4) === `O-S-`) {
+      const [module, name] = key.slice(4).split("/");
+      const dotPath = `${module}.${name}`;
+      set(headerSecrets, dotPath, headers[key]);
+      secrets.push(dotPath);
+    }
+    return headerSecrets;
+  }, {});
   if (secrets.length > 0) {
     log.debug(`Secrets [ ${secrets.length} ] from headers were identified`, {
-      secrets
+      secrets,
     });
   }
   saveSecretsLocally(localSecrets);
@@ -77,34 +72,29 @@ export function saveSecretHeaders(headers: IDictionary, log: ILoggerApi) {
 export function getHeaderSecrets() {
   const log = logger().reloadContext();
   const modules = getLocalSecrets();
-  return Object.keys(modules).reduce(
-    (headerSecrets: IDictionary, mod: keyof typeof modules & string) => {
-      const secrets = modules[mod];
-      if (typeof secrets === "object") {
-        Object.keys(secrets).forEach(secret => {
-          headerSecrets[`O-S-${mod}/${secret}`] = modules[mod][secret];
-        });
-      } else {
-        log.warn(
-          `Attempt to generate header secrets but module "${mod}" is not a hash of name/values. Ignoring this module but continuing.`,
-          {
-            module: mod,
-            type: typeof secrets,
-            localModules: Object.keys(modules)
-          }
-        );
-      }
-      return headerSecrets;
-    },
-    {}
-  );
+  return Object.keys(modules).reduce((headerSecrets: IDictionary, mod: keyof typeof modules & string) => {
+    const secrets = modules[mod];
+    if (typeof secrets === "object") {
+      Object.keys(secrets).forEach((secret) => {
+        headerSecrets[`O-S-${mod}/${secret}`] = modules[mod][secret];
+      });
+    } else {
+      log.warn(
+        `Attempt to generate header secrets but module "${mod}" is not a hash of name/values. Ignoring this module but continuing.`,
+        {
+          module: mod,
+          type: typeof secrets,
+          localModules: Object.keys(modules),
+        }
+      );
+    }
+    return headerSecrets;
+  }, {});
 }
 
 export function setContentType(type: string) {
   if (!type.includes("/")) {
-    throw new Error(
-      `The value sent to setContentType ("${type}") is not valid; it must be a valid MIME type.`
-    );
+    throw new Error(`The value sent to setContentType ("${type}") is not valid; it must be a valid MIME type.`);
   }
   contentType = type;
 }
@@ -129,29 +119,25 @@ function getBaseHeaders(opts: IHttpResponseHeaders & IDictionary) {
   const correlationId = getCorrelationId();
   const sequenceInfo = opts.sequence
     ? {
-        ["O-Sequence-Status"]: JSON.stringify(
-          sequenceStatus(correlationId)(opts.sequence)
-        )
+        ["O-Sequence-Status"]: JSON.stringify(sequenceStatus(correlationId)(opts.sequence)),
       }
     : {};
 
   return {
     ...sequenceInfo,
     ...getFnHeaders(),
-    ["X-Correlation-Id"]: getCorrelationId()
+    ["X-Correlation-Id"]: getCorrelationId(),
   };
 }
 
 /**
  * All the HTTP _Response_ headers to send when returning to API Gateway
  */
-export function getResponseHeaders(
-  opts: IHttpResponseHeaders = {}
-): IOrchestratedHeaders {
+export function getResponseHeaders(opts: IHttpResponseHeaders = {}): IOrchestratedHeaders {
   return {
     ...getBaseHeaders(opts),
     ...CORS_HEADERS,
-    "Content-Type": getContentType()
+    "Content-Type": getContentType(),
   };
 }
 
@@ -159,11 +145,9 @@ export function getResponseHeaders(
  * All the HTTP _Request_ headers to send when calling
  * another function
  */
-export function getRequestHeaders(
-  opts: IHttpResponseHeaders = {}
-): IOrchestratedHeaders {
+export function getRequestHeaders(opts: IHttpResponseHeaders = {}): IOrchestratedHeaders {
   return {
     ...getHeaderSecrets(),
-    ...getBaseHeaders(opts)
+    ...getBaseHeaders(opts),
   };
 }

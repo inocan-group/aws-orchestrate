@@ -1,4 +1,4 @@
-import { ErrorHandler } from "../ErrorHandler";
+import { ErrorHandler } from "./ErrorHandler";
 export const DEFAULT_ERROR_CODE = 500;
 /**
  * Is a container for a serverless function that
@@ -70,7 +70,7 @@ export class ErrorMeta {
                 }
                 else {
                     console.log({
-                        message: `The passed in setDefaultHandler param was of an unknown type ${typeof param}; the action has been ignored`
+                        message: `The passed in setDefaultHandler param was of an unknown type ${typeof param}; the action has been ignored`,
                     });
                 }
         }
@@ -86,7 +86,7 @@ export class ErrorMeta {
                 type: "error-forwarding",
                 code: this.defaultErrorCode,
                 arn: this._arn,
-                prop: "_arn"
+                prop: "_arn",
             };
         }
         if (this._defaultHandlerFn) {
@@ -94,7 +94,7 @@ export class ErrorMeta {
                 type: "handler-fn",
                 code: this.defaultErrorCode,
                 defaultHandlerFn: this._defaultHandlerFn,
-                prop: "_defaultHandlerFn"
+                prop: "_defaultHandlerFn",
             };
         }
         if (this._defaultError) {
@@ -102,13 +102,13 @@ export class ErrorMeta {
                 type: "default-error",
                 code: this.defaultErrorCode,
                 error: this._defaultError,
-                prop: "_defaultError"
+                prop: "_defaultError",
             };
         }
         return {
             type: "default",
             code: this.defaultErrorCode,
-            prop: "_default"
+            prop: "_default",
         };
     }
     /**
@@ -123,7 +123,7 @@ export class ErrorMeta {
     toString() {
         return JSON.stringify({
             defaultCode: this._defaultErrorCode,
-            errors: this._errors
+            errors: this._errors,
         });
     }
 }
