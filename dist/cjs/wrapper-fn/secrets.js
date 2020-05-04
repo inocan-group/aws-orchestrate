@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const aws_log_1 = require("aws-log");
 const aws_ssm_1 = require("aws-ssm");
 const lodash_flatten_1 = __importDefault(require("lodash.flatten"));
-// import { segment } from "../wrapper";
 let localSecrets = {};
 /**
  * Saves secrets locally so they can be used rather than
@@ -53,7 +52,7 @@ async function getSecrets(...modules) {
     const mods = lodash_flatten_1.default(modules);
     const log = aws_log_1.logger().reloadContext();
     const localSecrets = getLocalSecrets();
-    if (mods.every(i => Object.keys(localSecrets).includes(i))) {
+    if (mods.every((i) => Object.keys(localSecrets).includes(i))) {
         // everything found in local secrets
         log.debug(`Call to getSecrets() resulted in 100% hit rate for modules locally`, { modules: mods });
         // segment.addAnnotation("getSecrets", "finished:onlyLocal");
@@ -66,7 +65,7 @@ async function getSecrets(...modules) {
     // versus getting them all is negligible so we'll get them all from SSM
     log.debug(`Some modules requested were not found locally, requesting from SSM.`, { modules: mods });
     const newSecrets = await aws_ssm_1.SSM.modules(mods);
-    mods.forEach(m => {
+    mods.forEach((m) => {
         if (!newSecrets[m]) {
             throw new Error(`Failure to retrieve the SSM module "${m}"`);
         }
@@ -88,8 +87,8 @@ exports.getSecrets = getSecrets;
  */
 function maskLoggingForSecrets(modules, log) {
     let secretPaths = [];
-    Object.keys(modules).forEach(mod => {
-        Object.keys(mod).forEach(s => {
+    Object.keys(modules).forEach((mod) => {
+        Object.keys(mod).forEach((s) => {
             if (typeof s === "object") {
                 log.addToMaskedValues(modules[mod][s]);
                 secretPaths.push(`${mod}/${s}`);
@@ -98,7 +97,7 @@ function maskLoggingForSecrets(modules, log) {
     });
     if (secretPaths.length > 0) {
         log.debug(`All secret values [ ${secretPaths.length} ] have been masked in logging`, {
-            secretPaths
+            secretPaths,
         });
     }
     else {

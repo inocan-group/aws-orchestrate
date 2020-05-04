@@ -4,10 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_types_1 = require("common-types");
-const sequences_1 = require("./sequences");
-const index_1 = require("../index");
-const headers_1 = require("./headers");
 const lodash_get_1 = __importDefault(require("lodash.get"));
+const private_1 = require("../private");
 /**
  * A collection of log messages that the wrapper function will emit
  */
@@ -16,16 +14,16 @@ exports.loggedMessages = (log) => ({
     start(request, headers, context, sequence, apiGateway) {
         log.info(`The handler function ${lodash_get_1.default(context, "functionName")} has started.  ${lodash_get_1.default(sequence, "isSequence", false) ? ` [ ${log.getCorrelationId()} ].` : " [ not part of sequence ]."}`, {
             request,
-            sequence: sequence ? sequence.toObject() : index_1.LambdaSequence.notASequence(),
+            sequence: sequence ? sequence.toObject() : private_1.LambdaSequence.notASequence(),
             headers,
-            apiGateway
+            apiGateway,
         });
     },
     sequenceStarting() {
-        const s = sequences_1.getNewSequence();
+        const s = private_1.getNewSequence();
         log.debug(`The NEW sequence this function/conductor registered is about to be invoked`, {
             sequence: s.toObject(),
-            headersForwarded: Object.keys(headers_1.getRequestHeaders() || {})
+            headersForwarded: Object.keys(private_1.getRequestHeaders() || {}),
         });
     },
     sequenceStarted(seqResponse) {
@@ -36,7 +34,7 @@ exports.loggedMessages = (log) => ({
     },
     completingInvocation(arn, inovacationResponse) {
         log.info(`sequence: completed invocation of fn: ${arn}`, {
-            inovacationResponse
+            inovacationResponse,
         });
     },
     notPartOfExistingSequence() {
@@ -51,19 +49,19 @@ exports.loggedMessages = (log) => ({
     sequenceTracker: (sequenceTracker, workflowStatus) => {
         log.info(`About to send the LambdaSequence's status to the sequenceTracker [ ${sequenceTracker} ]`, {
             sequenceTracker,
-            workflowStatus
+            workflowStatus,
         });
     },
     sequenceTrackerComplete(isDone) {
         log.debug(`The invocation to the sequence tracker has completed`, {
-            isDone
+            isDone,
         });
     },
     returnToApiGateway: (result, responseHeaders) => {
         log.debug(`Returning results to API Gateway`, {
             statusCode: common_types_1.HttpStatusCodes.Success,
             result: JSON.stringify(result || ""),
-            responseHeaders
+            responseHeaders,
         });
     },
     /**
@@ -75,8 +73,8 @@ exports.loggedMessages = (log) => ({
         log.info(`Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}${isApiGateway ? ", ApiGateway" : ""} ]`, {
             errorMessage,
             stack,
-            workflowStatus
+            workflowStatus,
         });
-    }
+    },
 });
 //# sourceMappingURL=loggedMessages.js.map

@@ -5,3 +5,4 @@ export * from "./ErrorWithinError";
 export * from "./CallDepthExceeded";
 export * from "./RethrowError";
 export * from "./ErrorMeta";
+export * from "./ErrorHandler";

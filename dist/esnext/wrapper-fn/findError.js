@@ -7,7 +7,7 @@
  */
 export function findError(e, expectedErrors) {
     let found = false;
-    expectedErrors.list.forEach(i => {
+    expectedErrors.list.forEach((i) => {
         if ((e.code && e.code === i.identifiedBy.code) ||
             (e.name && e.name == i.identifiedBy.name) ||
             (e.message && e.message.includes(i.identifiedBy.messageContains)) ||

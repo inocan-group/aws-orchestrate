@@ -6,7 +6,7 @@ import {
   arn,
   IServerlessFunction,
   IHttpResponseHeaders,
-  IHttpRequestHeaders
+  IHttpRequestHeaders,
 } from "common-types";
 import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
@@ -15,7 +15,7 @@ import { getSecrets } from "./wrapper-fn/secrets";
 type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
-import { invoke, LambdaInvocation, UnconstrainedHttpHeaders } from "./invoke";
+import { invoke, LambdaInvocation, UnconstrainedHttpHeaders } from "./shared/invoke";
 type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 export type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 

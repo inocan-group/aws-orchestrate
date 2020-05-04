@@ -1,10 +1,7 @@
 import { IDictionary, HttpStatusCodes } from "common-types";
 import { ILoggerApi } from "aws-log";
-import { IErrorClass, IApiGateway } from "../@types";
-import { getNewSequence } from "./sequences";
-import { LambdaSequence } from "../index";
-import { getRequestHeaders } from "./headers";
 import get from "lodash.get";
+import { IErrorClass, IApiGateway, getNewSequence, LambdaSequence, getRequestHeaders } from "../private";
 
 /**
  * A collection of log messages that the wrapper function will emit
@@ -26,7 +23,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
         request,
         sequence: sequence ? sequence.toObject() : LambdaSequence.notASequence(),
         headers,
-        apiGateway
+        apiGateway,
       }
     );
   },
@@ -35,7 +32,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
     const s = getNewSequence();
     log.debug(`The NEW sequence this function/conductor registered is about to be invoked`, {
       sequence: s.toObject(),
-      headersForwarded: Object.keys(getRequestHeaders() || {})
+      headersForwarded: Object.keys(getRequestHeaders() || {}),
     });
   },
 
@@ -49,7 +46,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
 
   completingInvocation(arn: string, inovacationResponse: IDictionary) {
     log.info(`sequence: completed invocation of fn: ${arn}`, {
-      inovacationResponse
+      inovacationResponse,
     });
   },
 
@@ -67,13 +64,13 @@ export const loggedMessages = (log: ILoggerApi) => ({
   sequenceTracker: (sequenceTracker: string, workflowStatus: string) => {
     log.info(`About to send the LambdaSequence's status to the sequenceTracker [ ${sequenceTracker} ]`, {
       sequenceTracker,
-      workflowStatus
+      workflowStatus,
     });
   },
 
   sequenceTrackerComplete(isDone: boolean) {
     log.debug(`The invocation to the sequence tracker has completed`, {
-      isDone
+      isDone,
     });
   },
 
@@ -81,7 +78,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
     log.debug(`Returning results to API Gateway`, {
       statusCode: HttpStatusCodes.Success,
       result: JSON.stringify(result || ""),
-      responseHeaders
+      responseHeaders,
     });
   },
 
@@ -98,8 +95,8 @@ export const loggedMessages = (log: ILoggerApi) => ({
       {
         errorMessage,
         stack,
-        workflowStatus
+        workflowStatus,
       }
     );
-  }
+  },
 });

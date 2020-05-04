@@ -3,17 +3,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const sequences_1 = require("../sequences");
-const secrets_1 = require("./secrets");
 const lodash_set_1 = __importDefault(require("lodash.set"));
 const aws_log_1 = require("aws-log");
+const private_1 = require("../private");
 /**
  * Ensures that frontend clients who call Lambda's
  * will be given a CORs friendly response
  */
 exports.CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Credentials": true
+    "Access-Control-Allow-Credentials": true,
 };
 let contentType = "application/json";
 let fnHeaders = {};
@@ -60,10 +59,10 @@ function saveSecretHeaders(headers, log) {
     }, {});
     if (secrets.length > 0) {
         log.debug(`Secrets [ ${secrets.length} ] from headers were identified`, {
-            secrets
+            secrets,
         });
     }
-    secrets_1.saveSecretsLocally(localSecrets);
+    private_1.saveSecretsLocally(localSecrets);
     return localSecrets;
 }
 exports.saveSecretHeaders = saveSecretHeaders;
@@ -73,11 +72,11 @@ exports.saveSecretHeaders = saveSecretHeaders;
  */
 function getHeaderSecrets() {
     const log = aws_log_1.logger().reloadContext();
-    const modules = secrets_1.getLocalSecrets();
+    const modules = private_1.getLocalSecrets();
     return Object.keys(modules).reduce((headerSecrets, mod) => {
         const secrets = modules[mod];
         if (typeof secrets === "object") {
-            Object.keys(secrets).forEach(secret => {
+            Object.keys(secrets).forEach((secret) => {
                 headerSecrets[`O-S-${mod}/${secret}`] = modules[mod][secret];
             });
         }
@@ -85,7 +84,7 @@ function getHeaderSecrets() {
             log.warn(`Attempt to generate header secrets but module "${mod}" is not a hash of name/values. Ignoring this module but continuing.`, {
                 module: mod,
                 type: typeof secrets,
-                localModules: Object.keys(modules)
+                localModules: Object.keys(modules),
             });
         }
         return headerSecrets;
@@ -117,7 +116,7 @@ function getBaseHeaders(opts) {
     const correlationId = aws_log_1.getCorrelationId();
     const sequenceInfo = opts.sequence
         ? {
-            ["O-Sequence-Status"]: JSON.stringify(sequences_1.sequenceStatus(correlationId)(opts.sequence))
+            ["O-Sequence-Status"]: JSON.stringify(private_1.sequenceStatus(correlationId)(opts.sequence)),
         }
         : {};
     return Object.assign(Object.assign(Object.assign({}, sequenceInfo), getFnHeaders()), { ["X-Correlation-Id"]: aws_log_1.getCorrelationId() });

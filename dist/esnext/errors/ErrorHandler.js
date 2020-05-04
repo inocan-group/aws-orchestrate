@@ -12,7 +12,7 @@ export class ErrorHandler {
         return {
             code: this.code,
             identifiedBy: this.identifiedBy,
-            handling: this.handling
+            handling: this.handling,
         };
     }
 }

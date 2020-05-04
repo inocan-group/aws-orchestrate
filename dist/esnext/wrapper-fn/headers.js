@@ -1,14 +1,13 @@
-import { sequenceStatus } from "../sequences";
-import { saveSecretsLocally, getLocalSecrets } from "./secrets";
 import set from "lodash.set";
 import { logger, getCorrelationId } from "aws-log";
+import { sequenceStatus, saveSecretsLocally, getLocalSecrets } from "../private";
 /**
  * Ensures that frontend clients who call Lambda's
  * will be given a CORs friendly response
  */
 export const CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Credentials": true
+    "Access-Control-Allow-Credentials": true,
 };
 let contentType = "application/json";
 let fnHeaders = {};
@@ -54,7 +53,7 @@ export function saveSecretHeaders(headers, log) {
     }, {});
     if (secrets.length > 0) {
         log.debug(`Secrets [ ${secrets.length} ] from headers were identified`, {
-            secrets
+            secrets,
         });
     }
     saveSecretsLocally(localSecrets);
@@ -70,7 +69,7 @@ export function getHeaderSecrets() {
     return Object.keys(modules).reduce((headerSecrets, mod) => {
         const secrets = modules[mod];
         if (typeof secrets === "object") {
-            Object.keys(secrets).forEach(secret => {
+            Object.keys(secrets).forEach((secret) => {
                 headerSecrets[`O-S-${mod}/${secret}`] = modules[mod][secret];
             });
         }
@@ -78,7 +77,7 @@ export function getHeaderSecrets() {
             log.warn(`Attempt to generate header secrets but module "${mod}" is not a hash of name/values. Ignoring this module but continuing.`, {
                 module: mod,
                 type: typeof secrets,
-                localModules: Object.keys(modules)
+                localModules: Object.keys(modules),
             });
         }
         return headerSecrets;
@@ -106,13 +105,13 @@ function getBaseHeaders(opts) {
     const correlationId = getCorrelationId();
     const sequenceInfo = opts.sequence
         ? {
-            ["O-Sequence-Status"]: JSON.stringify(sequenceStatus(correlationId)(opts.sequence))
+            ["O-Sequence-Status"]: JSON.stringify(sequenceStatus(correlationId)(opts.sequence)),
         }
         : {};
     return {
         ...sequenceInfo,
         ...getFnHeaders(),
-        ["X-Correlation-Id"]: getCorrelationId()
+        ["X-Correlation-Id"]: getCorrelationId(),
     };
 }
 /**
@@ -122,7 +121,7 @@ export function getResponseHeaders(opts = {}) {
     return {
         ...getBaseHeaders(opts),
         ...CORS_HEADERS,
-        "Content-Type": getContentType()
+        "Content-Type": getContentType(),
     };
 }
 /**
@@ -132,7 +131,7 @@ export function getResponseHeaders(opts = {}) {
 export function getRequestHeaders(opts = {}) {
     return {
         ...getHeaderSecrets(),
-        ...getBaseHeaders(opts)
+        ...getBaseHeaders(opts),
     };
 }
 //# sourceMappingURL=headers.js.map

@@ -1,5 +1,5 @@
 import { invoke as invokeLambda } from "aws-log";
-import { buildOrchestratedRequest } from "./sequences";
+import { buildOrchestratedRequest } from "../sequences";
 /**
  * A higher-order function which accepts a _sequence_ as an input first.
  * In essence, this just provides useful configuration which the _wrapper

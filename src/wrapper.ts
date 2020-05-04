@@ -35,7 +35,7 @@ import {
 } from "./wrapper-fn/index";
 import { convertToApiGatewayError, ErrorWithinError, RethrowError } from "./errors/index";
 import { sequenceStatus, buildOrchestratedRequest } from "./sequences/index";
-import { invoke as invokeHigherOrder } from "./invoke";
+import { invoke as invokeHigherOrder } from "./shared/invoke";
 import { invoke as invokeLambda } from "aws-log";
 import { ISequenceTrackerStatus } from "./exported-functions/SequenceTracker";
 import get from "lodash.get";

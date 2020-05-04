@@ -1,3 +1,2 @@
-import serialize from 'serialize-javascript';
-export { serialize };
-export * from './deserialize';
+export * from "./deserialize";
+export * from "./invoke";

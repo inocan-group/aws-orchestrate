@@ -1,7 +1,6 @@
 import { logger } from "aws-log";
 import { SSM } from "aws-ssm";
 import flatten from "lodash.flatten";
-// import { segment } from "../wrapper";
 let localSecrets = {};
 /**
  * Saves secrets locally so they can be used rather than
@@ -45,7 +44,7 @@ export async function getSecrets(...modules) {
     const mods = flatten(modules);
     const log = logger().reloadContext();
     const localSecrets = getLocalSecrets();
-    if (mods.every(i => Object.keys(localSecrets).includes(i))) {
+    if (mods.every((i) => Object.keys(localSecrets).includes(i))) {
         // everything found in local secrets
         log.debug(`Call to getSecrets() resulted in 100% hit rate for modules locally`, { modules: mods });
         // segment.addAnnotation("getSecrets", "finished:onlyLocal");
@@ -58,7 +57,7 @@ export async function getSecrets(...modules) {
     // versus getting them all is negligible so we'll get them all from SSM
     log.debug(`Some modules requested were not found locally, requesting from SSM.`, { modules: mods });
     const newSecrets = await SSM.modules(mods);
-    mods.forEach(m => {
+    mods.forEach((m) => {
         if (!newSecrets[m]) {
             throw new Error(`Failure to retrieve the SSM module "${m}"`);
         }
@@ -69,7 +68,7 @@ export async function getSecrets(...modules) {
     log.debug(`new SSM modules retrieved`);
     const secrets = {
         ...localSecrets,
-        ...newSecrets
+        ...newSecrets,
     };
     saveSecretsLocally(secrets);
     maskLoggingForSecrets(newSecrets, log);
@@ -82,8 +81,8 @@ export async function getSecrets(...modules) {
  */
 export function maskLoggingForSecrets(modules, log) {
     let secretPaths = [];
-    Object.keys(modules).forEach(mod => {
-        Object.keys(mod).forEach(s => {
+    Object.keys(modules).forEach((mod) => {
+        Object.keys(mod).forEach((s) => {
             if (typeof s === "object") {
                 log.addToMaskedValues(modules[mod][s]);
                 secretPaths.push(`${mod}/${s}`);
@@ -92,7 +91,7 @@ export function maskLoggingForSecrets(modules, log) {
     });
     if (secretPaths.length > 0) {
         log.debug(`All secret values [ ${secretPaths.length} ] have been masked in logging`, {
-            secretPaths
+            secretPaths,
         });
     }
     else {
