@@ -1,10 +1,10 @@
-import { isLambdaProxyRequest, HttpStatusCodes } from "common-types";
+import { isLambdaProxyRequest, HttpStatusCodes, } from "common-types";
 import { logger } from "aws-log";
 import { ErrorMeta } from "./errors/ErrorMeta";
 import { LambdaSequence } from "./LambdaSequence";
 import { UnhandledError } from "./errors/UnhandledError";
 import { HandledError } from "./errors/HandledError";
-import { registerSequence as register, invokeNewSequence, findError, getSecrets, database, setFnHeaders, setContentType, getResponseHeaders, saveSecretHeaders, loggedMessages, getNewSequence, maskLoggingForSecrets, getLocalSecrets } from "./wrapper-fn/index";
+import { registerSequence as register, invokeNewSequence, findError, getSecrets, database, setFnHeaders, setContentType, getResponseHeaders, saveSecretHeaders, loggedMessages, getNewSequence, maskLoggingForSecrets, getLocalSecrets, } from "./wrapper-fn/index";
 import { convertToApiGatewayError, ErrorWithinError, RethrowError } from "./errors/index";
 import { sequenceStatus, buildOrchestratedRequest } from "./sequences/index";
 import { invoke as invokeHigherOrder } from "./invoke";
@@ -64,7 +64,7 @@ export const wrapper = function (fn, options = {}) {
                 setSuccessCode: (code) => (statusCode = code),
                 isApiGatewayRequest: isLambdaProxyRequest(event),
                 errorMgmt: errorMeta,
-                invoke
+                invoke,
             };
             //#endregion
             //#region CALL the HANDLER FUNCTION
@@ -117,7 +117,7 @@ export const wrapper = function (fn, options = {}) {
                 const response = {
                     statusCode: statusCode ? statusCode : result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
                     headers: getResponseHeaders(),
-                    body: result ? (typeof result === "string" ? result : JSON.stringify(result)) : ""
+                    body: result ? (typeof result === "string" ? result : JSON.stringify(result)) : "",
                 };
                 msg.returnToApiGateway(result, getResponseHeaders());
                 log.debug("the response will be", response);
@@ -165,7 +165,7 @@ export const wrapper = function (fn, options = {}) {
                     if (found.handling && found.handling.forwardTo) {
                         log.info(`Forwarding error to the function "${found.handling.forwardTo}"`, {
                             error: e,
-                            forwardTo: found.handling.forwardTo
+                            forwardTo: found.handling.forwardTo,
                         });
                         await invokeLambda(found.handling.forwardTo, e);
                     }
@@ -175,7 +175,7 @@ export const wrapper = function (fn, options = {}) {
                     log.debug(`An error is being processed by the default handling mechanism`, {
                         defaultHandling: get(errorMeta, "defaultHandling"),
                         errorMessage: get(e, "message", "no error messsage"),
-                        stack: get(e, "stack", "no stack available")
+                        stack: get(e, "stack", "no stack available"),
                     });
                     //#endregion
                     const handling = errorMeta.defaultHandling;
@@ -197,7 +197,7 @@ export const wrapper = function (fn, options = {}) {
                                         return {
                                             statusCode: result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent,
                                             headers: getResponseHeaders(),
-                                            body: result ? JSON.stringify(result) : ""
+                                            body: result ? JSON.stringify(result) : "",
                                         };
                                     }
                                     else {
@@ -263,7 +263,7 @@ export const wrapper = function (fn, options = {}) {
                         default:
                             log.debug("Unknown handling technique for unhandled error", {
                                 type: handling.type,
-                                errorMessage: e.message
+                                errorMessage: e.message,
                             });
                             throw new UnhandledError(errorMeta.defaultErrorCode, e);
                     }

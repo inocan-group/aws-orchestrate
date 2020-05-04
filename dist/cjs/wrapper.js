@@ -108,7 +108,7 @@ exports.wrapper = function (fn, options = {}) {
                 const response = {
                     statusCode: statusCode ? statusCode : result ? common_types_1.HttpStatusCodes.Success : common_types_1.HttpStatusCodes.NoContent,
                     headers: index_1.getResponseHeaders(),
-                    body: result ? (typeof result === "string" ? result : JSON.stringify(result)) : ""
+                    body: result ? (typeof result === "string" ? result : JSON.stringify(result)) : "",
                 };
                 msg.returnToApiGateway(result, index_1.getResponseHeaders());
                 log.debug("the response will be", response);
@@ -156,7 +156,7 @@ exports.wrapper = function (fn, options = {}) {
                     if (found.handling && found.handling.forwardTo) {
                         log.info(`Forwarding error to the function "${found.handling.forwardTo}"`, {
                             error: e,
-                            forwardTo: found.handling.forwardTo
+                            forwardTo: found.handling.forwardTo,
                         });
                         await aws_log_2.invoke(found.handling.forwardTo, e);
                     }
@@ -166,7 +166,7 @@ exports.wrapper = function (fn, options = {}) {
                     log.debug(`An error is being processed by the default handling mechanism`, {
                         defaultHandling: lodash_get_1.default(errorMeta, "defaultHandling"),
                         errorMessage: lodash_get_1.default(e, "message", "no error messsage"),
-                        stack: lodash_get_1.default(e, "stack", "no stack available")
+                        stack: lodash_get_1.default(e, "stack", "no stack available"),
                     });
                     //#endregion
                     const handling = errorMeta.defaultHandling;
@@ -188,7 +188,7 @@ exports.wrapper = function (fn, options = {}) {
                                         return {
                                             statusCode: result ? common_types_1.HttpStatusCodes.Accepted : common_types_1.HttpStatusCodes.NoContent,
                                             headers: index_1.getResponseHeaders(),
-                                            body: result ? JSON.stringify(result) : ""
+                                            body: result ? JSON.stringify(result) : "",
                                         };
                                     }
                                     else {
@@ -254,7 +254,7 @@ exports.wrapper = function (fn, options = {}) {
                         default:
                             log.debug("Unknown handling technique for unhandled error", {
                                 type: handling.type,
-                                errorMessage: e.message
+                                errorMessage: e.message,
                             });
                             throw new UnhandledError_1.UnhandledError(errorMeta.defaultErrorCode, e);
                     }

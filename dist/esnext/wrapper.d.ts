@@ -1,6 +1,5 @@
-import { IAWSLambaContext, IApiGatewayResponse, IApiGatewayErrorResponse } from "common-types";
+import { IAWSLambaContext, IApiGatewayResponse, IApiGatewayErrorResponse, IDictionary } from "common-types";
 import { IHandlerContext, IWrapperOptions, IOrchestrationRequestTypes } from "./@types";
-import { IDictionary } from "firemock";
 /**
  * **wrapper**
  *
