@@ -1,8 +1,6 @@
-import { IOrchestratedRequest } from "../@types";
 import { invoke as invokeLambda } from "aws-log";
 import { IDictionary } from "common-types";
-import { buildOrchestratedRequest } from "../sequences";
-import { LambdaSequence } from "../LambdaSequence";
+import { IOrchestratedRequest, LambdaSequence, buildOrchestratedRequest } from "../private";
 type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 
 export type LambdaInvocation<T = IDictionary, H = UnconstrainedHttpHeaders> = (

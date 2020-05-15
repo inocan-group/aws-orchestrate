@@ -8,17 +8,14 @@ import {
   IHttpResponseHeaders,
   IHttpRequestHeaders,
 } from "common-types";
-import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
-import { ErrorMeta } from "./errors/ErrorMeta";
-import { getSecrets } from "./wrapper-fn/secrets";
 type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
-import { invoke, LambdaInvocation, UnconstrainedHttpHeaders } from "./shared/invoke";
 type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 export type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 
+import { getSecrets, ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders } from "./private";
 /**
  * The API Gateway's _proxy integration request_ structure with the
  * `body` and `headers` removed

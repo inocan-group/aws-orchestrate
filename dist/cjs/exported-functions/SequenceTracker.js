@@ -1,14 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SequenceTracker = exports.SequenceTrackerConfig = void 0;
-const wrapper_1 = require("../wrapper");
-const secrets_1 = require("../wrapper-fn/secrets");
+const private_1 = require("../private");
 exports.SequenceTrackerConfig = {
-    description: `Allows writing the status of LambdaSequence's to Firebase to open up the possibility of providing functional HTTP statuses`
+    description: `Allows writing the status of LambdaSequence's to Firebase to open up the possibility of providing functional HTTP statuses`,
 };
 const fn = async (event, context) => {
     const firebaseModule = event.firebaseSecretLocation || "firebase/SERVICE_ACCOUNT";
-    const secrets = await secrets_1.getSecrets([firebaseModule]);
+    const secrets = await private_1.getSecrets([firebaseModule]);
     const db = await context.database(secrets.firebase.SERVICE_ACCOUNT);
     const stage = process.env.AWS_STAGE || process.env.NODE_ENV;
     if (!stage) {
@@ -45,5 +44,5 @@ const fn = async (event, context) => {
  * For more information see the docs at:
  * [SequenceTracker](aws-orchestrate.netlify.com/transaction#SequenceTracker)
  */
-exports.SequenceTracker = wrapper_1.wrapper(fn);
+exports.SequenceTracker = private_1.wrapper(fn);
 //# sourceMappingURL=SequenceTracker.js.map

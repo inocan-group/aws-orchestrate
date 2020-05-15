@@ -6813,7 +6813,7 @@ lzutf8@^0.5.5:
   resolved "https://registry.yarnpkg.com/lzutf8/-/lzutf8-0.5.5.tgz#3f677ef865eae628fca5f8c6a423ae631371a71c"
   integrity sha512-x4AdRtP0ETRe0BW8V+TfW+8rOF5t3vWU/Z52twUqDRf0OiEuXiLvXNN6Zm8biFCTI9ffXBZb++THAjfkJ559Nw==
 
-madge@^3.8.0:
+madge@^3.8.0, madge@^3.9.0:
   version "3.9.0"
   resolved "https://registry.yarnpkg.com/madge/-/madge-3.9.0.tgz#7bcc6d6265e88049685cb5bb075cd1b16b90fcf5"
   integrity sha512-ABR2ZTFga+TPLzlu2u46lcv8WwOzoI6VMTMqe3DyaY0igzyGpXiOIH1vAtziSKC4UHuyTpwkfhjWN5qOYR/5OA==
@@ -10573,7 +10573,7 @@ vuepress-plugin-smooth-scroll@^0.0.3:
   dependencies:
     smoothscroll-polyfill "^0.4.3"
 
-vuepress@^1.4.1:
+vuepress@^1.5.0:
   version "1.5.0"
   resolved "https://registry.yarnpkg.com/vuepress/-/vuepress-1.5.0.tgz#690ed2b190844c2e53665df1e211a5fb107a8de7"
   integrity sha512-Th07IdRtD6EiDGtlNwohQqfYorkDVdUkOHjLEC+T6k79Vfj7f0vv3tswmLrFb+sZvRxdfESOHDlpatxUZDjSmA==

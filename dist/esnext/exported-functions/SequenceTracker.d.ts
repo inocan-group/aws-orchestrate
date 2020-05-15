@@ -1,4 +1,4 @@
-import { IErrorClass, IWrapperFunction } from "../@types";
+import { IErrorClass, IWrapperFunction } from "../private";
 export declare const SequenceTrackerConfig: IWrapperFunction;
 export interface ISequenceTrackerRequest {
     status: ISequenceTrackerStatus;
@@ -70,4 +70,4 @@ export declare type ISequenceTrackerStatus = ISequenceTrackerStatusSuccess | ISe
  * For more information see the docs at:
  * [SequenceTracker](aws-orchestrate.netlify.com/transaction#SequenceTracker)
  */
-export declare const SequenceTracker: (event: import("../@types").IOrchestrationRequestTypes<ISequenceTrackerRequest>, context: import("common-types").IAWSLambaContext) => Promise<import("common-types").IApiGatewayResponse | ISequenceTrackerStatusSuccess | ISequenceTrackerStatusError | ISequenceTrackerStatusRunning | import("common-types").IApiGatewayErrorResponse<any>>;
+export declare const SequenceTracker: (event: import("../@types").IOrchestrationRequestTypes<ISequenceTrackerRequest>, context: import("common-types").IAWSLambaContext) => Promise<import("common-types").IApiGatewayResponse | import("common-types").IApiGatewayErrorResponse<any> | ISequenceTrackerStatusSuccess | ISequenceTrackerStatusError | ISequenceTrackerStatusRunning>;

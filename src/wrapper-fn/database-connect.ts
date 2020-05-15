@@ -1,7 +1,6 @@
 import { logger } from "aws-log";
 import { DB } from "abstracted-admin";
 import { getSecrets } from "../private";
-import { IDictionary } from "common-types";
 
 let _database: DB;
 

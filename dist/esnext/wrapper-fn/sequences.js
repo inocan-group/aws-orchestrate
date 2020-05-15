@@ -1,4 +1,4 @@
-import { LambdaSequence } from "../LambdaSequence";
+import { LambdaSequence } from "../private";
 let newSequence;
 /**
  * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)

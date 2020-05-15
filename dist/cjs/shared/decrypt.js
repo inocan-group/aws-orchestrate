@@ -1,3 +1,6 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.decrypt = void 0;
 /**
  * **decrypt**
  *
@@ -9,4 +12,5 @@ function decrypt(input) {
     // TODO: implement
     return input;
 }
+exports.decrypt = decrypt;
 //# sourceMappingURL=decrypt.js.map

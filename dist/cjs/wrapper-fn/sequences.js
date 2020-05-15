@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.invokeNewSequence = exports.getNewSequence = exports.registerSequence = void 0;
-const LambdaSequence_1 = require("../LambdaSequence");
+const private_1 = require("../private");
 let newSequence;
 /**
  * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)
@@ -17,7 +17,7 @@ exports.registerSequence = registerSequence;
  * returns the sequence which was set by `startSequence()`
  **/
 function getNewSequence() {
-    return newSequence || LambdaSequence_1.LambdaSequence.notASequence();
+    return newSequence || private_1.LambdaSequence.notASequence();
 }
 exports.getNewSequence = getNewSequence;
 async function invokeNewSequence(results = {}) {
