@@ -111,6 +111,7 @@ export const wrapper = function<I, O>(
         claims,
         log,
         headers,
+        queryParameters: apiGateway.queryStringParameters || {},
         setHeaders: setFnHeaders,
         setContentType,
         database: (config?: IFirebaseAdminConfig) => database(config),

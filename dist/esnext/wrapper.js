@@ -45,6 +45,7 @@ export const wrapper = function (fn, options = {}) {
                 claims,
                 log,
                 headers,
+                queryParameters: apiGateway.queryStringParameters || {},
                 setHeaders: setFnHeaders,
                 setContentType,
                 database: (config) => database(config),

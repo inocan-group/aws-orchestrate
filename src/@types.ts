@@ -251,6 +251,11 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    */
   headers: IWrapperRequestHeaders;
   /**
+   * A dictionary of name/value pairs based on the values passed in from the
+   * query parameters coming in from API Gateway
+   */
+  queryParameters: IDictionary;
+  /**
    * The custom claims which this function received from API Gateway.
    *
    * **Note:** the claims property is sourced from a deeply nested property in the API Gateway
