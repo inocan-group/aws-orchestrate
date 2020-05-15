@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getRequestHeaders = exports.getResponseHeaders = exports.setFnHeaders = exports.getFnHeaders = exports.setContentType = exports.getHeaderSecrets = exports.saveSecretHeaders = exports.getContentType = exports.CORS_HEADERS = void 0;
 const lodash_set_1 = __importDefault(require("lodash.set"));
 const aws_log_1 = require("aws-log");
 const private_1 = require("../private");

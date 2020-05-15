@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.convertToApiGatewayError = void 0;
 const ErrorMeta_1 = require("./ErrorMeta");
 const headers_1 = require("../wrapper-fn/headers");
 /**

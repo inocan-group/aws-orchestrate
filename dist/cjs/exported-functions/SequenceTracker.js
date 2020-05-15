@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.SequenceTracker = exports.SequenceTrackerConfig = void 0;
 const wrapper_1 = require("../wrapper");
 const secrets_1 = require("../wrapper-fn/secrets");
 exports.SequenceTrackerConfig = {

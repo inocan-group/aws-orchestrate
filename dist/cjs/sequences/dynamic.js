@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.isDynamic = exports.dynamic = void 0;
 /**
  * A helper function for Orchestrators which produces a
  * dynamic reference. Usage would be:

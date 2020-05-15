@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.decompress = exports.isCompressedSection = exports.compress = void 0;
 const lzutf8_1 = require("lzutf8");
 const UnhandledError_1 = require("../errors/UnhandledError");
 const common_types_1 = require("common-types");
