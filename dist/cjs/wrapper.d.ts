@@ -1,4 +1,4 @@
-import { IAWSLambaContext, IApiGatewayResponse, IApiGatewayErrorResponse, IDictionary } from "common-types";
+import { IAWSLambaContext, IApiGatewayResponse, IApiGatewayErrorResponse } from "common-types";
 import { IHandlerContext, IWrapperOptions, IOrchestrationRequestTypes } from "./@types";
 /**
  * **wrapper**
@@ -10,4 +10,4 @@ import { IHandlerContext, IWrapperOptions, IOrchestrationRequestTypes } from "./
  * @param context the contextual props and functions which AWS provides plus additional
  * features brought in by the wrapper function
  */
-export declare const wrapper: <I, O>(fn: (req: I, context: IHandlerContext<IDictionary<any>>) => Promise<O>, options?: IWrapperOptions) => (event: IOrchestrationRequestTypes<I>, context: IAWSLambaContext) => Promise<IApiGatewayResponse | O | IApiGatewayErrorResponse<any>>;
+export declare const wrapper: <I, O>(fn: (req: I, context: IHandlerContext) => Promise<O>, options?: IWrapperOptions) => (event: IOrchestrationRequestTypes<I>, context: IAWSLambaContext) => Promise<IApiGatewayResponse | O | IApiGatewayErrorResponse<any>>;

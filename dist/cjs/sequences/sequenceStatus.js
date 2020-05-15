@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.sequenceStatus = void 0;
 /**
  * A higher order function which first takes a `correlationId` and returns a function which provides
  * a simple status of the sequence.

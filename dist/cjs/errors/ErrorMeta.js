@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ErrorMeta = exports.DEFAULT_ERROR_CODE = void 0;
 const ErrorHandler_1 = require("./ErrorHandler");
 exports.DEFAULT_ERROR_CODE = 500;
 /**

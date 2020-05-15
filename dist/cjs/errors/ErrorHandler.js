@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ErrorHandler = void 0;
 /**
  * Allows the definition of a serverless function's
  * expected error code

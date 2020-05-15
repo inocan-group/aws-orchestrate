@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.isOrchestratedRequest = void 0;
 /**
  * detects if the given structure is of type <T> or
  * has been boxed into an `IOrchestratedMessageBody`

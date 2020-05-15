@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.invoke = void 0;
 const aws_log_1 = require("aws-log");
 const sequences_1 = require("../sequences");
 /**

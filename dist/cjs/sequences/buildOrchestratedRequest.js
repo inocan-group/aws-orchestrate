@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.buildOrchestratedRequest = void 0;
 const LambdaSequence_1 = require("../LambdaSequence");
 const wrapper_fn_1 = require("../wrapper-fn");
 const compress_1 = require("./compress");

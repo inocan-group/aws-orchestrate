@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.serializeSequence = void 0;
 /**
  * Serializes a `LambdaSequence` into a string representation
  * so it can be passed as a header parameter in HTTP responses

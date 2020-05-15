@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.wrapper = void 0;
 const common_types_1 = require("common-types");
 const aws_log_1 = require("aws-log");
 const ErrorMeta_1 = require("./errors/ErrorMeta");

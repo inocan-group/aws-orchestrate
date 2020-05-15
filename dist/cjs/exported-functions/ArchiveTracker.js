@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.handler = exports.ArchiveTrackerConfig = void 0;
 const wrapper_1 = require("../wrapper");
 /**
  * Usable as _inline-configuration_ of this function if using the

@@ -1,6 +1,7 @@
 import { logger } from "aws-log";
 import { DB } from "abstracted-admin";
 import { getSecrets } from "../private";
+import { IDictionary } from "common-types";
 
 let _database: DB;
 
@@ -10,36 +11,52 @@ type IFirebaseConfig = import("abstracted-firebase").IFirebaseAdminConfig;
  * **database**
  *
  * Provides a convenient means to connect to the database which lives
- * outside the _handler_ function's main thread. This allows the connection
- * to the database to sometimes be preserved between function executions.
+ * outside the _handler_ function's main thread. You _can_ pass in a
+ * **Firebase** configuration if you want but the only two things which
+ * are needed for the Admin API is a "service account" and a "database URL"
+ * so more typically you'll set these as ENV variables and/or you can just
+ * let this function retrieve the _secrets_ from SSM for you.
  *
- * This is loaded asynchronously and the containing code must explicitly
- * load the `abstracted-admin` library (as this library only lists it as
- * a devDep)
+ * If you want to have this function configure the connection for you please
+ * just use the following naming convention:
+ *
+ * 1. For the **service account**:
+ *    - for ENV: `FIREBASE_SERVICE_ACCOUNT`
+ *    - for SSM: `/[version]/[stage]/firebase/SERVICE_ACCOUNT`
+ * 2. For the **database URL** -- due to historical reasons -- there are two ENV names which will work:
+ *    - for ENV: `FIREBASE_DATA_ROOT_URL` or `FIREBASE_DATABASE_URL`
+ *    - for SSM: `/[version]/[stage]/firebase/DATABASE_URL`
+ *
+ * > Note that `FIREBASE_DATABASE_URL` is preferred over `FIREBASE_DATA_ROOT_URL` for ENV naming
  */
 export const database = async (config?: IFirebaseConfig) => {
   const log = logger().reloadContext();
+  let serviceAccount: string = process.env.FIREBASE_SERVICE_ACCOUNT;
+  let databaseUrl: string = process.env.FIREBASE_DATABASE_URL || process.env.FIREBASE_DATA_ROOT_URL;
+
   if (!_database) {
     if (!config) {
-      if (process.env.FIREBASE_SERVICE_ACCOUNT && process.env.FIREBASE_DATA_ROOT_URL) {
-        log.debug(`The environment variables are in place to configure database connectivity`, {
-          firebaseDataRootUrl: process.env.FIREBASE_DATA_ROOT_URL,
-        });
+      if (serviceAccount && databaseUrl) {
+        config = { serviceAccount, databaseUrl };
+        log.debug(`Environment variables were used to configure Firebase's Admin SDK`, { databaseUrl });
       } else {
         const { firebase } = await getSecrets(["firebase"]);
         if (!firebase) {
           throw new Error(
-            `The module "firebase" was not found in SSM; Firebase configuration could not be established`
+            `After checking ENV variables, the SSM module "firebase" was not found. Firebase configuration could not be established!`
           );
         }
-        if (!firebase.SERVICE_ACCOUNT) {
-          throw new Error(`The module "firebase" was found but it did not have a `);
-        }
-        log.debug(`The Firebase service account has been retrieved from SSM and will be used.`);
         config = {
-          serviceAccount: firebase.SERVICE_ACCOUNT,
-          databaseUrl: firebase.DATABASE_URL,
+          serviceAccount: serviceAccount || firebase.SERVICE_ACCOUNT,
+          databaseUrl: databaseUrl || firebase.DATABASE_URL,
         };
+        if (!config.serviceAccount) {
+          throw new Error(`The Firebase service account could not be found in ENV or SSM variables!`);
+        }
+        if (!config.databaseUrl) {
+          throw new Error(`The Firebase database URL could not be found in ENV or SSM variables!`);
+        }
+        log.debug(`A combination of ENV and SSM variables was used to configure Firebase's Admin SDK`);
       }
     }
 

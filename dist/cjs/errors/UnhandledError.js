@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.UnhandledError = void 0;
 class UnhandledError extends Error {
     /**
      * **Constructor**

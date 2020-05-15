@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.loggedMessages = void 0;
 const common_types_1 = require("common-types");
 const lodash_get_1 = __importDefault(require("lodash.get"));
 const private_1 = require("../private");
