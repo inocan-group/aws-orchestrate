@@ -6,14 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.wrapper = void 0;
 const common_types_1 = require("common-types");
 const aws_log_1 = require("aws-log");
-const ErrorMeta_1 = require("./errors/ErrorMeta");
-const LambdaSequence_1 = require("./LambdaSequence");
-const UnhandledError_1 = require("./errors/UnhandledError");
-const HandledError_1 = require("./errors/HandledError");
-const index_1 = require("./wrapper-fn/index");
-const index_2 = require("./errors/index");
-const index_3 = require("./sequences/index");
-const invoke_1 = require("./shared/invoke");
+const private_1 = require("./private");
 const aws_log_2 = require("aws-log");
 const lodash_get_1 = __importDefault(require("lodash.get"));
 /**
@@ -34,30 +27,30 @@ exports.wrapper = function (fn, options = {}) {
         workflowStatus = "initializing";
         context.callbackWaitsForEmptyEventLoop = false;
         const log = aws_log_1.logger().lambda(event, context);
-        const msg = index_1.loggedMessages(log);
-        const errorMeta = new ErrorMeta_1.ErrorMeta();
+        const msg = private_1.loggedMessages(log);
+        const errorMeta = new private_1.ErrorMeta();
         /** the code to use for successful requests */
         let statusCode;
         workflowStatus = "unboxing-from-prior-function";
-        const { request, sequence, apiGateway, headers } = LambdaSequence_1.LambdaSequence.from(event);
+        const { request, sequence, apiGateway, headers } = private_1.LambdaSequence.from(event);
         try {
             workflowStatus = "starting-try-catch";
             msg.start(request, headers, context, sequence, apiGateway);
             // const segment = xray.getSegment();
             // segment.addMetadata("initialized", request);
-            index_1.saveSecretHeaders(headers, log);
-            index_1.maskLoggingForSecrets(index_1.getLocalSecrets(), log);
+            private_1.saveSecretHeaders(headers, log);
+            private_1.maskLoggingForSecrets(private_1.getLocalSecrets(), log);
             //#region PREP
             workflowStatus = "prep-starting";
-            const status = index_3.sequenceStatus(log.getCorrelationId());
-            const registerSequence = index_1.registerSequence(log, context);
-            const invoke = invoke_1.invoke(sequence);
+            const status = private_1.sequenceStatus(log.getCorrelationId());
+            const registerSequence = private_1.registerSequence(log, context);
+            const invoke = private_1.invoke(sequence);
             const claims = JSON.parse(lodash_get_1.default(apiGateway, "requestContext.authorizer.customClaims", "{}"));
             const handlerContext = Object.assign(Object.assign({}, context), { claims,
                 log,
-                headers, setHeaders: index_1.setFnHeaders, setContentType: index_1.setContentType, database: (config) => index_1.database(config), sequence,
+                headers, queryParameters: apiGateway.queryStringParameters || {}, setHeaders: private_1.setFnHeaders, setContentType: private_1.setContentType, database: (config) => private_1.database(config), sequence,
                 registerSequence, isSequence: sequence.isSequence, isDone: sequence.isDone, apiGateway,
-                getSecrets: index_1.getSecrets, setSuccessCode: (code) => (statusCode = code), isApiGatewayRequest: common_types_1.isLambdaProxyRequest(event), errorMgmt: errorMeta, invoke });
+                getSecrets: private_1.getSecrets, setSuccessCode: (code) => (statusCode = code), isApiGatewayRequest: common_types_1.isLambdaProxyRequest(event), errorMgmt: errorMeta, invoke });
             //#endregion
             //#region CALL the HANDLER FUNCTION
             workflowStatus = "running-function";
@@ -79,10 +72,10 @@ exports.wrapper = function (fn, options = {}) {
             }
             //#endregion
             //#region SEQUENCE (orchestration starting)
-            if (index_1.getNewSequence().isSequence) {
+            if (private_1.getNewSequence().isSequence) {
                 workflowStatus = "sequence-starting";
                 msg.sequenceStarting();
-                const seqResponse = await index_1.invokeNewSequence(result);
+                const seqResponse = await private_1.invokeNewSequence(result);
                 msg.sequenceStarted(seqResponse);
                 workflowStatus = "sequence-started";
             }
@@ -94,7 +87,7 @@ exports.wrapper = function (fn, options = {}) {
             if (options.sequenceTracker && sequence.isSequence) {
                 workflowStatus = "sequence-tracker-starting";
                 msg.sequenceTracker(options.sequenceTracker, workflowStatus);
-                await aws_log_2.invoke(options.sequenceTracker, index_3.buildOrchestratedRequest(status(sequence)));
+                await aws_log_2.invoke(options.sequenceTracker, private_1.buildOrchestratedRequest(status(sequence)));
                 if (sequence.isDone) {
                     msg.sequenceTrackerComplete(true);
                 }
@@ -108,10 +101,10 @@ exports.wrapper = function (fn, options = {}) {
             if (handlerContext.isApiGatewayRequest) {
                 const response = {
                     statusCode: statusCode ? statusCode : result ? common_types_1.HttpStatusCodes.Success : common_types_1.HttpStatusCodes.NoContent,
-                    headers: index_1.getResponseHeaders(),
+                    headers: private_1.getResponseHeaders(),
                     body: result ? (typeof result === "string" ? result : JSON.stringify(result)) : "",
                 };
-                msg.returnToApiGateway(result, index_1.getResponseHeaders());
+                msg.returnToApiGateway(result, private_1.getResponseHeaders());
                 log.debug("the response will be", response);
                 return response;
             }
@@ -127,12 +120,12 @@ exports.wrapper = function (fn, options = {}) {
             try {
                 const isApiGatewayRequest = common_types_1.isLambdaProxyRequest(apiGateway);
                 msg.processingError(e, workflowStatus, isApiGatewayRequest);
-                const found = index_1.findError(e, errorMeta);
+                const found = private_1.findError(e, errorMeta);
                 if (found) {
                     if (!found.handling) {
-                        const err = new HandledError_1.HandledError(found.code, e, log.getContext());
+                        const err = new private_1.HandledError(found.code, e, log.getContext());
                         if (isApiGatewayRequest) {
-                            return index_2.convertToApiGatewayError(err);
+                            return private_1.convertToApiGatewayError(err);
                         }
                         else {
                             throw err;
@@ -143,10 +136,10 @@ exports.wrapper = function (fn, options = {}) {
                         if (!resolvedLocally) {
                             // Unresolved Known Error!
                             if (isApiGatewayRequest) {
-                                return index_2.convertToApiGatewayError(new HandledError_1.HandledError(found.code, e, log.getContext()));
+                                return private_1.convertToApiGatewayError(new private_1.HandledError(found.code, e, log.getContext()));
                             }
                             else {
-                                throw new HandledError_1.HandledError(found.code, e, log.getContext());
+                                throw new private_1.HandledError(found.code, e, log.getContext());
                             }
                         }
                         else {
@@ -188,7 +181,7 @@ exports.wrapper = function (fn, options = {}) {
                                     if (isApiGatewayRequest) {
                                         return {
                                             statusCode: result ? common_types_1.HttpStatusCodes.Accepted : common_types_1.HttpStatusCodes.NoContent,
-                                            headers: index_1.getResponseHeaders(),
+                                            headers: private_1.getResponseHeaders(),
                                             body: result ? JSON.stringify(result) : "",
                                         };
                                     }
@@ -203,10 +196,10 @@ exports.wrapper = function (fn, options = {}) {
                             catch (e2) {
                                 // handler threw an error
                                 if (isApiGatewayRequest) {
-                                    return index_2.convertToApiGatewayError(new UnhandledError_1.UnhandledError(errorMeta.defaultErrorCode, e));
+                                    return private_1.convertToApiGatewayError(new private_1.UnhandledError(errorMeta.defaultErrorCode, e));
                                 }
                                 else {
-                                    throw new UnhandledError_1.UnhandledError(errorMeta.defaultErrorCode, e);
+                                    throw new private_1.UnhandledError(errorMeta.defaultErrorCode, e);
                                 }
                             }
                             break;
@@ -228,7 +221,7 @@ exports.wrapper = function (fn, options = {}) {
                             handling.error.stack = e.stack;
                             handling.error.type = "default-error";
                             if (isApiGatewayRequest) {
-                                return index_2.convertToApiGatewayError(handling.error);
+                                return private_1.convertToApiGatewayError(handling.error);
                             }
                             else {
                                 throw handling.error;
@@ -243,12 +236,12 @@ exports.wrapper = function (fn, options = {}) {
                             //   stack: e.stack
                             // });
                             log.info(`the default error code is ${errorMeta.defaultErrorCode}`);
-                            log.warn(`the error response will look like:`, index_2.convertToApiGatewayError(new UnhandledError_1.UnhandledError(errorMeta.defaultErrorCode, e)));
+                            log.warn(`the error response will look like:`, private_1.convertToApiGatewayError(new private_1.UnhandledError(errorMeta.defaultErrorCode, e)));
                             if (isApiGatewayRequest) {
-                                return index_2.convertToApiGatewayError(new UnhandledError_1.UnhandledError(errorMeta.defaultErrorCode, e));
+                                return private_1.convertToApiGatewayError(new private_1.UnhandledError(errorMeta.defaultErrorCode, e));
                             }
                             else {
-                                throw new UnhandledError_1.UnhandledError(errorMeta.defaultErrorCode, e);
+                                throw new private_1.UnhandledError(errorMeta.defaultErrorCode, e);
                             }
                             break;
                         //#endregion
@@ -257,7 +250,7 @@ exports.wrapper = function (fn, options = {}) {
                                 type: handling.type,
                                 errorMessage: e.message,
                             });
-                            throw new UnhandledError_1.UnhandledError(errorMeta.defaultErrorCode, e);
+                            throw new private_1.UnhandledError(errorMeta.defaultErrorCode, e);
                     }
                 }
             }
@@ -281,9 +274,9 @@ exports.wrapper = function (fn, options = {}) {
                     if (errorOfError.type === "unhandled-error" ||
                         errorOfError.type === "handled-error" ||
                         errorOfError.type === "default-error") {
-                        throw new index_2.RethrowError(errorOfError);
+                        throw new private_1.RethrowError(errorOfError);
                     }
-                    throw new index_2.ErrorWithinError(e, errorOfError);
+                    throw new private_1.ErrorWithinError(e, errorOfError);
                 }
             }
         }

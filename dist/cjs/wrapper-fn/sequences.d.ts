@@ -1,6 +1,6 @@
-import { LambdaSequence } from "../LambdaSequence";
 import { ILoggerApi } from "aws-log";
 import { IAWSLambaContext } from "common-types";
+import { LambdaSequence } from "../private";
 /**
  * Adds a new sequence to be invoked later (as a call to `invokeNewSequence`)
  */

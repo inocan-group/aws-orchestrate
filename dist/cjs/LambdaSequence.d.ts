@@ -1,5 +1,5 @@
 import { IDictionary, arn } from "common-types";
-import { ILambdaFunctionType, ILambdaSequenceStep, ILambdaSequenceNextTuple, ILambaSequenceFromResponse, ISerializedSequence, IOrchestratedProperties, IOrchestrationRequestTypes, IFanOutTuple, IFanOutResponse, OrchestratedErrorHandler, OrchestratedCondition } from "./@types";
+import { ILambdaFunctionType, ILambdaSequenceStep, ILambdaSequenceNextTuple, ILambaSequenceFromResponse, ISerializedSequence, IOrchestratedProperties, IOrchestrationRequestTypes, IFanOutTuple, IFanOutResponse, OrchestratedErrorHandler, OrchestratedCondition } from "./private";
 export declare class LambdaSequence {
     /**
      * **add** (static initializer)

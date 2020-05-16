@@ -1,14 +1,11 @@
 import { IDictionary, IAWSLambdaProxyIntegrationRequest, IAWSLambaContext, Omit, arn, IServerlessFunction, IHttpResponseHeaders, IHttpRequestHeaders } from "common-types";
-import { LambdaSequence } from "./LambdaSequence";
 import { ILoggerApi } from "aws-log";
-import { ErrorMeta } from "./errors/ErrorMeta";
-import { getSecrets } from "./wrapper-fn/secrets";
 declare type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
 declare type DB = import("abstracted-admin").DB;
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
-import { UnconstrainedHttpHeaders } from "./shared/invoke";
 declare type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 export declare type IWrapperFunction = Omit<IServerlessFunction, "handler">;
+import { getSecrets, ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders } from "./private";
 /**
  * The API Gateway's _proxy integration request_ structure with the
  * `body` and `headers` removed
@@ -219,6 +216,11 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
      * by `aws-orchestrate`.
      */
     headers: IWrapperRequestHeaders;
+    /**
+     * A dictionary of name/value pairs based on the values passed in from the
+     * query parameters coming in from API Gateway
+     */
+    queryParameters: IDictionary;
     /**
      * The custom claims which this function received from API Gateway.
      *

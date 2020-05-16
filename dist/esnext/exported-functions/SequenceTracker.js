@@ -1,7 +1,6 @@
-import { wrapper } from "../wrapper";
-import { getSecrets } from "../wrapper-fn/secrets";
+import { wrapper, getSecrets } from "../private";
 export const SequenceTrackerConfig = {
-    description: `Allows writing the status of LambdaSequence's to Firebase to open up the possibility of providing functional HTTP statuses`
+    description: `Allows writing the status of LambdaSequence's to Firebase to open up the possibility of providing functional HTTP statuses`,
 };
 const fn = async (event, context) => {
     const firebaseModule = event.firebaseSecretLocation || "firebase/SERVICE_ACCOUNT";

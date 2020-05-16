@@ -1,5 +1,5 @@
 import { IDictionary } from "common-types";
-import { LambdaSequence } from "../LambdaSequence";
+import { LambdaSequence } from "../private";
 declare type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 export declare type LambdaInvocation<T = IDictionary, H = UnconstrainedHttpHeaders> = (fnArn: string, request: T, additionalHeaders?: H) => Promise<InvocationResponse>;
 export declare type UnconstrainedHttpHeaders = IDictionary<string | number | boolean>;

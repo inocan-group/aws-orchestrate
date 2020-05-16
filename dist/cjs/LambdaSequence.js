@@ -5,9 +5,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LambdaSequence = void 0;
 const common_types_1 = require("common-types");
-const sequences_1 = require("./sequences");
 const lodash_get_1 = __importDefault(require("lodash.get"));
 const aws_log_1 = require("aws-log");
+const private_1 = require("./private");
 class LambdaSequence {
     constructor() {
         /**
@@ -162,7 +162,7 @@ class LambdaSequence {
         let body = this.resolveRequestProperties(this.activeFn);
         let arn = this.activeFn.arn;
         this.validateCallDepth();
-        const request = sequences_1.buildOrchestratedRequest(body, this);
+        const request = private_1.buildOrchestratedRequest(body, this);
         return [arn, request];
     }
     /**
@@ -198,12 +198,12 @@ class LambdaSequence {
             sequence = LambdaSequence.notASequence();
             delete apiGateway.body;
         }
-        else if (sequences_1.isOrchestratedRequest(event)) {
-            headers = sequences_1.decompress(event.headers);
-            request = sequences_1.decompress(event.body);
-            sequence = LambdaSequence.deserialize(sequences_1.decompress(event.sequence));
+        else if (private_1.isOrchestratedRequest(event)) {
+            headers = private_1.decompress(event.headers);
+            request = private_1.decompress(event.body);
+            sequence = LambdaSequence.deserialize(private_1.decompress(event.sequence));
         }
-        else if (sequences_1.isBareRequest(event)) {
+        else if (private_1.isBareRequest(event)) {
             headers = {};
             sequence =
                 typeof event === "object" && event._sequence
@@ -392,7 +392,7 @@ class LambdaSequence {
     resolveRequestProperties(fn) {
         return Object.keys(fn.params).reduce((props, key) => {
             let value = fn.params[key];
-            if (sequences_1.isDynamic(value)) {
+            if (private_1.isDynamic(value)) {
                 value = lodash_get_1.default(this._responses, value.lookup, undefined);
                 if (typeof value === undefined) {
                     throw new Error(`The property "${key}" was set as a dynamic property by the Orchestrator but it was dependant on getting a value from ${fn.params[key]} which could not be found.`);

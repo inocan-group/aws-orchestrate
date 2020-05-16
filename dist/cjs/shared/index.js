@@ -12,5 +12,8 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 //#autindex:named
 __exportStar(require("./deserialize"), exports);
+__exportStar(require("./serialize"), exports);
 __exportStar(require("./invoke"), exports);
+__exportStar(require("./encrypt"), exports);
+__exportStar(require("./decrypt"), exports);
 //# sourceMappingURL=index.js.map

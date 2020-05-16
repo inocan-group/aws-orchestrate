@@ -1,24 +1,16 @@
-import { wrapper } from "../wrapper";
-import { IHandlerFunction, IErrorClass, IWrapperFunction } from "../@types";
-import { getSecrets } from "../wrapper-fn/secrets";
+import { IHandlerFunction, IErrorClass, IWrapperFunction, wrapper, getSecrets } from "../private";
 
 export const SequenceTrackerConfig: IWrapperFunction = {
-  description: `Allows writing the status of LambdaSequence's to Firebase to open up the possibility of providing functional HTTP statuses`
+  description: `Allows writing the status of LambdaSequence's to Firebase to open up the possibility of providing functional HTTP statuses`,
 };
 
-const fn: IHandlerFunction<
-  ISequenceTrackerRequest,
-  ISequenceTrackerStatus
-> = async (event, context) => {
-  const firebaseModule =
-    event.firebaseSecretLocation || "firebase/SERVICE_ACCOUNT";
+const fn: IHandlerFunction<ISequenceTrackerRequest, ISequenceTrackerStatus> = async (event, context) => {
+  const firebaseModule = event.firebaseSecretLocation || "firebase/SERVICE_ACCOUNT";
   const secrets = await getSecrets([firebaseModule]);
   const db = await context.database(secrets.firebase.SERVICE_ACCOUNT);
   const stage = process.env.AWS_STAGE || process.env.NODE_ENV;
   if (!stage) {
-    throw new Error(
-      `The "stage" could not be determined; set the AWS_STAGE or NODE_ENV environment variables!`
-    );
+    throw new Error(`The "stage" could not be determined; set the AWS_STAGE or NODE_ENV environment variables!`);
   }
   const databasePath = `aws-orchestrate/${stage}/${event.status.correlationId}`;
   await db.set<ISequenceTrackerStatus>(databasePath, event.status);
@@ -59,18 +51,15 @@ export interface ISequenceTrackerStatusBase {
   status: string;
 }
 
-export interface ISequenceTrackerStatusSuccess
-  extends ISequenceTrackerStatusBase {
+export interface ISequenceTrackerStatusSuccess extends ISequenceTrackerStatusBase {
   status: "success";
   data: string;
 }
-export interface ISequenceTrackerStatusError
-  extends ISequenceTrackerStatusBase {
+export interface ISequenceTrackerStatusError extends ISequenceTrackerStatusBase {
   status: "error";
   error: IErrorClass;
 }
-export interface ISequenceTrackerStatusRunning
-  extends ISequenceTrackerStatusBase {
+export interface ISequenceTrackerStatusRunning extends ISequenceTrackerStatusBase {
   status: "running";
 }
 export type ISequenceTrackerStatus =

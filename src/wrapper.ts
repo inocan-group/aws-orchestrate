@@ -7,18 +7,16 @@ import {
   IDictionary,
 } from "common-types";
 import { logger } from "aws-log";
-import { ErrorMeta } from "./errors/ErrorMeta";
-import { LambdaSequence } from "./LambdaSequence";
-import { UnhandledError } from "./errors/UnhandledError";
 import {
   IHandlerContext,
   IWrapperOptions,
   IOrchestrationRequestTypes,
+  HandledError,
   OrchestratedErrorHandler,
   OrchestratedErrorForwarder,
-} from "./@types";
-import { HandledError } from "./errors/HandledError";
-import {
+  ErrorMeta,
+  LambdaSequence,
+  UnhandledError,
   registerSequence as register,
   invokeNewSequence,
   findError,
@@ -32,12 +30,16 @@ import {
   getNewSequence,
   maskLoggingForSecrets,
   getLocalSecrets,
-} from "./wrapper-fn/index";
-import { convertToApiGatewayError, ErrorWithinError, RethrowError } from "./errors/index";
-import { sequenceStatus, buildOrchestratedRequest } from "./sequences/index";
-import { invoke as invokeHigherOrder } from "./shared/invoke";
+  convertToApiGatewayError,
+  ErrorWithinError,
+  RethrowError,
+  sequenceStatus,
+  buildOrchestratedRequest,
+  invoke as invokeHigherOrder,
+  ISequenceTrackerStatus,
+} from "./private";
+
 import { invoke as invokeLambda } from "aws-log";
-import { ISequenceTrackerStatus } from "./exported-functions/SequenceTracker";
 import get from "lodash.get";
 // import xray from "aws-xray-sdk-core";
 // export const segment = xray.getSegment();
@@ -109,6 +111,7 @@ export const wrapper = function<I, O>(
         claims,
         log,
         headers,
+        queryParameters: apiGateway.queryStringParameters || {},
         setHeaders: setFnHeaders,
         setContentType,
         database: (config?: IFirebaseAdminConfig) => database(config),

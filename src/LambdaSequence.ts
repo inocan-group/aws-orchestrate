@@ -5,6 +5,8 @@ import {
   getBodyFromPossibleLambdaProxyRequest,
   arn,
 } from "common-types";
+import get from "lodash.get";
+import { logger, invoke as invokeLambda } from "aws-log";
 
 import {
   ILambdaFunctionType,
@@ -21,10 +23,12 @@ import {
   IFanOutResponse,
   OrchestratedErrorHandler,
   OrchestratedCondition,
-} from "./@types";
-import { isDynamic, decompress, isBareRequest, buildOrchestratedRequest, isOrchestratedRequest } from "./sequences";
-import get from "lodash.get";
-import { logger, invoke as invokeLambda } from "aws-log";
+  isDynamic,
+  decompress,
+  isBareRequest,
+  buildOrchestratedRequest,
+  isOrchestratedRequest,
+} from "./private";
 
 export class LambdaSequence {
   /**

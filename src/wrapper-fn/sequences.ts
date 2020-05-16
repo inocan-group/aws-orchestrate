@@ -1,7 +1,6 @@
-import { LambdaSequence } from "../LambdaSequence";
 import { ILoggerApi } from "aws-log";
 import { IAWSLambaContext } from "common-types";
-import { invoke } from "../shared/invoke";
+import { LambdaSequence } from "../private";
 
 let newSequence: LambdaSequence;
 

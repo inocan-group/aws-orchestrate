@@ -1,5 +1,5 @@
 import { IAWSLambaContext, IApiGatewayResponse, IApiGatewayErrorResponse } from "common-types";
-import { IHandlerContext, IWrapperOptions, IOrchestrationRequestTypes } from "./@types";
+import { IHandlerContext, IWrapperOptions, IOrchestrationRequestTypes } from "./private";
 /**
  * **wrapper**
  *

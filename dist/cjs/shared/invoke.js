@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.invoke = void 0;
 const aws_log_1 = require("aws-log");
-const sequences_1 = require("../sequences");
+const private_1 = require("../private");
 /**
  * A higher-order function which accepts a _sequence_ as an input first.
  * In essence, this just provides useful configuration which the _wrapper
@@ -16,7 +16,7 @@ const sequences_1 = require("../sequences");
  */
 function invoke(sequence) {
     return (fnArn, request, additionalHeaders) => {
-        const boxedRequest = sequences_1.buildOrchestratedRequest(request, sequence, additionalHeaders);
+        const boxedRequest = private_1.buildOrchestratedRequest(request, sequence, additionalHeaders);
         return aws_log_1.invoke(fnArn, boxedRequest);
     };
 }

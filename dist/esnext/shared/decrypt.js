@@ -5,7 +5,7 @@
  *
  * @param input the encrypted string
  */
-function decrypt(input) {
+export function decrypt(input) {
     // TODO: implement
     return input;
 }

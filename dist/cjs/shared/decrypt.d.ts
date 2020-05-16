@@ -5,4 +5,4 @@
  *
  * @param input the encrypted string
  */
-declare function decrypt(input: string): string;
+export declare function decrypt(input: string): string;
