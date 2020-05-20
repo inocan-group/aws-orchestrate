@@ -38,13 +38,9 @@ import {
   invoke as invokeHigherOrder,
   ISequenceTrackerStatus,
 } from "./private";
-
 import { invoke as invokeLambda } from "aws-log";
 import get from "lodash.get";
-// import xray from "aws-xray-sdk-core";
-// export const segment = xray.getSegment();
-
-type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
+import { IAdminConfig, IMockConfig } from "@forest-fire/types";
 
 /**
  * **wrapper**
@@ -56,12 +52,12 @@ type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
  * @param context the contextual props and functions which AWS provides plus additional
  * features brought in by the wrapper function
  */
-export const wrapper = function<I, O>(
+export const wrapper = function <I, O>(
   fn: (req: I, context: IHandlerContext) => Promise<O>,
   options: IWrapperOptions = {}
 ) {
   /** this is the core Lambda event which the wrapper takes as an input */
-  return async function(
+  return async function (
     event: IOrchestrationRequestTypes<I>,
     context: IAWSLambaContext
   ): Promise<O | IApiGatewayResponse | IApiGatewayErrorResponse> {
@@ -114,7 +110,7 @@ export const wrapper = function<I, O>(
         queryParameters: apiGateway.queryStringParameters || {},
         setHeaders: setFnHeaders,
         setContentType,
-        database: (config?: IFirebaseAdminConfig) => database(config),
+        database: (config?: IAdminConfig | IMockConfig) => database(config),
         sequence,
         registerSequence,
         isSequence: sequence.isSequence,
@@ -254,7 +250,7 @@ export const wrapper = function<I, O>(
                 if (passed === true) {
                   log.debug(
                     `The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${
-                      result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
+                    result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
                     } ].`
                   );
                   if (isApiGatewayRequest) {

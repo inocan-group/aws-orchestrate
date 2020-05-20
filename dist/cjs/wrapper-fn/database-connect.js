@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.database = void 0;
 const aws_log_1 = require("aws-log");
-const abstracted_admin_1 = require("abstracted-admin");
+const universal_fire_1 = require("universal-fire");
 const private_1 = require("../private");
 let _database;
 /**
@@ -30,12 +30,12 @@ let _database;
 exports.database = async (config) => {
     const log = aws_log_1.logger().reloadContext();
     let serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
-    let databaseUrl = process.env.FIREBASE_DATABASE_URL || process.env.FIREBASE_DATA_ROOT_URL;
+    let databaseURL = process.env.FIREBASE_DATABASE_URL || process.env.FIREBASE_DATA_ROOT_URL;
     if (!_database) {
         if (!config) {
-            if (serviceAccount && databaseUrl) {
-                config = { serviceAccount, databaseUrl };
-                log.debug(`Environment variables were used to configure Firebase's Admin SDK`, { databaseUrl });
+            if (serviceAccount && databaseURL) {
+                config = { serviceAccount, databaseURL };
+                log.debug(`Environment variables were used to configure Firebase's Admin SDK`, { databaseURL });
             }
             else {
                 const { firebase } = await private_1.getSecrets(["firebase"]);
@@ -44,18 +44,18 @@ exports.database = async (config) => {
                 }
                 config = {
                     serviceAccount: serviceAccount || firebase.SERVICE_ACCOUNT,
-                    databaseUrl: databaseUrl || firebase.DATABASE_URL,
+                    databaseURL: databaseURL || firebase.DATABASE_URL,
                 };
                 if (!config.serviceAccount) {
                     throw new Error(`The Firebase service account could not be found in ENV or SSM variables!`);
                 }
-                if (!config.databaseUrl) {
+                if (!config.databaseURL) {
                     throw new Error(`The Firebase database URL could not be found in ENV or SSM variables!`);
                 }
                 log.debug(`A combination of ENV and SSM variables was used to configure Firebase's Admin SDK`);
             }
         }
-        _database = await abstracted_admin_1.DB.connect(config);
+        _database = await universal_fire_1.DB.connect(universal_fire_1.RealTimeAdmin, config);
     }
     return _database;
 };

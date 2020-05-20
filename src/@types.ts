@@ -9,9 +9,10 @@ import {
   IHttpRequestHeaders,
 } from "common-types";
 import { ILoggerApi } from "aws-log";
-type IFirebaseAdminConfig = import("abstracted-firebase").IFirebaseAdminConfig;
-type DB = import("abstracted-admin").DB;
+import { IAdminConfig, IMockConfig } from "@forest-fire/types";
+import { RealTimeAdmin } from "universal-fire";
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
+
 type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 export type IWrapperFunction = Omit<IServerlessFunction, "handler">;
 
@@ -287,11 +288,11 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    */
   log: ILoggerApi;
   /**
-   * Gives you access to a Firebase `DB` instance via `abstracted-admin`.
+   * Gives you access to a Firebase `DB` instance via `universal-fire`.
    * This is loaded synchronously so should be included in a serverless functions
    * main dependency bundle (but _tree-shaken_ away if this function is not called).
    */
-  database: (config?: IFirebaseAdminConfig) => Promise<DB>;
+  database: (config?: IAdminConfig | IMockConfig) => Promise<RealTimeAdmin>;
   /**
    * **getSecrets**
    *
