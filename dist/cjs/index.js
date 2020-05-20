@@ -11,6 +11,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 }
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./LambdaSequence"), exports);
+__exportStar(require("./sequences"), exports);
 __exportStar(require("./@types"), exports);
 __exportStar(require("./wrapper"), exports);
 //# sourceMappingURL=index.js.map
