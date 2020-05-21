@@ -1,5 +1,5 @@
 import { logger } from "aws-log";
-import { DB } from "abstracted-admin";
+import { DB, RealTimeAdmin } from "universal-fire";
 import { getSecrets } from "../private";
 let _database;
 /**
@@ -27,12 +27,12 @@ let _database;
 export const database = async (config) => {
     const log = logger().reloadContext();
     let serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
-    let databaseUrl = process.env.FIREBASE_DATABASE_URL || process.env.FIREBASE_DATA_ROOT_URL;
+    let databaseURL = process.env.FIREBASE_DATABASE_URL || process.env.FIREBASE_DATA_ROOT_URL;
     if (!_database) {
         if (!config) {
-            if (serviceAccount && databaseUrl) {
-                config = { serviceAccount, databaseUrl };
-                log.debug(`Environment variables were used to configure Firebase's Admin SDK`, { databaseUrl });
+            if (serviceAccount && databaseURL) {
+                config = { serviceAccount, databaseURL };
+                log.debug(`Environment variables were used to configure Firebase's Admin SDK`, { databaseURL });
             }
             else {
                 const { firebase } = await getSecrets(["firebase"]);
@@ -41,18 +41,18 @@ export const database = async (config) => {
                 }
                 config = {
                     serviceAccount: serviceAccount || firebase.SERVICE_ACCOUNT,
-                    databaseUrl: databaseUrl || firebase.DATABASE_URL,
+                    databaseURL: databaseURL || firebase.DATABASE_URL,
                 };
                 if (!config.serviceAccount) {
                     throw new Error(`The Firebase service account could not be found in ENV or SSM variables!`);
                 }
-                if (!config.databaseUrl) {
+                if (!config.databaseURL) {
                     throw new Error(`The Firebase database URL could not be found in ENV or SSM variables!`);
                 }
                 log.debug(`A combination of ENV and SSM variables was used to configure Firebase's Admin SDK`);
             }
         }
-        _database = await DB.connect(config);
+        _database = await DB.connect(RealTimeAdmin, config);
     }
     return _database;
 };

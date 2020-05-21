@@ -1,5 +1,5 @@
-import { DB } from "abstracted-admin";
-declare type IFirebaseConfig = import("abstracted-firebase").IFirebaseAdminConfig;
+import { RealTimeAdmin } from "universal-fire";
+import { IAdminConfig, IMockConfig } from "@forest-fire/types";
 /**
  * **database**
  *
@@ -22,5 +22,4 @@ declare type IFirebaseConfig = import("abstracted-firebase").IFirebaseAdminConfi
  *
  * > Note that `FIREBASE_DATABASE_URL` is preferred over `FIREBASE_DATA_ROOT_URL` for ENV naming
  */
-export declare const database: (config?: IFirebaseConfig) => Promise<DB>;
-export {};
+export declare const database: (config?: IAdminConfig | IMockConfig) => Promise<RealTimeAdmin>;
