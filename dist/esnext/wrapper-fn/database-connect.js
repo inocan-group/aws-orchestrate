@@ -1,5 +1,5 @@
 import { logger } from "aws-log";
-import { DB, RealTimeAdmin } from "universal-fire";
+import { RealTimeAdmin } from "universal-fire";
 import { getSecrets } from "../private";
 let _database;
 /**
@@ -52,7 +52,7 @@ export const database = async (config) => {
                 log.debug(`A combination of ENV and SSM variables was used to configure Firebase's Admin SDK`);
             }
         }
-        _database = await DB.connect(RealTimeAdmin, config);
+        _database = await RealTimeAdmin(config);
     }
     return _database;
 };

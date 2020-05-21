@@ -1,5 +1,4 @@
-import { RealTimeAdmin } from "universal-fire";
-import { IAdminConfig, IMockConfig } from "@forest-fire/types";
+import { IAdminConfig, IMockConfig } from "universal-fire";
 /**
  * **database**
  *
@@ -22,4 +21,4 @@ import { IAdminConfig, IMockConfig } from "@forest-fire/types";
  *
  * > Note that `FIREBASE_DATABASE_URL` is preferred over `FIREBASE_DATA_ROOT_URL` for ENV naming
  */
-export declare const database: (config?: IAdminConfig | IMockConfig) => Promise<RealTimeAdmin>;
+export declare const database: (config?: IAdminConfig | IMockConfig) => Promise<import("@forest-fire/real-time-admin").RealTimeAdmin>;

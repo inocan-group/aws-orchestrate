@@ -40,7 +40,7 @@ import {
 } from "./private";
 import { invoke as invokeLambda } from "aws-log";
 import get from "lodash.get";
-import { IAdminConfig, IMockConfig } from "@forest-fire/types";
+import { IAdminConfig, IMockConfig } from "universal-fire";
 
 /**
  * **wrapper**

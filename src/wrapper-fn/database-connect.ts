@@ -1,10 +1,10 @@
 import { logger } from "aws-log";
-import { DB, RealTimeAdmin } from "universal-fire";
-import { IAdminConfig, IMockConfig } from "@forest-fire/types";
+import { IRealTimeAdmin, RealTimeAdmin } from "universal-fire";
+import { IAdminConfig, IMockConfig } from "universal-fire";
 
 import { getSecrets } from "../private";
 
-let _database: RealTimeAdmin;
+let _database: IRealTimeAdmin
 
 /**
  * **database**
@@ -59,7 +59,7 @@ export const database = async (config?: IAdminConfig | IMockConfig) => {
       }
     }
 
-    _database = await DB.connect(RealTimeAdmin, config);
+    _database = await RealTimeAdmin(config);
   }
 
   return _database;
