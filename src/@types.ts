@@ -9,8 +9,7 @@ import {
   IHttpRequestHeaders,
 } from "common-types";
 import { ILoggerApi } from "aws-log";
-import { IAdminConfig, IMockConfig } from "@forest-fire/types";
-import { RealTimeAdmin } from "universal-fire";
+import { IAdminConfig, IMockConfig, IRealTimeAdmin } from "universal-fire";
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
 
 type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
@@ -292,7 +291,7 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * This is loaded synchronously so should be included in a serverless functions
    * main dependency bundle (but _tree-shaken_ away if this function is not called).
    */
-  database: (config?: IAdminConfig | IMockConfig) => Promise<RealTimeAdmin>;
+  database: (config?: IAdminConfig | IMockConfig) => Promise<IRealTimeAdmin>;
   /**
    * **getSecrets**
    *

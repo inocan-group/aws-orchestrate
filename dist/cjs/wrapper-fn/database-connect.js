@@ -55,7 +55,7 @@ exports.database = async (config) => {
                 log.debug(`A combination of ENV and SSM variables was used to configure Firebase's Admin SDK`);
             }
         }
-        _database = await universal_fire_1.DB.connect(universal_fire_1.RealTimeAdmin, config);
+        _database = await universal_fire_1.RealTimeAdmin(config);
     }
     return _database;
 };
