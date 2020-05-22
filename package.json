@@ -41,7 +41,7 @@
     "lodash.set": "^4.3.2",
     "lzutf8": "^0.5.5",
     "serialize-javascript": "^3.0.0",
-    "universal-fire": "^0.48.5"
+    "universal-fire": "^0.48.11"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",

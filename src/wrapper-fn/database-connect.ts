@@ -1,6 +1,5 @@
 import { logger } from "aws-log";
-import { IRealTimeAdmin, RealTimeAdmin } from "universal-fire";
-import { IAdminConfig, IMockConfig } from "universal-fire";
+import { IAdminConfig, IMockConfig, IRealTimeAdmin, RealTimeAdmin } from "universal-fire";
 
 import { getSecrets } from "../private";
 
