@@ -1,7 +1,7 @@
 {
   "name": "aws-orchestrate",
   "description": "This library is intended to help projects intending to build a \"micro-service architecture\" to achieve those ambitions with some handy orchestration classes and types.",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "main": "dist/cjs/index.js",
   "module": "dist/esnext/index.js",
   "esnext": "dist/esnext/index.js",
@@ -41,7 +41,7 @@
     "lodash.set": "^4.3.2",
     "lzutf8": "^0.5.5",
     "serialize-javascript": "^3.0.0",
-    "universal-fire": "^0.48.5"
+    "universal-fire": "^0.48.11"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
