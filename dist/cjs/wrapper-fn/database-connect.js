@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.database = void 0;
 const aws_log_1 = require("aws-log");
-const universal_fire_1 = require("universal-fire");
+const real_time_admin_1 = require("@forest-fire/real-time-admin");
 const private_1 = require("../private");
 let _database;
 /**
@@ -55,7 +55,7 @@ exports.database = async (config) => {
                 log.debug(`A combination of ENV and SSM variables was used to configure Firebase's Admin SDK`);
             }
         }
-        _database = await universal_fire_1.RealTimeAdmin(config);
+        _database = await real_time_admin_1.RealTimeAdmin.connect(config);
     }
     return _database;
 };

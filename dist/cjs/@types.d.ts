@@ -1,6 +1,7 @@
 import { IDictionary, IAWSLambdaProxyIntegrationRequest, IAWSLambaContext, Omit, arn, IServerlessFunction, IHttpResponseHeaders, IHttpRequestHeaders } from "common-types";
 import { ILoggerApi } from "aws-log";
-import { IAdminConfig, IMockConfig, IRealTimeAdmin } from "universal-fire";
+import { IAdminConfig, IMockConfig } from "universal-fire";
+import { RealTimeAdmin } from "@forest-fire/real-time-admin";
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
 declare type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 export declare type IWrapperFunction = Omit<IServerlessFunction, "handler">;
@@ -256,7 +257,7 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
      * This is loaded synchronously so should be included in a serverless functions
      * main dependency bundle (but _tree-shaken_ away if this function is not called).
      */
-    database: (config?: IAdminConfig | IMockConfig) => Promise<IRealTimeAdmin>;
+    database: (config?: IAdminConfig | IMockConfig) => Promise<RealTimeAdmin>;
     /**
      * **getSecrets**
      *
