@@ -107,7 +107,7 @@ export const wrapper = function <I, O>(
         claims,
         log,
         headers,
-        queryParameters: apiGateway.queryStringParameters || {},
+        queryParameters: apiGateway?.queryStringParameters || {},
         setHeaders: setFnHeaders,
         setContentType,
         database: (config?: IAdminConfig | IMockConfig) => database(config),
