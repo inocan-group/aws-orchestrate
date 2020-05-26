@@ -48,7 +48,7 @@ exports.wrapper = function (fn, options = {}) {
             const claims = JSON.parse(lodash_get_1.default(apiGateway, "requestContext.authorizer.customClaims", "{}"));
             const handlerContext = Object.assign(Object.assign({}, context), { claims,
                 log,
-                headers, queryParameters: apiGateway.queryStringParameters || {}, setHeaders: private_1.setFnHeaders, setContentType: private_1.setContentType, database: (config) => private_1.database(config), sequence,
+                headers, queryParameters: (apiGateway === null || apiGateway === void 0 ? void 0 : apiGateway.queryStringParameters) || {}, setHeaders: private_1.setFnHeaders, setContentType: private_1.setContentType, database: (config) => private_1.database(config), sequence,
                 registerSequence, isSequence: sequence.isSequence, isDone: sequence.isDone, apiGateway,
                 getSecrets: private_1.getSecrets, setSuccessCode: (code) => (statusCode = code), isApiGatewayRequest: common_types_1.isLambdaProxyRequest(event), errorMgmt: errorMeta, invoke });
             //#endregion
