@@ -806,7 +806,7 @@
   resolved "https://registry.yarnpkg.com/@firebase/app-types/-/app-types-0.6.1.tgz#dcbd23030a71c0c74fc95d4a3f75ba81653850e9"
   integrity sha512-L/ZnJRAq7F++utfuoTKX4CLBG5YR7tFO3PLzG1/oXXKEezJ0kRL3CMRoueBEmTCzVb/6SIs2Qlaw++uDgi5Xyg==
 
-"@firebase/app@^0.6.2":
+"@firebase/app@^0.6.4":
   version "0.6.4"
   resolved "https://registry.yarnpkg.com/@firebase/app/-/app-0.6.4.tgz#5b857f2ba1cc286c88a3a7e1e6a1a7cc36308bee"
   integrity sha512-E1Zw6yeZYdYYFurMnklKPvE+q/xleHXs7bmcVgyhgAEg3Gv6/qXI4+4GdWh+iF7wmQ3Liesh51xqfdpvHBwAMQ==
@@ -837,7 +837,7 @@
     "@firebase/util" "0.2.47"
     tslib "1.11.1"
 
-"@firebase/database-types@0.5.1", "@firebase/database-types@^0.5.0":
+"@firebase/database-types@0.5.1", "@firebase/database-types@^0.5.0", "@firebase/database-types@^0.5.1":
   version "0.5.1"
   resolved "https://registry.yarnpkg.com/@firebase/database-types/-/database-types-0.5.1.tgz#fab2f3fb48eec374a9f435ed21e138635cb9b71c"
   integrity sha512-onQxom1ZBYBJ648w/VNRzUewovEDAH7lvnrrpCd69ukkyrMk6rGEO/PQ9BcNEbhlNtukpsqRS0oNOFlHs0FaSA==
@@ -893,13 +893,13 @@
     "@forest-fire/serialized-query" "^0.49.6"
     common-types "^1.14.3"
 
-"@forest-fire/real-time-admin@^0.49.9":
-  version "0.49.9"
-  resolved "https://registry.yarnpkg.com/@forest-fire/real-time-admin/-/real-time-admin-0.49.9.tgz#6b78f2ea945bbd400ef1facd62674d27a3ca76dc"
-  integrity sha512-cvniJcKbCW8wSDIrCX0E2rxFx2o7KKC2pFy8logXkKeG29g+kfvev5gbcNCT37p5sexT5U+gHkU/4hbBjW9blg==
+"@forest-fire/real-time-admin@^0.49.10":
+  version "0.49.10"
+  resolved "https://registry.yarnpkg.com/@forest-fire/real-time-admin/-/real-time-admin-0.49.10.tgz#41da546378f3f6e48194b19fc5c617cc453d1328"
+  integrity sha512-v7Lio9Q8KwfZ0X5SPPcHERIWs3qcI/Cl0aYikQrxcGkRbRcUNGuxRPn6D6T7tgW74IwJwXVsmx4GYQ5CFv3Gcw==
   dependencies:
-    "@firebase/app" "^0.6.2"
-    "@firebase/database-types" "^0.5.0"
+    "@firebase/app" "^0.6.4"
+    "@firebase/database-types" "^0.5.1"
     "@forest-fire/real-time-db" "^0.49.6"
     "@forest-fire/types" "^0.49.0"
     "@forest-fire/utility" "^0.49.0"
