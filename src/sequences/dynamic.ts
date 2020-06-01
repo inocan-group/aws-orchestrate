@@ -26,7 +26,7 @@ export function dynamic<T = any>(
 }
 
 export function isDynamic(obj: IDictionary) {
-  return obj.type === "orchestrated-dynamic-property" && obj.lookup
+  return obj?.type === "orchestrated-dynamic-property" && obj.lookup
     ? true
     : false;
 }
