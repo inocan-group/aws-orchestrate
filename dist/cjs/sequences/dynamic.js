@@ -23,7 +23,7 @@ function dynamic(fn, prop) {
 }
 exports.dynamic = dynamic;
 function isDynamic(obj) {
-    return obj.type === "orchestrated-dynamic-property" && obj.lookup
+    return (obj === null || obj === void 0 ? void 0 : obj.type) === "orchestrated-dynamic-property" && obj.lookup
         ? true
         : false;
 }

@@ -19,7 +19,7 @@ export function dynamic(fn, prop) {
     };
 }
 export function isDynamic(obj) {
-    return obj.type === "orchestrated-dynamic-property" && obj.lookup
+    return obj?.type === "orchestrated-dynamic-property" && obj.lookup
         ? true
         : false;
 }
