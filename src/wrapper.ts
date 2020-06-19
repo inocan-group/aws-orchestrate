@@ -1,46 +1,48 @@
+import { ErrorHandler, ServerlessError } from "./errors";
 import {
-  IAWSLambaContext,
-  isLambdaProxyRequest,
-  IApiGatewayResponse,
-  IApiGatewayErrorResponse,
-  HttpStatusCodes,
-  IDictionary,
-} from "common-types";
-import { logger } from "aws-log";
-import {
-  IHandlerContext,
-  IWrapperOptions,
-  IOrchestrationRequestTypes,
-  HandledError,
-  OrchestratedErrorHandler,
-  OrchestratedErrorForwarder,
   ErrorMeta,
-  LambdaSequence,
-  UnhandledError,
-  registerSequence as register,
-  invokeNewSequence,
-  findError,
-  getSecrets,
-  database,
-  setFnHeaders,
-  setContentType,
-  getResponseHeaders,
-  saveSecretHeaders,
-  loggedMessages,
-  getNewSequence,
-  maskLoggingForSecrets,
-  getLocalSecrets,
-  convertToApiGatewayError,
   ErrorWithinError,
-  RethrowError,
-  sequenceStatus,
-  buildOrchestratedRequest,
-  invoke as invokeHigherOrder,
+  HandledError,
+  IHandlerContext,
+  IOrchestrationRequestTypes,
   ISequenceTrackerStatus,
+  IWrapperOptions,
+  LambdaSequence,
+  OrchestratedErrorForwarder,
+  OrchestratedErrorHandler,
+  RethrowError,
+  UnhandledError,
+  buildOrchestratedRequest,
+  convertToApiGatewayError,
+  database,
+  findError,
+  getLocalSecrets,
+  getNewSequence,
+  getResponseHeaders,
+  getSecrets,
+  invoke as invokeHigherOrder,
+  invokeNewSequence,
+  loggedMessages,
+  maskLoggingForSecrets,
+  registerSequence as register,
+  saveSecretHeaders,
+  sequenceStatus,
+  setContentType,
+  setFnHeaders,
 } from "./private";
-import { invoke as invokeLambda } from "aws-log";
-import get from "lodash.get";
+import {
+  HttpStatusCodes,
+  IAWSLambaContext,
+  IApiGatewayErrorResponse,
+  IApiGatewayResponse,
+  IDictionary,
+  isLambdaProxyRequest,
+} from "common-types";
 import { IAdminConfig, IMockConfig } from "universal-fire";
+
+import get from "lodash.get";
+import { invoke as invokeLambda } from "aws-log";
+import { logger } from "aws-log";
 
 /**
  * **wrapper**
@@ -52,12 +54,12 @@ import { IAdminConfig, IMockConfig } from "universal-fire";
  * @param context the contextual props and functions which AWS provides plus additional
  * features brought in by the wrapper function
  */
-export const wrapper = function <I, O>(
+export const wrapper = function<I, O>(
   fn: (req: I, context: IHandlerContext) => Promise<O>,
   options: IWrapperOptions = {}
 ) {
   /** this is the core Lambda event which the wrapper takes as an input */
-  return async function (
+  return async function(
     event: IOrchestrationRequestTypes<I>,
     context: IAWSLambaContext
   ): Promise<O | IApiGatewayResponse | IApiGatewayErrorResponse> {
@@ -88,6 +90,8 @@ export const wrapper = function <I, O>(
     workflowStatus = "unboxing-from-prior-function";
     const { request, sequence, apiGateway, headers } = LambdaSequence.from<I>(event);
 
+    let handlerContext: IHandlerContext<I>;
+
     try {
       workflowStatus = "starting-try-catch";
       msg.start(request, headers, context, sequence, apiGateway);
@@ -102,10 +106,11 @@ export const wrapper = function <I, O>(
       const registerSequence = register(log, context);
       const invoke = invokeHigherOrder(sequence);
       const claims: IDictionary = JSON.parse(get(apiGateway, "requestContext.authorizer.customClaims", "{}"));
-      const handlerContext: IHandlerContext<I> = {
+      handlerContext = {
         ...context,
         claims,
         log,
+        correlationId: log.getCorrelationId(),
         headers,
         queryParameters: apiGateway?.queryStringParameters || {},
         setHeaders: setFnHeaders,
@@ -192,7 +197,21 @@ export const wrapper = function <I, O>(
       try {
         const isApiGatewayRequest: boolean = isLambdaProxyRequest(apiGateway);
         msg.processingError(e, workflowStatus, isApiGatewayRequest);
-        const found = findError(e, errorMeta);
+
+        /**
+         * "found" is either handler author using the `HandledError` class themselves
+         * or using the API exposed at `context.errorMgmt`
+         **/
+        const found: ServerlessError | ErrorHandler | false =
+          e instanceof ServerlessError ? e : findError(e, errorMeta);
+        if (found instanceof ServerlessError) {
+          found.functionName = context.functionName;
+          found.classification = found.classification.replace("aws-orchestrate/", `${found.functionName}/`);
+          found.correlationId = handlerContext.correlationId;
+          found.awsRequestId = handlerContext.awsRequestId;
+
+          throw found;
+        }
 
         if (found) {
           if (!found.handling) {
@@ -250,7 +269,7 @@ export const wrapper = function <I, O>(
                 if (passed === true) {
                   log.debug(
                     `The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${
-                    result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
+                      result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
                     } ].`
                   );
                   if (isApiGatewayRequest) {
@@ -337,6 +356,10 @@ export const wrapper = function <I, O>(
          * All errors end up here and it is the location where conductor-based
          * error handling can get involved in the error processing flow
          */
+
+        if (errorOfError instanceof ServerlessError) {
+          throw errorOfError;
+        }
 
         const conductorErrorHandler: OrchestratedErrorHandler | false =
           sequence.activeFn && sequence.activeFn.onError && typeof sequence.activeFn.onError === "function"

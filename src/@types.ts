@@ -1,22 +1,33 @@
+import { ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders, getSecrets } from "./private";
 import {
-  IDictionary,
-  IAWSLambdaProxyIntegrationRequest,
   IAWSLambaContext,
+  IAWSLambdaProxyIntegrationRequest,
+  IDictionary,
+  IHttpRequestHeaders,
+  IHttpResponseHeaders,
+  IServerlessFunction,
   Omit,
   arn,
-  IServerlessFunction,
-  IHttpResponseHeaders,
-  IHttpRequestHeaders,
 } from "common-types";
-import { ILoggerApi } from "aws-log";
-import { IAdminConfig, IMockConfig, } from "universal-fire"
-import { RealTimeAdmin } from "@forest-fire/real-time-admin";
+import { IAdminConfig, IMockConfig } from "universal-fire";
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
 
-type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
-export type IWrapperFunction = Omit<IServerlessFunction, "handler">;
+import { ILoggerApi } from "aws-log";
+import { RealTimeAdmin } from "universal-fire";
 
-import { getSecrets, ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders } from "./private";
+type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
+/**
+ * The meta-data for a handler function; this symbol is now deprecated
+ * in favor of `IHandlerMeta`.
+ */
+export type IWrapperFunction = IHandlerMeta;
+
+/**
+ * The _meta-data_ for a handler function. This can include a description
+ * (strongly suggested), events, timeouts, etc.
+ */
+export type IHandlerMeta = Omit<IServerlessFunction, "handler">;
+
 /**
  * The API Gateway's _proxy integration request_ structure with the
  * `body` and `headers` removed
@@ -275,6 +286,10 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * sequence
    */
   isSequence: boolean;
+  /**
+   * The unique `id` assigned to this _sequence_
+   */
+  correlationId: string;
   /**
    * Indicates whether the current sequence is "done" (aka, the current
    * function execution is the _last_ function in the sequence)

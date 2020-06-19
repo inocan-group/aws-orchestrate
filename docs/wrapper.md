@@ -168,7 +168,10 @@ With this one line of code you are able to get all secrets associated with `fire
 
 ## Error Handling
 
-All errors encountered in your handler function will be trapped by the `wrapper` function and will report the error in a reasonable way without any configuration. If, however, you want to take a more active role than you can by leveraging the Error Management API at `context.errorMgmt`.
+All errors encountered in your handler function will be trapped by the `wrapper` function and will report the error in a reasonable way without any configuration. If, however, you want to take a more active role than you can by leveraging one of two distinct mechanisms:
+
+1. the Error Management API at `context.errorMgmt`
+2. use or extend the `HandledError` class exposed by this library
 
 ### Handled Errors
 

@@ -2,21 +2,18 @@ import { IAwsLogContext } from "aws-log";
 import { IErrorWithExtraProperties } from "../@types";
 
 export class HandledError extends Error {
+  public kind: string = "HandledError";
   /**
    * Create a serialized/string representation of the error
    * for returning to **API Gateway**
    */
-  public static apiGatewayError(
-    errorCode: number,
-    e: Error,
-    context: IAwsLogContext
-  ) {
+  public static apiGatewayError(errorCode: number, e: Error, context: IAwsLogContext) {
     const obj = new HandledError(errorCode, e, context);
     return JSON.stringify({
       errorType: obj.name,
       httpStatus: obj.httpStatus,
       requestId: obj.requestId,
-      message: obj.message
+      message: obj.message,
     });
   }
 
@@ -24,11 +21,7 @@ export class HandledError extends Error {
    * creates an error to be thrown by a **Lambda** function which
    * was initiatiated by a
    */
-  public static lambdaError(
-    errorCode: number,
-    e: Error,
-    context: IAwsLogContext
-  ) {
+  public static lambdaError(errorCode: number, e: Error, context: IAwsLogContext) {
     const obj = new HandledError(errorCode, e, context);
   }
 
@@ -61,16 +54,11 @@ export class HandledError extends Error {
    * @param classification the type/subtype of the error; if only `subtype` stated then
    * type will be defaulted to `handled-error`
    */
-  constructor(
-    errorCode: number,
-    e: IErrorWithExtraProperties,
-    context: IAwsLogContext
-  ) {
+  constructor(errorCode: number, e: IErrorWithExtraProperties, context: IAwsLogContext) {
     super(e.message);
     this.stack = e.stack;
 
-    const type: string =
-      e.name && e.name !== "Error" ? e.name : context.functionName;
+    const type: string = e.name && e.name !== "Error" ? e.name : context.functionName;
     const subType: string = e.code ? String(e.code) : "handled-error";
     this.classification = `${type}/${subType}`;
     this.functionName = context.functionName;

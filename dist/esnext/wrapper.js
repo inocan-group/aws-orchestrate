@@ -1,8 +1,8 @@
-import { isLambdaProxyRequest, HttpStatusCodes, } from "common-types";
-import { logger } from "aws-log";
-import { HandledError, ErrorMeta, LambdaSequence, UnhandledError, registerSequence as register, invokeNewSequence, findError, getSecrets, database, setFnHeaders, setContentType, getResponseHeaders, saveSecretHeaders, loggedMessages, getNewSequence, maskLoggingForSecrets, getLocalSecrets, convertToApiGatewayError, ErrorWithinError, RethrowError, sequenceStatus, buildOrchestratedRequest, invoke as invokeHigherOrder, } from "./private";
-import { invoke as invokeLambda } from "aws-log";
+import { ErrorMeta, ErrorWithinError, HandledError, LambdaSequence, RethrowError, UnhandledError, buildOrchestratedRequest, convertToApiGatewayError, database, findError, getLocalSecrets, getNewSequence, getResponseHeaders, getSecrets, invoke as invokeHigherOrder, invokeNewSequence, loggedMessages, maskLoggingForSecrets, registerSequence as register, saveSecretHeaders, sequenceStatus, setContentType, setFnHeaders, } from "./private";
+import { HttpStatusCodes, isLambdaProxyRequest, } from "common-types";
 import get from "lodash.get";
+import { invoke as invokeLambda } from "aws-log";
+import { logger } from "aws-log";
 /**
  * **wrapper**
  *
@@ -129,7 +129,14 @@ export const wrapper = function (fn, options = {}) {
             try {
                 const isApiGatewayRequest = isLambdaProxyRequest(apiGateway);
                 msg.processingError(e, workflowStatus, isApiGatewayRequest);
-                const found = findError(e, errorMeta);
+                /**
+                 * "found" is either handler author using the `HandledError` class themselves
+                 * or using the API exposed at `context.errorMgmt`
+                 **/
+                const found = e.kind === "HandledError" ? e : findError(e, errorMeta);
+                if (found instanceof HandledError) {
+                    throw e;
+                }
                 if (found) {
                     if (!found.handling) {
                         const err = new HandledError(found.code, e, log.getContext());

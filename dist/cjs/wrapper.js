@@ -4,11 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.wrapper = void 0;
-const common_types_1 = require("common-types");
-const aws_log_1 = require("aws-log");
 const private_1 = require("./private");
-const aws_log_2 = require("aws-log");
+const common_types_1 = require("common-types");
 const lodash_get_1 = __importDefault(require("lodash.get"));
+const aws_log_1 = require("aws-log");
+const aws_log_2 = require("aws-log");
 /**
  * **wrapper**
  *
@@ -26,7 +26,7 @@ exports.wrapper = function (fn, options = {}) {
         let workflowStatus;
         workflowStatus = "initializing";
         context.callbackWaitsForEmptyEventLoop = false;
-        const log = aws_log_1.logger().lambda(event, context);
+        const log = aws_log_2.logger().lambda(event, context);
         const msg = private_1.loggedMessages(log);
         const errorMeta = new private_1.ErrorMeta();
         /** the code to use for successful requests */
@@ -63,7 +63,7 @@ exports.wrapper = function (fn, options = {}) {
                 workflowStatus = "invoke-started";
                 const [fn, requestBody] = sequence.next(result);
                 msg.startingInvocation(fn, requestBody);
-                const invokeParams = await aws_log_2.invoke(fn, requestBody);
+                const invokeParams = await aws_log_1.invoke(fn, requestBody);
                 msg.completingInvocation(fn, invokeParams);
                 workflowStatus = "invoke-complete";
             }
@@ -87,7 +87,7 @@ exports.wrapper = function (fn, options = {}) {
             if (options.sequenceTracker && sequence.isSequence) {
                 workflowStatus = "sequence-tracker-starting";
                 msg.sequenceTracker(options.sequenceTracker, workflowStatus);
-                await aws_log_2.invoke(options.sequenceTracker, private_1.buildOrchestratedRequest(status(sequence)));
+                await aws_log_1.invoke(options.sequenceTracker, private_1.buildOrchestratedRequest(status(sequence)));
                 if (sequence.isDone) {
                     msg.sequenceTrackerComplete(true);
                 }
@@ -120,7 +120,14 @@ exports.wrapper = function (fn, options = {}) {
             try {
                 const isApiGatewayRequest = common_types_1.isLambdaProxyRequest(apiGateway);
                 msg.processingError(e, workflowStatus, isApiGatewayRequest);
-                const found = private_1.findError(e, errorMeta);
+                /**
+                 * "found" is either handler author using the `HandledError` class themselves
+                 * or using the API exposed at `context.errorMgmt`
+                 **/
+                const found = e.kind === "HandledError" ? e : private_1.findError(e, errorMeta);
+                if (found instanceof private_1.HandledError) {
+                    throw e;
+                }
                 if (found) {
                     if (!found.handling) {
                         const err = new private_1.HandledError(found.code, e, log.getContext());
@@ -152,7 +159,7 @@ exports.wrapper = function (fn, options = {}) {
                             error: e,
                             forwardTo: found.handling.forwardTo,
                         });
-                        await aws_log_2.invoke(found.handling.forwardTo, e);
+                        await aws_log_1.invoke(found.handling.forwardTo, e);
                     }
                 }
                 else {
@@ -207,7 +214,7 @@ exports.wrapper = function (fn, options = {}) {
                         case "error-forwarding":
                             //#region error-forwarding
                             log.debug("The error will be forwarded to another function for handling", { arn: handling.arn });
-                            await aws_log_2.invoke(handling.arn, e);
+                            await aws_log_1.invoke(handling.arn, e);
                             break;
                         //#endregion
                         case "default-error":
@@ -267,7 +274,7 @@ exports.wrapper = function (fn, options = {}) {
                     ? sequence.activeFn.onError
                     : false;
                 if (forwardedByConductor) {
-                    await aws_log_2.invoke(...forwardedByConductor);
+                    await aws_log_1.invoke(...forwardedByConductor);
                 }
                 else {
                     // Catch errors in error handlers

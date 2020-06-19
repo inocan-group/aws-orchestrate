@@ -1,11 +1,20 @@
-import { IDictionary, IAWSLambdaProxyIntegrationRequest, IAWSLambaContext, Omit, arn, IServerlessFunction, IHttpResponseHeaders, IHttpRequestHeaders } from "common-types";
-import { ILoggerApi } from "aws-log";
+import { ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders, getSecrets } from "./private";
+import { IAWSLambaContext, IAWSLambdaProxyIntegrationRequest, IDictionary, IHttpRequestHeaders, IHttpResponseHeaders, IServerlessFunction, Omit, arn } from "common-types";
 import { IAdminConfig, IMockConfig } from "universal-fire";
-import { RealTimeAdmin } from "@forest-fire/real-time-admin";
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
+import { ILoggerApi } from "aws-log";
+import { RealTimeAdmin } from "universal-fire";
 declare type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
-export declare type IWrapperFunction = Omit<IServerlessFunction, "handler">;
-import { getSecrets, ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders } from "./private";
+/**
+ * The meta-data for a handler function; this symbol is now deprecated
+ * in favor of `IHandlerMeta`.
+ */
+export declare type IWrapperFunction = IHandlerMeta;
+/**
+ * The _meta-data_ for a handler function. This can include a description
+ * (strongly suggested), events, timeouts, etc.
+ */
+export declare type IHandlerMeta = Omit<IServerlessFunction, "handler">;
 /**
  * The API Gateway's _proxy integration request_ structure with the
  * `body` and `headers` removed
