@@ -168,11 +168,44 @@ With this one line of code you are able to get all secrets associated with `fire
 
 ## Error Handling
 
-All errors encountered in your handler function will be trapped by the `wrapper` function and will report the error in a reasonable way without any configuration. If, however, you want to take a more active role than you can by leveraging the Error Management API at `context.errorMgmt`.
+All errors encountered in your handler function will be trapped by the `wrapper` function and will report the error in a reasonable way without any configuration. If, however, you want to take a more active role than you can by leveraging one of two distinct mechanisms:
+
+1. the Error Management API at `context.errorMgmt`
+2. use or extend the `HandledError` class exposed by this library
 
 ### Handled Errors
 
-The first concept to grok is the idea behind "handled" and "unhandled" errors. We will start by defining "handled" errors and with this _un-handled_ will make sense intuitively.
+The first concept to grok is the idea behind "handled" and "unhandled" errors. A "handled" error is where the consumer specifically/intentionally intends to throw errors given a certain set of circumstances. This is par for the course with two important exceptions:
+
+1. The error which is thrown MUST have a valid HTTP status code (not part of the default Error from JS)
+2. The handler wraps all the code that consumers write to capture _unhandled_ error so it must be able to distinguish between an error that the handler author intended versus one that happened without real handling for it.
+
+Both of the above conditions are met by either using or extending the `ServerlessError` symbol from this library:
+
+```typescript{6-7}
+const fn: IHandlerFunction<IRequest, IResponse> = async (req, ctx) {
+  try {
+    // do something which may throw something you want to handle
+  } catch(e) {
+    if(e.message.includes('not allowed')) {
+      // Something you recognized might happen
+      throw ServerlessError(403, e.message, 'not-allowed');
+    }
+    // this is an unhandled error just throw it and let the wrapper manage this
+    throw e;
+  }
+}
+```
+
+This is typically the best way to handle your expected error states but you can also use the built in error management API found at `context.errorMgmt`. An example of this could be:
+
+```typescript{2-4}
+const fn: IHandlerFunction<IRequest, IResponse> = async (req, ctx) {
+  // any error which contains the text "not allowed" in it will be mapped to the
+  // **403** error code.
+  handlerContext.errorMgmt.addHandler(403, { messageContains: "not allowed" });
+}
+```
 
 ### Un-Handled Errors
 

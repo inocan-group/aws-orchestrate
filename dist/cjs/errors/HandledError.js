@@ -12,6 +12,7 @@ class HandledError extends Error {
      */
     constructor(errorCode, e, context) {
         super(e.message);
+        this.kind = "HandledError";
         this.type = "handled-error";
         this.stack = e.stack;
         const type = e.name && e.name !== "Error" ? e.name : context.functionName;
@@ -32,7 +33,7 @@ class HandledError extends Error {
             errorType: obj.name,
             httpStatus: obj.httpStatus,
             requestId: obj.requestId,
-            message: obj.message
+            message: obj.message,
         });
     }
     /**

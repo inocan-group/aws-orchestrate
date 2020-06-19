@@ -1,6 +1,7 @@
 import { IAwsLogContext } from "aws-log";
 import { IErrorWithExtraProperties } from "../@types";
 export declare class HandledError extends Error {
+    kind: string;
     /**
      * Create a serialized/string representation of the error
      * for returning to **API Gateway**

@@ -14,4 +14,6 @@ __exportStar(require("./LambdaSequence"), exports);
 __exportStar(require("./sequences"), exports);
 __exportStar(require("./@types"), exports);
 __exportStar(require("./wrapper"), exports);
+var index_1 = require("./errors/index");
+Object.defineProperty(exports, "HandledError", { enumerable: true, get: function () { return index_1.HandledError; } });
 //# sourceMappingURL=index.js.map
