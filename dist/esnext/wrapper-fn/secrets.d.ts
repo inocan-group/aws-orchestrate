@@ -1,5 +1,5 @@
-import { IDictionary } from "common-types";
 import { ILoggerApi } from "aws-log";
+import { IDictionary } from "common-types";
 /**
  * Saves secrets locally so they can be used rather than
  * going out to SSM. These secrets will then also be "passed

@@ -9,11 +9,10 @@ import {
   Omit,
   arn,
 } from "common-types";
-import { IAdminConfig, IMockConfig } from "universal-fire";
+import type { RealTimeAdmin, IAdminConfig, IMockConfig } from "universal-fire";
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
 
 import { ILoggerApi } from "aws-log";
-import { RealTimeAdmin } from "universal-fire";
 
 type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 /**

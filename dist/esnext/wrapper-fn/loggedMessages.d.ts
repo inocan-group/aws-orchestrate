@@ -1,6 +1,6 @@
 import { IDictionary } from "common-types";
+import { IApiGateway, IErrorClass, LambdaSequence } from "../private";
 import { ILoggerApi } from "aws-log";
-import { IErrorClass, IApiGateway, LambdaSequence } from "../private";
 /**
  * A collection of log messages that the wrapper function will emit
  */

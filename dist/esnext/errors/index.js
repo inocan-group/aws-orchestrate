@@ -6,4 +6,5 @@ export * from "./CallDepthExceeded";
 export * from "./RethrowError";
 export * from "./ErrorMeta";
 export * from "./ErrorHandler";
+export * from "./ServerlessError";
 //# sourceMappingURL=index.js.map

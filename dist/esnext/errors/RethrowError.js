@@ -1,5 +1,5 @@
 import { HttpStatusCodes } from "common-types";
-import get from "lodash.get";
+import { get } from "lodash-es";
 /**
  * Rethrows an error which has a `code` property set
  * such as `HandledError` or `HandledError`; preserving

@@ -1,6 +1,6 @@
 import { logger } from "aws-log";
 import { SSM } from "aws-ssm";
-import flatten from "lodash.flatten";
+import { flatten } from "lodash-es";
 let localSecrets = {};
 /**
  * Saves secrets locally so they can be used rather than

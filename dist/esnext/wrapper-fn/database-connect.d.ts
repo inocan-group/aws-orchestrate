@@ -1,4 +1,4 @@
-import { IAdminConfig, IMockConfig } from "universal-fire";
+import type { IAdminConfig, IMockConfig } from "universal-fire";
 import { RealTimeAdmin } from "@forest-fire/real-time-admin";
 /**
  * **database**

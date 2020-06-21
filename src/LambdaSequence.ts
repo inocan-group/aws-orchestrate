@@ -1,34 +1,34 @@
 import {
   IAWSLambdaProxyIntegrationRequest,
   IDictionary,
-  isLambdaProxyRequest,
-  getBodyFromPossibleLambdaProxyRequest,
   arn,
+  getBodyFromPossibleLambdaProxyRequest,
+  isLambdaProxyRequest,
 } from "common-types";
-import get from "lodash.get";
-import { logger, invoke as invokeLambda } from "aws-log";
-
 import {
-  ILambdaFunctionType,
-  ILambdaSequenceStep,
-  ILambdaSequenceNextTuple,
+  IFanOutResponse,
+  IFanOutTuple,
   ILambaSequenceFromResponse,
-  IOrchestratedRequest,
-  IWrapperRequestHeaders,
-  ISerializedSequence,
+  ILambdaFunctionType,
+  ILambdaSequenceNextTuple,
+  ILambdaSequenceStep,
   IOrchestratedDynamicProperty,
   IOrchestratedProperties,
+  IOrchestratedRequest,
   IOrchestrationRequestTypes,
-  IFanOutTuple,
-  IFanOutResponse,
-  OrchestratedErrorHandler,
+  ISerializedSequence,
+  IWrapperRequestHeaders,
   OrchestratedCondition,
-  isDynamic,
+  OrchestratedErrorHandler,
+  buildOrchestratedRequest,
   decompress,
   isBareRequest,
-  buildOrchestratedRequest,
+  isDynamic,
   isOrchestratedRequest,
 } from "./private";
+import { invoke as invokeLambda, logger } from "aws-log";
+
+import { get } from "lodash-es";
 
 export class LambdaSequence {
   /**

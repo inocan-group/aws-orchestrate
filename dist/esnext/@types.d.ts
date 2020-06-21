@@ -1,9 +1,8 @@
 import { ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders, getSecrets } from "./private";
 import { IAWSLambaContext, IAWSLambdaProxyIntegrationRequest, IDictionary, IHttpRequestHeaders, IHttpResponseHeaders, IServerlessFunction, Omit, arn } from "common-types";
-import { IAdminConfig, IMockConfig } from "universal-fire";
+import type { RealTimeAdmin, IAdminConfig, IMockConfig } from "universal-fire";
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
 import { ILoggerApi } from "aws-log";
-import { RealTimeAdmin } from "universal-fire";
 declare type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 /**
  * The meta-data for a handler function; this symbol is now deprecated
@@ -249,6 +248,10 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
      * sequence
      */
     isSequence: boolean;
+    /**
+     * The unique `id` assigned to this _sequence_
+     */
+    correlationId: string;
     /**
      * Indicates whether the current sequence is "done" (aka, the current
      * function execution is the _last_ function in the sequence)

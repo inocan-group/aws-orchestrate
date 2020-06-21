@@ -1,6 +1,6 @@
-import set from "lodash.set";
-import { logger, getCorrelationId } from "aws-log";
-import { sequenceStatus, saveSecretsLocally, getLocalSecrets } from "../private";
+import { getCorrelationId, logger } from "aws-log";
+import { getLocalSecrets, saveSecretsLocally, sequenceStatus } from "../private";
+import { set } from "lodash-es";
 /**
  * Ensures that frontend clients who call Lambda's
  * will be given a CORs friendly response

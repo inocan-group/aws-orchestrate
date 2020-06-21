@@ -1,7 +1,7 @@
-import { isLambdaProxyRequest, getBodyFromPossibleLambdaProxyRequest, } from "common-types";
-import get from "lodash.get";
-import { logger, invoke as invokeLambda } from "aws-log";
-import { isDynamic, decompress, isBareRequest, buildOrchestratedRequest, isOrchestratedRequest, } from "./private";
+import { getBodyFromPossibleLambdaProxyRequest, isLambdaProxyRequest, } from "common-types";
+import { buildOrchestratedRequest, decompress, isBareRequest, isDynamic, isOrchestratedRequest, } from "./private";
+import { invoke as invokeLambda, logger } from "aws-log";
+import { get } from "lodash-es";
 export class LambdaSequence {
     constructor() {
         /**

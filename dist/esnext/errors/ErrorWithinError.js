@@ -1,5 +1,5 @@
 import { HttpStatusCodes } from "common-types";
-import get from "lodash.get";
+import { get } from "lodash-es";
 /**
  * Errors which are encountered while handling an error. These secondary errors
  * should always originate from the **wrapper** function rather than the consumer's

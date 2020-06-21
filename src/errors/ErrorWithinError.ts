@@ -1,5 +1,5 @@
 import { HttpStatusCodes } from "common-types";
-import get from "lodash.get";
+import { get } from "lodash-es";
 
 /**
  * Errors which are encountered while handling an error. These secondary errors
@@ -42,11 +42,7 @@ export class ErrorWithinError extends Error {
       originalError,
       "message",
       "no message"
-    )}".\n\nSubsequently the error within the wrapper function was: "${get(
-      secondaryErr,
-      "message",
-      "no message"
-    )}"`;
+    )}".\n\nSubsequently the error within the wrapper function was: "${get(secondaryErr, "message", "no message")}"`;
 
     this.stack = secondaryErr.stack;
     this.originalStack = originalError.stack;

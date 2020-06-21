@@ -1,5 +1,4 @@
 import { HttpStatusCodes } from "common-types";
-import get from "lodash.get";
 
 /**
  * Thrown when a function calls itself more than the allowed `callDepth`

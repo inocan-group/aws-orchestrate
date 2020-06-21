@@ -1,6 +1,6 @@
 import { HttpStatusCodes } from "common-types";
-import get from "lodash.get";
 import { IErrorClass } from "../@types";
+import { get } from "lodash-es";
 
 /**
  * Rethrows an error which has a `code` property set
@@ -19,10 +19,6 @@ export class RethrowError extends Error {
     this.name = get(err, "name");
     this.stack = get(err, "stack");
     this.type = get(err, "type");
-    this.httpStatus = get(
-      err,
-      "httpStatus",
-      HttpStatusCodes.InternalServerError
-    );
+    this.httpStatus = get(err, "httpStatus", HttpStatusCodes.InternalServerError);
   }
 }

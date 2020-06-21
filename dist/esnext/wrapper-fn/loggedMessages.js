@@ -1,6 +1,6 @@
 import { HttpStatusCodes } from "common-types";
-import get from "lodash.get";
-import { getNewSequence, LambdaSequence, getRequestHeaders } from "../private";
+import { LambdaSequence, getNewSequence, getRequestHeaders } from "../private";
+import { get } from "lodash-es";
 /**
  * A collection of log messages that the wrapper function will emit
  */

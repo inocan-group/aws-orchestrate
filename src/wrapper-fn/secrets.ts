@@ -1,7 +1,8 @@
+import { ILoggerApi, logger } from "aws-log";
+
 import { IDictionary } from "common-types";
-import { logger, ILoggerApi } from "aws-log";
 import { SSM } from "aws-ssm";
-import flatten from "lodash.flatten";
+import { flatten } from "lodash-es";
 
 let localSecrets: IDictionary = {};
 
@@ -50,7 +51,7 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
   const mods = flatten(modules);
   const log = logger().reloadContext();
   const localSecrets = getLocalSecrets();
-  if (mods.every((i) => Object.keys(localSecrets).includes(i))) {
+  if (mods.every((i: string) => Object.keys(localSecrets).includes(i))) {
     // everything found in local secrets
     log.debug(`Call to getSecrets() resulted in 100% hit rate for modules locally`, { modules: mods });
     // segment.addAnnotation("getSecrets", "finished:onlyLocal");
@@ -64,7 +65,7 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
   // versus getting them all is negligible so we'll get them all from SSM
   log.debug(`Some modules requested were not found locally, requesting from SSM.`, { modules: mods });
   const newSecrets = await SSM.modules(mods);
-  mods.forEach((m) => {
+  mods.forEach((m: string) => {
     if (!newSecrets[m]) {
       throw new Error(`Failure to retrieve the SSM module "${m}"`);
     }
