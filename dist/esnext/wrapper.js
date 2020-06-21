@@ -1,3 +1,4 @@
+import { ServerlessError } from "./errors";
 import { ErrorMeta, ErrorWithinError, HandledError, LambdaSequence, RethrowError, UnhandledError, buildOrchestratedRequest, convertToApiGatewayError, database, findError, getLocalSecrets, getNewSequence, getResponseHeaders, getSecrets, invoke as invokeHigherOrder, invokeNewSequence, loggedMessages, maskLoggingForSecrets, registerSequence as register, saveSecretHeaders, sequenceStatus, setContentType, setFnHeaders, } from "./private";
 import { HttpStatusCodes, isLambdaProxyRequest, } from "common-types";
 import get from "lodash.get";
@@ -27,6 +28,7 @@ export const wrapper = function (fn, options = {}) {
         let statusCode;
         workflowStatus = "unboxing-from-prior-function";
         const { request, sequence, apiGateway, headers } = LambdaSequence.from(event);
+        let handlerContext;
         try {
             workflowStatus = "starting-try-catch";
             msg.start(request, headers, context, sequence, apiGateway);
@@ -40,10 +42,11 @@ export const wrapper = function (fn, options = {}) {
             const registerSequence = register(log, context);
             const invoke = invokeHigherOrder(sequence);
             const claims = JSON.parse(get(apiGateway, "requestContext.authorizer.customClaims", "{}"));
-            const handlerContext = {
+            handlerContext = {
                 ...context,
                 claims,
                 log,
+                correlationId: log.getCorrelationId(),
                 headers,
                 queryParameters: apiGateway?.queryStringParameters || {},
                 setHeaders: setFnHeaders,
@@ -133,9 +136,13 @@ export const wrapper = function (fn, options = {}) {
                  * "found" is either handler author using the `HandledError` class themselves
                  * or using the API exposed at `context.errorMgmt`
                  **/
-                const found = e.kind === "HandledError" ? e : findError(e, errorMeta);
-                if (found instanceof HandledError) {
-                    throw e;
+                const found = e instanceof ServerlessError ? e : findError(e, errorMeta);
+                if (found instanceof ServerlessError) {
+                    found.functionName = context.functionName;
+                    found.classification = found.classification.replace("aws-orchestrate/", `${found.functionName}/`);
+                    found.correlationId = handlerContext.correlationId;
+                    found.awsRequestId = handlerContext.awsRequestId;
+                    throw found;
                 }
                 if (found) {
                     if (!found.handling) {
@@ -275,6 +282,9 @@ export const wrapper = function (fn, options = {}) {
                  * All errors end up here and it is the location where conductor-based
                  * error handling can get involved in the error processing flow
                  */
+                if (errorOfError instanceof ServerlessError) {
+                    throw errorOfError;
+                }
                 const conductorErrorHandler = sequence.activeFn && sequence.activeFn.onError && typeof sequence.activeFn.onError === "function"
                     ? sequence.activeFn.onError
                     : false;

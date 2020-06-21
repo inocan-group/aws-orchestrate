@@ -250,6 +250,10 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
      */
     isSequence: boolean;
     /**
+     * The unique `id` assigned to this _sequence_
+     */
+    correlationId: string;
+    /**
      * Indicates whether the current sequence is "done" (aka, the current
      * function execution is the _last_ function in the sequence)
      *
