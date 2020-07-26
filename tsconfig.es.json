@@ -7,7 +7,7 @@
     "moduleResolution": "node",
     "sourceMap": true,
     "noImplicitAny": true,
-    "outDir": "./dist/esnext",
+    "outDir": "./dist/es",
     "removeComments": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
