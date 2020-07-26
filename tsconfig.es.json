@@ -1,16 +1,10 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "declaration": true,
-    "module": "es2020",
-    "lib": ["es2015", "es2016", "es2017", "esnext.asynciterable", "DOM"],
-    "target": "es2020",
-    "moduleResolution": "node",
-    "sourceMap": true,
-    "noImplicitAny": true,
-    "outDir": "./dist/es",
-    "removeComments": false,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "noEmit": false,
+    "module": "esnext",
+    "outDir": "dist/es"
   },
-  "include": ["src/**/*"]
+  "include": ["src"]
 }
