@@ -18,24 +18,15 @@ interface IResponse {
 }
 
 /** returns the sent in event and context */
-const handlerFn: IHandlerFunction<IRequest, IResponse> = async (
-  request,
-  context
-) => {
+const handlerFn: IHandlerFunction<IRequest, IResponse> = async (request, context) => {
   return { testing: true, request, context };
 };
 
-const handlerErrorFn: IHandlerFunction<IRequest, IResponse> = async (
-  event,
-  context
-) => {
+const handlerErrorFn: IHandlerFunction<IRequest, IResponse> = async (event, context) => {
   throw new Error("this is an error god dammit");
 };
 
-const handlerErrorFnWithDefaultChanged: IHandlerFunction<
-  IRequest,
-  IResponse
-> = async (event, context) => {
+const handlerErrorFnWithDefaultChanged: IHandlerFunction<IRequest, IResponse> = async (event, context) => {
   context.errorMgmt.setDefaultErrorCode(400);
   throw new Error("this is an error god dammit");
 };
@@ -43,15 +34,8 @@ const handlerErrorFnWithDefaultChanged: IHandlerFunction<
 const handlerErrorFnWithKnownErrors: (
   cbResult: boolean,
   isHandled: boolean
-) => IHandlerFunction<IRequest, IResponse> = (
-  cbResult,
-  isHandled = false
-) => async (event, context) => {
-  context.errorMgmt.addHandler(
-    404,
-    { errorClass: HandledError },
-    { callback: e => cbResult }
-  );
+) => IHandlerFunction<IRequest, IResponse> = (cbResult, isHandled = false) => async (event, context) => {
+  context.errorMgmt.addHandler(404, { errorClass: HandledError }, { callback: (e) => cbResult });
   const BOGUS_ERROR_CODE = 399;
 
   if (isHandled) {
@@ -67,7 +51,7 @@ const handlerErrorFnWithKnownErrors: (
 
 const simpleEvent: IRequest = {
   foo: "foo is foo",
-  bar: 456
+  bar: 456,
 };
 
 const orchestrateEvent: IOrchestratedRequest<IRequest> = {
@@ -77,57 +61,49 @@ const orchestrateEvent: IOrchestratedRequest<IRequest> = {
     .toObject(),
   headers: {
     "Content-Type": "application/json",
-    "X-Correlation-Id": "12345"
+    "X-Correlation-Id": "12345",
   },
-  body: simpleEvent
+  body: simpleEvent,
 };
 
 describe("Handler Wrapper => ", () => {
-  it(
-    'By default the "callbackWaitsForEmptyEventLoop" is set to "false"',
-    async () => {
-      process.env.AWS_STAGE = "dev";
-      const wrapped = wrapper<IRequest, IResponse>(async (request, context) => {
-        expect(context.callbackWaitsForEmptyEventLoop).toBe(false);
-        return { request, context, testing: true };
-      });
-      const results = await wrapped(simpleEvent, {} as any);
-      expect(results).toBeInstanceOf("object");
-      expect(
-        (results as IResponse).context.callbackWaitsForEmptyEventLoop
-      ).toBe(false);
-    }
-  );
+  it('By default the "callbackWaitsForEmptyEventLoop" is set to "false"', async () => {
+    process.env.AWS_STAGE = "dev";
+    const wrapped = wrapper<IRequest, IResponse>(async (request, context) => {
+      expect(context.callbackWaitsForEmptyEventLoop).toBe(false);
+      return { request, context, testing: true };
+    });
+    const results = await wrapped(simpleEvent, {} as any);
+    expect(results).toBeObject();
+    expect((results as IResponse).context.callbackWaitsForEmptyEventLoop).toBe(false);
+  });
 
-  it(
-    "Wrapper consumes a valid handler function and events passed down are strongly typed",
-    async () => {
-      process.env.AWS_STAGE = "dev";
-      const wrapped = wrapper(handlerFn);
+  it("Wrapper consumes a valid handler function and events passed down are strongly typed", async () => {
+    process.env.AWS_STAGE = "dev";
+    const wrapped = wrapper(handlerFn);
 
-      const results = await wrapped(simpleEvent, {} as any);
+    const results = await wrapped(simpleEvent, {} as any);
 
-      expect(results).to.haveOwnProperty("request");
-      expect(results).to.haveOwnProperty("context");
-      expect((results as IResponse).context).to.haveOwnProperty("isSequence");
-      expect((results as IResponse).context).to.haveOwnProperty("isDone");
-    }
-  );
+    expect(results).toHaveProperty("request");
+    expect(results).toHaveProperty("context");
+    expect((results as IResponse).context).toHaveProperty("isSequence");
+    expect((results as IResponse).context).toHaveProperty("isDone");
+  });
 
   it("A bare request works", async () => {
     process.env.AWS_STAGE = "dev";
     const wrapped = wrapper(handlerFn);
     const results = (await wrapped(simpleEvent, {} as any)) as IResponse;
 
-    expect(results).toBeInstanceOf("object");
+    expect(results).toBeObject();
 
-    expect(results).to.haveOwnProperty("request");
-    expect(results).to.haveOwnProperty("context");
+    expect(results).toHaveProperty("request");
+    expect(results).toHaveProperty("context");
 
     expect(results.request.foo).toBe(simpleEvent.foo);
     expect(results.request.bar).toBe(simpleEvent.bar);
 
-    expect(results.context.headers).toBeInstanceOf("object");
+    expect(results.context.headers).toBeObject();
     expect(Object.keys(results.context.headers)).toHaveLength(0);
   });
 
@@ -140,20 +116,20 @@ describe("Handler Wrapper => ", () => {
     const wrapped = wrapper(handlerFn);
     const results = (await wrapped(orchestrateEvent, {} as any)) as IResponse;
 
-    expect(results).toBeInstanceOf("object");
+    expect(results).toBeObject();
 
     console.log(results);
 
-    expect(results).to.haveOwnProperty("request");
-    expect(results).to.haveOwnProperty("context");
+    expect(results).toHaveProperty("request");
+    expect(results).toHaveProperty("context");
 
     expect(results.request.foo).toBe(simpleEvent.foo);
     expect(results.request.bar).toBe(simpleEvent.bar);
 
-    expect(results.context.headers).toBeInstanceOf("object");
+    expect(results.context.headers).toBeObject();
     expect(results.context.headers["X-Correlation-Id"]).toBeInstanceOf("string");
-    expect(results.context.headers["Content-Type"])
-      .is.a("string").toBe("application/json");
+    expect(results.context.headers["Content-Type"]).toBeString();
+    expect(results.context.headers["Content-Type"]).toEqual("application/json");
 
     expect(results.context.sequence).toBeInstanceOf(LambdaSequence);
     const seqSummary = results.context.sequence.toObject();
@@ -162,81 +138,60 @@ describe("Handler Wrapper => ", () => {
     expect(seqSummary.isSequence).toBe(true);
   });
 
-  it(
-    "Unhandled error in function results in defaultCode and error proxied",
-    async () => {
-      process.env.AWS_STAGE = "dev";
-      const wrapped = wrapper(handlerErrorFn);
+  it("Unhandled error in function results in defaultCode and error proxied", async () => {
+    process.env.AWS_STAGE = "dev";
+    const wrapped = wrapper(handlerErrorFn);
 
-      try {
-        const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
-      } catch (e) {
-        expect(e.code).toBe("Error");
-        expect(e.name).toBe("unhandled-error");
-        expect(e.httpStatus).toBe(DEFAULT_ERROR_CODE);
-      }
+    try {
+      const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
+    } catch (e) {
+      expect(e.code).toBe("Error");
+      expect(e.name).toBe("unhandled-error");
+      expect(e.httpStatus).toBe(DEFAULT_ERROR_CODE);
     }
-  );
+  });
 
-  it(
-    "Unhandled error has defaultCode modified when defaults are changed",
-    async () => {
-      process.env.AWS_STAGE = "dev";
-      const wrapped = wrapper(handlerErrorFnWithDefaultChanged);
+  it("Unhandled error has defaultCode modified when defaults are changed", async () => {
+    process.env.AWS_STAGE = "dev";
+    const wrapped = wrapper(handlerErrorFnWithDefaultChanged);
 
-      try {
-        const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
-      } catch (e) {
-        expect(e.code).toBe("Error");
-        expect(e.name).toBe("unhandled-error");
-        expect(e.httpStatus).toBe(400);
-      }
+    try {
+      const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
+    } catch (e) {
+      expect(e.code).toBe("Error");
+      expect(e.name).toBe("unhandled-error");
+      expect(e.httpStatus).toBe(400);
     }
-  );
+  });
 
-  it(
-    "Known error with callback that does NOT resolve results in appropriate response",
-    async () => {
-      process.env.AWS_STAGE = "dev";
-      const wrapped = wrapper(handlerErrorFnWithKnownErrors(false, true));
+  it("Known error with callback that does NOT resolve results in appropriate response", async () => {
+    process.env.AWS_STAGE = "dev";
+    const wrapped = wrapper(handlerErrorFnWithKnownErrors(false, true));
 
-      try {
-        const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
-      } catch (e) {
-        expect(e.name).toBe("known");
-        expect(e.httpStatus).toBe(404);
-      }
+    try {
+      const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
+    } catch (e) {
+      expect(e.name).toBe("known");
+      expect(e.httpStatus).toBe(404);
     }
-  );
+  });
 
-  it(
-    "Known error with callback that does resolve results in appropriate response",
-    async () => {
-      process.env.AWS_STAGE = "dev";
-      const wrapped = wrapper(handlerErrorFnWithKnownErrors(true, true));
+  it("Known error with callback that does resolve results in appropriate response", async () => {
+    process.env.AWS_STAGE = "dev";
+    const wrapped = wrapper(handlerErrorFnWithKnownErrors(true, true));
 
-      try {
-        const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
-        // error is handled
-        expect(response).toBeUndefined();
-      } catch (e) {
-        throw new Error(
-          "there should not have been an error when callback resolves the error"
-        );
-      }
+    try {
+      const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
+      // error is handled
+      expect(response).toBeUndefined();
+    } catch (e) {
+      throw new Error("there should not have been an error when callback resolves the error");
     }
-  );
+  });
 
   it("Known error is identified with part of 'message'", async () => {
-    const fn: IHandlerFunction<IRequest, IResponse> = async (
-      event,
-      context
-    ) => {
-      context.errorMgmt.addHandler(
-        401,
-        { messageContains: "help me" },
-        { callback: () => false }
-      );
+    const fn: IHandlerFunction<IRequest, IResponse> = async (event, context) => {
+      context.errorMgmt.addHandler(401, { messageContains: "help me" }, { callback: () => false });
       const e = Error("help me") as Error & { code: string };
       e.code = "secret-code";
       e.name = "named and shamed";

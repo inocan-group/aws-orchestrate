@@ -40,7 +40,7 @@ import {
 } from "common-types";
 import type { IAdminConfig, IMockConfig } from "universal-fire";
 
-import {get} from "lodash-es";
+import {get} from "native-dash";
 import { invoke as invokeLambda } from "aws-log";
 import { logger } from "aws-log";
 

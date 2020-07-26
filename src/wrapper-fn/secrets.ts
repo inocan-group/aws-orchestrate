@@ -2,7 +2,7 @@ import { ILoggerApi, logger } from "aws-log";
 
 import { IDictionary } from "common-types";
 import { SSM } from "aws-ssm";
-import { flatten } from "lodash-es";
+import { flatten } from "native-dash";
 
 let localSecrets: IDictionary = {};
 

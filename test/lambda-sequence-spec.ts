@@ -7,9 +7,9 @@ import { LambdaSequence } from "../src/LambdaSequence";
 describe("Lambda Sequence => ", () => {
   it("can instantiate", async () => {
     const s = new LambdaSequence();
-    expect(s.from).toBeInstanceOf("function");
-    expect(s.add).toBeInstanceOf("function");
-    expect(s.next).toBeInstanceOf("function");
+    expect(s.from).toBeFunction();
+    expect(s.add).toBeFunction();
+    expect(s.next).toBeFunction();
   });
 
   it("from() returns proper properties when no sequence or proxy request", async () => {
@@ -47,9 +47,8 @@ describe("Lambda Sequence => ", () => {
     // after calling "from" the sequence is reduced from 2 to 1
     expect(sequence.remaining.length).toBe(1);
     sequence.steps.map((step) => {
-      expect(step)
-        .to.haveOwnProperty("arn")
-        .toBeInstanceOf("string");
+      expect(step).toHaveProperty("arn");
+      // expect(step).toBeString();
     });
   });
 
@@ -68,7 +67,7 @@ describe("Lambda Sequence => ", () => {
       width: 50,
     });
     const nxt = s.next();
-    expect(nxt).toBeInstanceOf("array");
+    expect(nxt).toBeArray();
   });
 
   it("Running sequence's next() and from() method works with modern IOrchestrateMessageBody", () => {
@@ -105,7 +104,7 @@ describe("Lambda Sequence => ", () => {
     // fn2 body
     const fn2Body = decompress<IDictionary>(fn1Event.body, true);
     expect(fn2Body.c).toBe(3);
-    expect(fn2Body.a).toBeInstanceOf("undefined");
+    expect(fn2Body.a).toBeUndefined();
     expect(fn2Body.temperature).toBe(f1Response.data);
 
     // fn2 sequence
@@ -134,7 +133,7 @@ describe("Lambda Sequence => ", () => {
     const fn3 = LambdaSequence.from<IDictionary>(fn2Event);
     console.log(fn3.request);
 
-    expect(fn3.headers).to.haveOwnProperty("X-Correlation-Id");
+    expect(fn3.headers).toHaveProperty("X-Correlation-Id");
     expect(fn3.sequence.activeFn.arn).toBe("fn3");
     expect(fn3.request.c).toBeUndefined();
     expect(fn3.request.d).toBe(4);
