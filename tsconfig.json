@@ -16,6 +16,5 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*", "rollup.config.js"],
-  "exclude": ["node_modules", "**/*-spec.ts", "node_modules/@firebase/**/*.d.ts"]
+  "include": ["src", "test"]
 }

@@ -1,7 +1,7 @@
+import * as helpers from "./testing/helpers";
+
 import { IAWSLambaContext, IAWSLambdaProxyIntegrationRequest } from "common-types";
 import { IHandlerContext, IHandlerFunction, ServerlessError, wrapper } from "../src/index";
-
-import { expect } from "chai";
 
 const CORRELATION_ID = "c-123";
 const AWS_REQUEST_ID = "1234";
@@ -16,7 +16,9 @@ describe("Handling errors => ", () => {
       throw new ServerlessError(ERROR_CODE, "a test of an explicit error throw", "testing");
     };
     try {
+      const restore = helpers.captureStdout();
       const wrapped = wrapper(myHandler);
+      restore();
       const result = await wrapped(
         { headers: { "X-Correlation-Id": CORRELATION_ID } } as IAWSLambdaProxyIntegrationRequest,
         {
@@ -25,10 +27,10 @@ describe("Handling errors => ", () => {
         } as IAWSLambaContext
       );
     } catch (e) {
-      expect(e.name).to.equal("ServerlessError");
-      expect(e.httpStatus).to.equal(ERROR_CODE);
-      expect(e.correlationId).to.equal(CORRELATION_ID);
-      expect(e.awsRequestId).to.equal(AWS_REQUEST_ID);
+      expect(e.name).toBe("ServerlessError");
+      expect(e.httpStatus).toBe(ERROR_CODE);
+      expect(e.correlationId).toBe(CORRELATION_ID);
+      expect(e.awsRequestId).toBe(AWS_REQUEST_ID);
     }
   });
 });

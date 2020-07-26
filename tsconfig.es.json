@@ -1,8 +1,10 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "declaration": true,
     "noEmit": false,
-    "outDir": "dist/cjs"
+    "module": "esnext",
+    "outDir": "dist/es"
   },
   "include": ["src"]
 }

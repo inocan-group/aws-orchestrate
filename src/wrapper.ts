@@ -38,9 +38,9 @@ import {
   IDictionary,
   isLambdaProxyRequest,
 } from "common-types";
-import { IAdminConfig, IMockConfig } from "universal-fire";
+import type { IAdminConfig, IMockConfig } from "universal-fire";
 
-import get from "lodash.get";
+import {get} from "lodash-es";
 import { invoke as invokeLambda } from "aws-log";
 import { logger } from "aws-log";
 

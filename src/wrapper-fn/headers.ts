@@ -1,7 +1,8 @@
 import { IDictionary, IHttpResponseHeaders } from "common-types";
-import set from "lodash.set";
-import { logger, ILoggerApi, getCorrelationId } from "aws-log";
-import { sequenceStatus, saveSecretsLocally, getLocalSecrets, IOrchestratedHeaders } from "../private";
+import { ILoggerApi, getCorrelationId, logger } from "aws-log";
+import { IOrchestratedHeaders, getLocalSecrets, saveSecretsLocally, sequenceStatus } from "../private";
+
+import { set } from "lodash-es";
 
 /**
  * Ensures that frontend clients who call Lambda's
