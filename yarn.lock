@@ -2642,10 +2642,25 @@ aws-log@^0.9.2:
     stack-trace "^0.0.10"
     traverse "^0.6.6"
 
-aws-sdk@^2.658.0, aws-sdk@^2.700.0:
+aws-sdk@^2.658.0:
   version "2.701.0"
   resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.701.0.tgz#9827b7eb2bf87722c348d5195c17620b5fe1bead"
   integrity sha512-95fWGr6gvyRH408VP5LQAycB8Wqw665ll7q6/soscGFD+2HuQ+gB5qpSlXJwOgSggKQCaExWoQnDABBoTSXM2w==
+  dependencies:
+    buffer "4.9.2"
+    events "1.1.1"
+    ieee754 "1.1.13"
+    jmespath "0.15.0"
+    querystring "0.2.0"
+    sax "1.2.1"
+    url "0.10.3"
+    uuid "3.3.2"
+    xml2js "0.4.19"
+
+aws-sdk@^2.715.0:
+  version "2.720.0"
+  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.720.0.tgz#b834adc6b7458c41621f8e2169602c69c655f504"
+  integrity sha512-899YXs6iWae82GGJM95S5MFBPIG8pE9aq+GlSr47mz7te97hGX0OcjPs3GuGZWA6Nrp0MCR9eMqu6DwBlYGltA==
   dependencies:
     buffer "4.9.2"
     events "1.1.1"
@@ -8200,10 +8215,10 @@ merge2@^1.2.3, merge2@^1.3.0:
   resolved "https://registry.yarnpkg.com/merge2/-/merge2-1.4.1.tgz#4368892f885e907455a6fd7dc55c0c9d404990ae"
   integrity sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==
 
-mermaid@^8.5.2:
-  version "8.5.2"
-  resolved "https://registry.yarnpkg.com/mermaid/-/mermaid-8.5.2.tgz#0f1914cda53d4ea5377380e5ce07a38bef2ea7e8"
-  integrity sha512-I+s+8/RzlazF3dGOhDUfU/ERkUV4zfIlTWb3703jNx+2lfACs+4AdY9ULQaw6BPWzW3gB+XlXFOOX/m/vqujIA==
+mermaid@^8.6.0:
+  version "8.6.3"
+  resolved "https://registry.yarnpkg.com/mermaid/-/mermaid-8.6.3.tgz#2d516a3b04d6927db5b509b440a1dbf4418be390"
+  integrity sha512-oedt5nwCB+5jqPhyd45ml9bYd8WlldcMGT1KgpyKYL58gcnMKjxbHDa/g2fQXSPKopK+O3u7CmgXxXwMyW+4aA==
   dependencies:
     "@braintree/sanitize-url" "^3.1.0"
     crypto-random-string "^3.0.1"
@@ -11734,7 +11749,7 @@ unique-string@^2.0.0:
   dependencies:
     crypto-random-string "^2.0.0"
 
-universal-fire@^0.55.11, universal-fire@^0.55.13:
+universal-fire@^0.55.13:
   version "0.55.13"
   resolved "https://registry.yarnpkg.com/universal-fire/-/universal-fire-0.55.13.tgz#9aa6d10f5ca5e3b91b4e8998e9fa554635b01cd7"
   integrity sha512-Eqi3tCWTVO8zGP7ES/RKjTb+zY0ff81i90P0pjMgdO8dGD2QYOtXKZtok70aEFYsrz1RELO2UbkAhmWvUGfaXA==
