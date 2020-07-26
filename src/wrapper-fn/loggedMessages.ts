@@ -2,7 +2,7 @@ import { HttpStatusCodes, IDictionary } from "common-types";
 import { IApiGateway, IErrorClass, LambdaSequence, getNewSequence, getRequestHeaders } from "../private";
 
 import { ILoggerApi } from "aws-log";
-import { get } from "lodash-es";
+import { get } from "native-dash";
 
 /**
  * A collection of log messages that the wrapper function will emit

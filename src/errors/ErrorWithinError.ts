@@ -1,5 +1,5 @@
 import { HttpStatusCodes } from "common-types";
-import { get } from "lodash-es";
+import { get } from "native-dash";
 
 /**
  * Errors which are encountered while handling an error. These secondary errors

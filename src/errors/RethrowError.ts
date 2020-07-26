@@ -1,6 +1,6 @@
 import { HttpStatusCodes } from "common-types";
 import { IErrorClass } from "../@types";
-import { get } from "lodash-es";
+import { get } from "native-dash";
 
 /**
  * Rethrows an error which has a `code` property set

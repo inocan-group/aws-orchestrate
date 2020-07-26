@@ -13,10 +13,7 @@ interface Console {
   _restored: boolean;
   // Console: typeof NodeJS.Console;
   assert(value: any, message?: string, ...optionalParams: any[]): void;
-  dir(
-    obj: any,
-    options?: { showHidden?: boolean; depth?: number; colors?: boolean }
-  ): void;
+  dir(obj: any, options?: { showHidden?: boolean; depth?: number; colors?: boolean }): void;
   error(message?: any, ...optionalParams: any[]): void;
   info(message?: any, ...optionalParams: any[]): void;
   log(message?: any, ...optionalParams: any[]): void;
@@ -33,11 +30,11 @@ export function restoreStdoutAndStderr() {
 }
 
 export async function wait(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function timeout(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 let envIsSetup = false;
@@ -48,15 +45,13 @@ export function setupEnv() {
       process.env.AWS_STAGE = "test";
     }
     const current = process.env;
-    const yamlConfig: IDictionary = yaml.safeLoad(
-      fs.readFileSync("./env.yml", "utf8")
-    );
+    const yamlConfig: IDictionary = yaml.load(fs.readFileSync("./env.yml", "utf8"));
     const combined = {
       ...yamlConfig[process.env.AWS_STAGE],
-      ...process.env
+      ...process.env,
     };
 
-    Object.keys(combined).forEach(key => (process.env[key] = combined[key]));
+    Object.keys(combined).forEach((key) => (process.env[key] = combined[key]));
     envIsSetup = true;
 
     return combined;

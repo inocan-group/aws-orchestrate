@@ -1,16 +1,26 @@
+const { resolve } = require("path");
 module.exports = {
-  roots: ["<rootDir>/test"],
-  testMatch: ["**/*-spec.ts"],
+  testMatch: ["**/test/?(*-)+(spec|test).[jt]s?(x)"],
+
+  // Maps a regular expression for a "path" and maps it to a transformer
+  // https://jestjs.io/docs/en/configuration#transform-objectstring-pathtotransformer--pathtotransformer-object
   transform: {
-    "(firemodel|universal-fire|@forest-fire|lodash-es).+\\.js$": "babel-jest",
     "^.+\\.tsx?$": "ts-jest",
   },
-  transformIgnorePatterns: ["<rootDir>/node_modules/(?!(firemodel|universal-fire|@forest-fire|lodash-es)).+\\.js$"],
+
+  // https://jestjs.io/docs/en/configuration#transformignorepatterns-arraystring
+  transformIgnorePatterns: [
+    // "<rootDir>/node_modules/(?!(universal-fire|@forest-fire)).+\\.js$",
+    resolve(process.cwd(), "node_modules") + `/(?!(universal-fire|@forest-fire)).+\\.js$`,
+  ],
+
+  // modules which do NOT export CJS must have an entry to
+  // https://jestjs.io/docs/en/configuration#modulenamemapper-objectstring-string--arraystring
   moduleNameMapper: {
-    "^firemodel$": "<rootDir>/node_modules/firemodel/dist/es/index.js",
-    "^universal-fire$": "<rootDir>/node_modules/universal-fire/dist/es/index.js",
-    "^lodash-es$": "<rootDir>/node_modules/lodash/index.js",
-    // '^@forest-fire/firestore-client$': '<rootDir>/node_modules/@forest-fire/firestore-client/dist/es/index.js',
-    // '^@forest-fire/real-time-client$': '<rootDir>/node_modules/@forest-fire/real-time-client/dist/es/index.js',
+    "^@/(.*)$": resolve(process.cwd(), "src", "$1"),
   },
+
+  // adds more assertions to the default library that Jest provides
+  setupFilesAfterEnv: ["jest-extended"],
+  testEnvironment: "node",
 };

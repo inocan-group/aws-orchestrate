@@ -20,15 +20,15 @@ import {
   IWrapperRequestHeaders,
   OrchestratedCondition,
   OrchestratedErrorHandler,
-  buildOrchestratedRequest,
   decompress,
   isBareRequest,
   isDynamic,
   isOrchestratedRequest,
 } from "./private";
+import { buildOrchestratedRequest } from "./sequences/index";
 import { invoke as invokeLambda, logger } from "aws-log";
 
-import { get } from "lodash-es";
+import { get } from "native-dash";
 
 export class LambdaSequence {
   /**
