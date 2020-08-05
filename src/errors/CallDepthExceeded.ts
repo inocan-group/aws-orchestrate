@@ -1,4 +1,4 @@
-import { HttpStatusCodes } from "common-types";
+import { HttpStatusCodes } from 'common-types'
 
 /**
  * Thrown when a function calls itself more than the allowed `callDepth`
@@ -13,25 +13,25 @@ export class CallDepthExceeded extends Error {
   /**
    * The `name` is of the format `type`/`sub-type`
    */
-  name: string;
+  name: string
   /**
    * The `code` is the "sub-type" of the name
    */
-  code: string;
+  code: string
 
   /** the HTTP errorCode */
-  httpStatus: number;
+  httpStatus: number
   /** the AWS requestId */
-  requestId: string;
+  requestId: string
 
-  originalStack: string;
+  originalStack: string
 
   constructor(callDepth: number) {
-    super("");
+    super('')
 
-    this.name = "aws-orchestrate/call-depth-exceeded";
-    this.code = "call-depth-exceeded";
-    this.httpStatus = HttpStatusCodes.InternalServerError;
-    this.message = `The allowed number of self-calls [ ] was exceeded!"`;
+    this.name = 'aws-orchestrate/call-depth-exceeded'
+    this.code = 'call-depth-exceeded'
+    this.httpStatus = HttpStatusCodes.InternalServerError
+    this.message = `The allowed number of self-calls [ ] was exceeded!"`
   }
 }
