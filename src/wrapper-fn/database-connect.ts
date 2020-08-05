@@ -1,10 +1,10 @@
 import { logger } from "aws-log";
 import type { IAdminConfig, IMockConfig } from "universal-fire";
-import { RealTimeAdmin } from "@forest-fire/real-time-admin"
+import { RealTimeAdmin, IRealTimeAdmin, IAbstractedDatabase } from "universal-fire"
 
 import { getSecrets } from "../private";
 
-let _database: RealTimeAdmin
+let _database: IRealTimeAdmin & IAbstractedDatabase
 
 /**
  * **database**
