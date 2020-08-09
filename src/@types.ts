@@ -12,7 +12,8 @@ import {
 import type {  IAdminConfig, IMockConfig, IRealTimeAdmin } from "universal-fire";
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
 
-import { ILoggerApi } from "aws-log";
+import { ILoggerApi, IAwsLogConfig } from "aws-log";
+
 
 type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 /**
@@ -47,6 +48,8 @@ export interface IWrapperOptions {
    * > the `o-sequence-tracker` _header_ variable.
    */
   sequenceTracker?: arn;
+
+  loggerConfig?: Partial<IAwsLogConfig>
 }
 
 export type IExpectedHeaders = IHttpRequestHeaders & IDictionary;

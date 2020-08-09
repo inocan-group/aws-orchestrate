@@ -23,4 +23,4 @@ const generalConfig = moduleSystem => ({
   ],
 })
 
-export default [generalConfig('cjs')]
+export default [generalConfig('cjs'), generalConfig('es')]
