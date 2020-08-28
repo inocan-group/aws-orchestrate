@@ -81,7 +81,7 @@ export const wrapper = function<I, O>(
       | "returning-values";
     workflowStatus = "initializing";
     context.callbackWaitsForEmptyEventLoop = false;
-    const log = logger().lambda(event, context);
+    const log = logger(options.loggerConfig).lambda(event, context);
     const msg = loggedMessages(log);
     const errorMeta: ErrorMeta = new ErrorMeta();
 
