@@ -8695,10 +8695,10 @@ nanomatch@^1.2.9:
     snapdragon "^0.8.1"
     to-regex "^3.0.1"
 
-native-dash@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/native-dash/-/native-dash-1.0.0.tgz#28129a1a713a061bd1603819ea82832612b0f696"
-  integrity sha512-BpRs4Ku+A2iSYOAEb6nMF7Nz2cEXV/Z6vyfp4lAJNvn6gtwRUNPoHlNgtOoJTe8kFEjBGK+9UvRZihE9Mo9Bxg==
+native-dash@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/native-dash/-/native-dash-1.1.1.tgz#7b19fe68b0f4c0774e2cef827d4795f93c1fbded"
+  integrity sha512-Dnpgq5Sh59m6Omd6IN2k3iccBXi93tk9vF7UT+3AJQbqVLA6eRd7ytZrtAie++JITbecweQtJTA7DffVGtXQRg==
 
 natural-compare@^1.4.0:
   version "1.4.0"
