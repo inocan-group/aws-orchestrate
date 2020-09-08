@@ -44,7 +44,7 @@
   "peerDependencies": {
     "aws-log": "^0.9.3",
     "aws-ssm": "^0.3.11",
-    "universal-fire": "~0.58.4"
+    "universal-fire": "~0.59.2"
   },
   "optionalDependencies": {
     "firemodel": "> 0.56.0"

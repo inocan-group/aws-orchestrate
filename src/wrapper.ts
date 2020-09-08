@@ -265,7 +265,7 @@ export const wrapper = function<I, O>(
                * 3. handler returns _falsy_ which means that the default error should be thrown
                */
               try {
-                const passed = handling.defaultHandlerFn(e);
+                const passed = await Promise.resolve(handling.defaultHandlerFn(e));
                 if (passed === true) {
                   log.debug(
                     `The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${

@@ -102,7 +102,7 @@ export class ErrorMeta {
    *
    * In all cases, it will replace the runtime error's stack with what was passed in.
    */
-  setDefaultHandler(fn: (err: Error) => boolean): ErrorMeta;
+  setDefaultHandler(fn: (err: Error) => Promise<boolean> | boolean): ErrorMeta;
   /**
    * **setDefaultHandler**
    *
