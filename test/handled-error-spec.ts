@@ -34,12 +34,24 @@ describe('Handling errors => ', () => {
     }
   })
   it('throwing an error should be catch by default error handler', async () => {
-    let foo: number = 0
     const myHandler: IHandlerFunction<void, void> = async (req, ctx) => {
-      foo = 1
-      throw new ServerlessError(ERROR_CODE, 'a test of an explicit error throw', 'testing')
+      ctx.errorMgmt.setDefaultHandler((error: Error) => {
+        expect(error.name).toBe('Error')
+        expect(error.message).toBe('a test of an explicit error throw')
+        expect(error.stack).not.toBeUndefined()
+        return true
+      })
+      throw new Error('a test of an explicit error throw')
     }
-    try {
-    } catch (e) {}
+    const restore = helpers.captureStdout()
+    const wrapped = wrapper(myHandler)
+    restore()
+    await wrapped(
+      { headers: { 'X-Correlation-Id': CORRELATION_ID } } as IAWSLambdaProxyIntegrationRequest,
+      {
+        awsRequestId: AWS_REQUEST_ID,
+        functionName: FUNCTION_NAME,
+      } as IAWSLambaContext,
+    )
   })
 })
