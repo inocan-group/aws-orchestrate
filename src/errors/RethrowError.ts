@@ -1,6 +1,5 @@
 import { HttpStatusCodes } from "common-types";
 import { IErrorClass } from "../@types";
-import { get } from "native-dash";
 
 /**
  * Rethrows an error which has a `code` property set
@@ -15,10 +14,10 @@ export class RethrowError extends Error {
   constructor(err: IErrorClass) {
     super(err.message);
 
-    this.code = get(err, "code");
-    this.name = get(err, "name");
-    this.stack = get(err, "stack");
-    this.type = get(err, "type");
-    this.httpStatus = get(err, "httpStatus", HttpStatusCodes.InternalServerError);
+    this.code = err.code;
+    this.name = err.name;
+    this.stack = err.stack;
+    this.type = err.type;
+    this.httpStatus = err.httpStatus ?? HttpStatusCodes.InternalServerError;
   }
 }

@@ -40,7 +40,7 @@ import {
 } from "common-types";
 import type { IAdminConfig, IMockConfig } from "universal-fire";
 
-import {get} from "native-dash";
+import { get } from "native-dash";
 import { invoke as invokeLambda } from "aws-log";
 import { logger } from "aws-log";
 
@@ -54,12 +54,12 @@ import { logger } from "aws-log";
  * @param context the contextual props and functions which AWS provides plus additional
  * features brought in by the wrapper function
  */
-export const wrapper = function<I, O>(
+export const wrapper = function <I, O>(
   fn: (req: I, context: IHandlerContext) => Promise<O>,
   options: IWrapperOptions = {}
 ) {
   /** this is the core Lambda event which the wrapper takes as an input */
-  return async function(
+  return async function (
     event: IOrchestrationRequestTypes<I>,
     context: IAWSLambaContext
   ): Promise<O | IApiGatewayResponse | IApiGatewayErrorResponse> {
@@ -247,9 +247,9 @@ export const wrapper = function<I, O>(
         } else {
           //#region UNFOUND ERROR
           log.debug(`An error is being processed by the default handling mechanism`, {
-            defaultHandling: get(errorMeta, "defaultHandling"),
-            errorMessage: get(e, "message", "no error messsage"),
-            stack: get(e, "stack", "no stack available"),
+            defaultHandling: errorMeta.defaultHandling,
+            errorMessage: e.message ?? "no error messsage",
+            stack: e.stack ?? "no stack available",
           });
           //#endregion
 
@@ -265,11 +265,13 @@ export const wrapper = function<I, O>(
                * 3. handler returns _falsy_ which means that the default error should be thrown
                */
               try {
-                const passed = await Promise.resolve(handling.defaultHandlerFn(e));
+                /** The following line is intended to pass error without loosing stack nor error message and name */
+                const stack = new Error().stack
+                const passed = await handling.defaultHandlerFn({ message: e.message, name: e.name, stack });
                 if (passed === true) {
                   log.debug(
                     `The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${
-                      result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
+                    result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
                     } ].`
                   );
                   if (isApiGatewayRequest) {
