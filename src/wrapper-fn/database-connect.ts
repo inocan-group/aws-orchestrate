@@ -1,10 +1,14 @@
 import { logger } from "aws-log";
-import type { IAdminConfig, IMockConfig } from "universal-fire";
-import { RealTimeAdmin, IRealTimeAdmin, IAbstractedDatabase } from "universal-fire"
+import type { IAdminConfig, IMockConfig, IAbstractedDatabase } from "universal-fire";
+import { RealTimeAdmin, IRealTimeAdmin } from "universal-fire"
+
 
 import { getSecrets } from "../private";
+function isRtdbBacked(db: IAbstractedDatabase): db is IRealTimeAdmin {
+  return db.dbType === "RTDB"
+}
 
-let _database: IRealTimeAdmin & IAbstractedDatabase
+let _database: IAbstractedDatabase & IRealTimeAdmin
 
 /**
  * **database**
@@ -47,7 +51,7 @@ export const database = async (config?: IAdminConfig | IMockConfig) => {
         }
         config = {
           serviceAccount: serviceAccount || firebase.SERVICE_ACCOUNT,
-          databaseURL: databaseURL || firebase.DATABASE_URL,
+          databaseURL: databaseURL || firebase.DATABASE_URL
         };
         if (!config.serviceAccount) {
           throw new Error(`The Firebase service account could not be found in ENV or SSM variables!`);
@@ -59,7 +63,13 @@ export const database = async (config?: IAdminConfig | IMockConfig) => {
       }
     }
 
-    _database = await RealTimeAdmin.connect(config);
+    const db = await RealTimeAdmin.connect(config);
+
+    if (!isRtdbBacked(db)) {
+      throw "Only RealTime Database is supported out-of-the-box"
+    }
+    _database = db
+    
   }
 
   return _database;
