@@ -18,7 +18,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
   ) {
     log.info(
       `The handler function ${get(context, "functionName")} has started.  ${
-        get(sequence, "isSequence", false) ? ` [ ${log.getCorrelationId()} ].` : " [ not part of sequence ]."
+      get(sequence, "isSequence", false) ? ` [ ${log.getCorrelationId()} ].` : " [ not part of sequence ]."
       }`,
       {
         request,
@@ -87,11 +87,11 @@ export const loggedMessages = (log: ILoggerApi) => ({
    * as soon as an error is detected in the wrapper, write a log message about the error
    */
   processingError: (e: IErrorClass, workflowStatus: string, isApiGateway: boolean = false) => {
-    const stack = get(e, "stack") || new Error().stack;
-    const errorMessage = get(e, "message", "no-message");
+    const stack = e.stack ?? new Error().stack;
+    const errorMessage = e.message ?? "no-message";
     log.info(
       `Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}${
-        isApiGateway ? ", ApiGateway" : ""
+      isApiGateway ? ", ApiGateway" : ""
       } ]`,
       {
         errorMessage,

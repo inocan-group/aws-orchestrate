@@ -392,7 +392,7 @@ export interface IErrorWithExtraProperties extends Error {
   [key: string]: any;
 }
 
-export type IErrorHandlerFunction = (err: Error) => boolean;
+export type IErrorHandlerFunction = (err: Error) => Promise<boolean> | boolean;
 export interface IErrorClass extends Error {
   type?: string;
   code?: string;

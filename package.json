@@ -1,7 +1,7 @@
 {
   "name": "aws-orchestrate",
   "description": "This library is intended to help projects intending to build a \"micro-service architecture\" to achieve those ambitions with some handy orchestration classes and types.",
-  "version": "0.14.4",
+  "version": "0.14.5",
   "main": "dist/cjs/index.js",
   "module": "dist/es/index.js",
   "typings": "dist/es/index.d.ts",
@@ -44,7 +44,7 @@
   "peerDependencies": {
     "aws-log": "^0.9.3",
     "aws-ssm": "^0.3.11",
-    "universal-fire": "~0.58.4"
+    "universal-fire": "~0.59.2"
   },
   "optionalDependencies": {
     "firemodel": "> 0.56.0"
