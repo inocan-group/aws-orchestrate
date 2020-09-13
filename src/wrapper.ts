@@ -267,11 +267,10 @@ export const wrapper = function <I, O>(
               try {
                 /** The following line is intended to pass error without loosing stack nor error message and name */
                 const stack = new Error().stack
-                const passed = await handling.defaultHandlerFn({ message: e.message, name: e.name, stack });
+                const passed = await handling.defaultHandlerFn({ ...e, name: e.name, message: e.message, stack: e.stack });
                 if (passed === true) {
                   log.debug(
-                    `The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${
-                    result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
+                    `The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
                     } ].`
                   );
                   if (isApiGatewayRequest) {
@@ -302,7 +301,7 @@ export const wrapper = function <I, O>(
             case "error-forwarding":
               //#region error-forwarding
               log.debug("The error will be forwarded to another function for handling", { arn: handling.arn });
-              await invokeLambda(handling.arn, e);
+              await invokeLambda(handling.arn, { ...e, name: e.name, message: e.message, stack: e.stack });
               break;
             //#endregion
 
