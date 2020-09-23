@@ -20,7 +20,7 @@ import {
   getNewSequence,
   getResponseHeaders,
   getSecrets,
-  invoke as invokeHigherOrder,
+  invokeSequence,
   invokeNewSequence,
   loggedMessages,
   maskLoggingForSecrets,
@@ -29,6 +29,7 @@ import {
   sequenceStatus,
   setContentType,
   setFnHeaders,
+  invoke as invokeLambda
 } from "./private";
 import {
   HttpStatusCodes,
@@ -41,7 +42,6 @@ import {
 import type { IAdminConfig, IMockConfig } from "universal-fire";
 
 import { get } from "native-dash";
-import { invoke as invokeLambda } from "aws-log";
 import { logger } from "aws-log";
 
 /**
@@ -104,7 +104,7 @@ export const wrapper = function <I, O>(
       workflowStatus = "prep-starting";
       const status = sequenceStatus(log.getCorrelationId());
       const registerSequence = register(log, context);
-      const invoke = invokeHigherOrder(sequence);
+      const invoke = invokeSequence(sequence);
       const claims: IDictionary = JSON.parse(get(apiGateway, "requestContext.authorizer.customClaims", "{}"));
       handlerContext = {
         ...context,
@@ -142,7 +142,7 @@ export const wrapper = function <I, O>(
         workflowStatus = "invoke-started";
         const [fn, requestBody] = sequence.next<O>(result);
         msg.startingInvocation(fn, requestBody);
-        const invokeParams = await invokeLambda(fn, requestBody);
+        const invokeParams = await invoke(fn, requestBody);
         msg.completingInvocation(fn, invokeParams);
         workflowStatus = "invoke-complete";
       } else {

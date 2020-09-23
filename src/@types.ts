@@ -204,7 +204,7 @@ export interface ILambdaSequenceStep<T = IDictionary> {
   onCondition?: any;
 }
 
-export type ILambdaFunctionType = "task" | "fan-out" | "step-start" | "fan-in" | "other";
+export type ILambdaFunctionType = "task" | "fan-out" | "step-fn" | "fan-in" | "other";
 
 export interface ILambaSequenceFromResponse<T> {
   request: T;
