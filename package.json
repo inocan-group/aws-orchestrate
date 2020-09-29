@@ -90,6 +90,7 @@
     "typescript": "^3.9.6",
     "universal-fire": "^0.59.2",
     "vuepress": "^1.5.3",
-    "vuepress-plugin-autometa": "^0.1.13"
+    "vuepress-plugin-autometa": "^0.1.13",
+    "vuepress-plugin-mermaidjs": "^1.8.0"
   }
 }
