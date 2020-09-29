@@ -1,5 +1,5 @@
 import { IDictionary } from 'common-types'
-import { ensureFunctionName } from '../private'
+import { AwsResource, ensureFunctionName } from '../private'
 import { getStage } from 'aws-log'
 
 export interface IParsedArn {
@@ -10,23 +10,21 @@ export interface IParsedArn {
   fn: string
 }
 
-export function parseArn(arn: string): IParsedArn {
+export function parseArn(arn: string, target: AwsResource = AwsResource.Lambda): IParsedArn {
   const isFullyQualified = arn.slice(0, 3) === 'arn' ? true : false
 
-  return isFullyQualified ? parseFullyQualifiedString(arn) : parsePartiallyQualifiedString(arn)
+  return isFullyQualified ? parseFullyQualifiedString(arn, target) : parsePartiallyQualifiedString(arn)
 }
 
-export enum TargetResource {
-  Lambda = 'Lambda',
-  StepFunction = 'StepFunction',
+const ResourceArnFormatRegex: IDictionary<RegExp | undefined> = {
+  [AwsResource.Lambda]: /arn:aws:lambda:([\w-].*):([0-9].*):function:(.*)/,
+  [AwsResource.StepFunction]: /arn:aws:states:([\w-].*):([0-9].*):stateMachine:(.*)/,
 }
 
-const ResourceArnFormatRegex = {
-  [TargetResource.Lambda]: /arn:aws:lambda:([\w-].*):([0-9].*):function:(.*)/,
-  [TargetResource.StepFunction]: /arn:aws:states:([\w-].*):([0-9].*):stateMachine:(.*)/,
-}
-
-function parseFullyQualifiedString(arn: string, target: TargetResource = TargetResource.Lambda): IParsedArn {
+function parseFullyQualifiedString(arn: string, target: AwsResource): IParsedArn {
+  if (!(target in ResourceArnFormatRegex)) {
+    throw new Error('ApiGateway not supported. Apigateway should be called by http request')
+  }
   const [_, region, account, remain] = arn.match(ResourceArnFormatRegex[target])
   const parts = remain.split('-')
   const fn = parts[parts.length - 1]

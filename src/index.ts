@@ -1,5 +1,6 @@
-export * from "./LambdaSequence";
-export * from "./sequences";
-export * from "./@types";
-export * from "./wrapper";
-export { ServerlessError } from "./errors/index";
+export * from './LambdaSequence'
+export * from './sequences'
+export * from './@types'
+export * from './wrapper'
+export * from './invoke'
+export { ServerlessError } from './errors/index'

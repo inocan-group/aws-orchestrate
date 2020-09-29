@@ -10,7 +10,7 @@ const generalConfig = moduleSystem => ({
     format: `${moduleSystem}`,
     sourcemap: true,
   },
-  external: ['universal-fire', 'firemodel', 'firebase', 'aws-ssm', 'aws-log', 'common-types', 'stream'],
+  external: ['universal-fire', 'firemodel', 'firebase', 'aws-ssm', 'aws-log', 'common-types', 'stream', 'aws-sdk'],
   plugins: [
     commonjs(),
     resolve(),

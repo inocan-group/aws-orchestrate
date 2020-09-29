@@ -1,6 +1,12 @@
 import { IDictionary, IHttpRequestHeaders } from 'common-types'
 import { logger } from 'aws-log'
-import { IOrchestratedRequest, LambdaSequence, buildOrchestratedRequest, parseArn } from '../private'
+import {
+  IOrchestratedRequest,
+  LambdaSequence,
+  buildOrchestratedRequest,
+  parseArn,
+  buildInvocationRequest,
+} from '../private'
 
 export type InvocationResponse = import('aws-sdk').Lambda.InvocationResponse
 
