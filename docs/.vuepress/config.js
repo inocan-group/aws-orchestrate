@@ -78,6 +78,7 @@ module.exports = {
       // md.set({ breaks: false });
       md.use(require('./plugins/mermaid'))
     },
+    lineNumbers: true,
   },
   themeConfig: {
     logo: '',
