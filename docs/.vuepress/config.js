@@ -1,19 +1,19 @@
 // const appleTouch = require("../.vuepress/apple-touch.json");
-const title = "aws-orchestrate";
-const favicon = "/favicon-32x32.png";
+const title = 'aws-orchestrate'
+const favicon = '/favicon-32x32.png'
 
 let head = [
-  ["link", { rel: "icon", href: favicon }],
-  ["link", { rel: "manifest", href: "/manifest.json" }],
-  ["meta", { name: "application-name", content: title }],
+  ['link', { rel: 'icon', href: favicon }],
+  ['link', { rel: 'manifest', href: '/manifest.json' }],
+  ['meta', { name: 'application-name', content: title }],
   [
-    "meta",
+    'meta',
     {
-      name: "apple-mobile-web-app-capable",
-      content: true
-    }
-  ]
-];
+      name: 'apple-mobile-web-app-capable',
+      content: true,
+    },
+  ],
+]
 const appleIcons = [
   // {
   //   sizes: "2048x2732",
@@ -50,10 +50,10 @@ const appleIcons = [
   //   rel: "apple-touch-startup-image",
   //   href: "icons/apple_splash_640.png"
   // }
-];
+]
 appleIcons.map(img => {
-  head.push(["link", img]);
-});
+  head.push(['link', img])
+})
 
 module.exports = {
   title,
@@ -94,6 +94,10 @@ module.exports = {
       {
         text: 'Sequences',
         link: '/sequence',
+      },
+      {
+        text: 'Step Fns',
+        link: '/step-fns/',
       },
       {
         text: 'HTTP Transactions',
