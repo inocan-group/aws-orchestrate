@@ -1,19 +1,19 @@
 // const appleTouch = require("../.vuepress/apple-touch.json");
-const title = "aws-orchestrate";
-const favicon = "/favicon-32x32.png";
+const title = 'aws-orchestrate'
+const favicon = '/favicon-32x32.png'
 
 let head = [
-  ["link", { rel: "icon", href: favicon }],
-  ["link", { rel: "manifest", href: "/manifest.json" }],
-  ["meta", { name: "application-name", content: title }],
+  ['link', { rel: 'icon', href: favicon }],
+  ['link', { rel: 'manifest', href: '/manifest.json' }],
+  ['meta', { name: 'application-name', content: title }],
   [
-    "meta",
+    'meta',
     {
-      name: "apple-mobile-web-app-capable",
-      content: true
-    }
-  ]
-];
+      name: 'apple-mobile-web-app-capable',
+      content: true,
+    },
+  ],
+]
 const appleIcons = [
   // {
   //   sizes: "2048x2732",
@@ -50,58 +50,60 @@ const appleIcons = [
   //   rel: "apple-touch-startup-image",
   //   href: "icons/apple_splash_640.png"
   // }
-];
+]
 appleIcons.map(img => {
-  head.push(["link", img]);
-});
+  head.push(['link', img])
+})
 
 module.exports = {
   title,
-  description: "aws-orchestrate",
+  description: 'aws-orchestrate',
   plugins: {
-    "@vuepress/pwa": {
+    '@vuepress/pwa': {
       serviceWorker: true,
       updatePopup: {
-        message: "New content is available",
-        buttonText: "Refresh"
-      }
+        message: 'New content is available',
+        buttonText: 'Refresh',
+      },
     },
-    mermaid: true,
-    "@vuepress/back-to-top": true,
-    "@vuepress/last-updated": true,
-    "@vuepress/medium-zoom": true
+    mermaidjs: true,
+    '@vuepress/back-to-top': true,
+    '@vuepress/last-updated': true,
+    '@vuepress/medium-zoom': true,
   },
-  footer: "â’¸ 2018 Inocan Group, All Rights Reserved",
+  footer: 'â’¸ 2018 Inocan Group, All Rights Reserved',
   head,
   markdown: {
     config: md => {
       // md.set({ breaks: false });
-      md.use(require("./plugins/mermaid"));
-    }
+      md.use(require('./plugins/mermaid'))
+    },
+    lineNumbers: true,
   },
   themeConfig: {
-    logo: "",
-    footer: "â’¸ 2018 Inocan Group, All Rights Reserved",
+    logo: '',
+    footer: 'â’¸ 2018 Inocan Group, All Rights Reserved',
     serviceWorker: {
-      updatePopup: true
+      updatePopup: true,
     },
     nav: [
       {
-        text: "Handler Wrapper",
-        link: "/wrapper"
+        text: 'Handler Wrapper',
+        link: '/wrapper',
       },
       {
-        text: "Sequences",
-        link: "/sequence"
+        text: 'Sequences',
+        link: '/sequence',
       },
       {
-        text: "HTTP Transactions",
-        link: "/transaction"
-      }
+        text: 'Step Fns',
+        link: '/step-fns/',
+      },
+      {
+        text: 'HTTP Transactions',
+        link: '/transaction',
+      },
     ],
-    sidebar: [
-      '/wrapper',
-      '/sequence'
-    ]
-  }
-};
+    sidebar: ['/wrapper', '/sequence'],
+  },
+}

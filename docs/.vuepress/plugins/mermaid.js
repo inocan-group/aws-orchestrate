@@ -1,4 +1,4 @@
-/** @type {import("mermaid").default} */
+/** @type {import("mermaidjs").default} */
 let mermaid;
 
 const mermaidChart = code => {
@@ -14,7 +14,7 @@ const mermaidChart = code => {
 
 async function getMermaid() {
   if (!mermaid) {
-    mermaid = (await import("mermaid")).default;
+    mermaid = (await import('mermaidjs')).default
     mermaid.initialize({
       startOnLoad: false,
       theme: "default",

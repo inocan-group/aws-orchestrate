@@ -19,14 +19,16 @@ type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 /**
  * The meta-data for a handler function; this symbol is now deprecated
  * in favor of `IHandlerMeta`.
+ * 
+ * @deprecated
  */
-export type IWrapperFunction = IHandlerMeta;
+export type IWrapperFunction = IHandlerConfig;
 
 /**
  * The _meta-data_ for a handler function. This can include a description
  * (strongly suggested), events, timeouts, etc.
  */
-export type IHandlerMeta = Omit<IServerlessFunction, "handler">;
+export type IHandlerConfig = Omit<IServerlessFunction, "handler">;
 
 /**
  * The API Gateway's _proxy integration request_ structure with the
@@ -141,6 +143,25 @@ export interface ICompressedSection {
   compressed: true;
   data: string;
 }
+/** @inheritdoc */
+export type IStepFunctionTaskRequest<T> =  IStepFunctionTaskPayload<T>
+/** @inheritdoc */
+export type IStepFunctionTaskResponse<T> =  IStepFunctionTaskPayload<T>
+
+/**
+ *  **IStepFunctionTaskPayload**
+ * 
+ * When making a step function invocation _body_ it's going to be the payload that the user return from his lambda function
+ * or it will contain the input that the user receive as `request`
+ * 
+ * It's being described as `payload` because it's a type that is going to be used to wrap the state machine's state and 
+ * make the user to have the same experience of `fn`-to-`fn` functionality. Ex: (Passing client context props as ssm secrets, correlationId, etc)
+ */
+export interface IStepFunctionTaskPayload<T> {
+  type: "step-fn-message-body",
+  body: T,
+  headers: IOrchestratedHeaders | ICompressedSection
+}
 
 /**
  * **IOrchestratedMessageBody**
@@ -161,6 +182,13 @@ export interface IOrchestratedRequest<T> {
   headers: IOrchestratedHeaders | ICompressedSection;
 }
 
+export interface IOrchestratedResponse<T> {
+  type: "orchestrated-message-body";
+  body: T | ICompressedSection;
+  sequence: ISerializedSequence | ICompressedSection;
+  headers: IOrchestratedHeaders | ICompressedSection; 
+}
+
 /**
  * This is a antiquated request form which should not be used anymore
  */
@@ -171,7 +199,8 @@ export type IBareRequest<T> = T & {
 export type IOrchestrationRequestTypes<T> =
   | IOrchestratedRequest<T>
   | IBareRequest<T>
-  | IAWSLambdaProxyIntegrationRequest;
+  | IAWSLambdaProxyIntegrationRequest
+  | IStepFunctionTaskRequest<T>;
 
 /**
  * **ILambdaSequenceStep**
@@ -204,13 +233,14 @@ export interface ILambdaSequenceStep<T = IDictionary> {
   onCondition?: any;
 }
 
-export type ILambdaFunctionType = "task" | "fan-out" | "step-start" | "fan-in" | "other";
+export type ILambdaFunctionType = "task" | "fan-out" | "fan-in" | "other";
 
 export interface ILambaSequenceFromResponse<T> {
   request: T;
   apiGateway?: IAWSLambdaProxyIntegrationRequest;
   sequence: LambdaSequence;
   headers: Omit<IOrchestratedHeaders, "X-Correlation-Id"> | IHttpRequestHeaders;
+  triggeredBy: AwsResource
 }
 
 /**
@@ -233,6 +263,16 @@ export interface IErrorIdentification {
   code?: string;
   name?: string;
   messageContains?: string;
+}
+
+/**
+ * This enum is inteded to be used to determine an specific aws resource.
+ * It should be become bigger as we need more resources types
+ */
+export enum AwsResource {
+  Lambda = 'Lambda',
+  StepFunction = 'StepFunction',
+  ApiGateway = 'ApiGateway',
 }
 
 export interface IErrorHandling {
@@ -283,6 +323,10 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * The sequence which this execution is part of
    */
   sequence: LambdaSequence;
+  /**
+   * The type of aws resource that triggered the current lambda fn
+   */
+  triggeredBy: AwsResource;
   /**
    * Check whether the given function execution is part of a
    * sequence
