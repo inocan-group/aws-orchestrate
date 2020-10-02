@@ -5,3 +5,4 @@ export * from "./dynamic";
 export * from "./compress";
 export * from "./isBareRequest";
 export * from "./buildOrchestratedRequest";
+export * from './buildStepFunctionTaskInput'
