@@ -3029,10 +3029,10 @@ available-typed-arrays@^1.0.0, available-typed-arrays@^1.0.2:
   dependencies:
     array-filter "^1.0.0"
 
-aws-log@^0.9.2:
-  version "0.9.3"
-  resolved "https://registry.yarnpkg.com/aws-log/-/aws-log-0.9.3.tgz#99fc8a974259d46cceb288b4c82636f6e01b05a0"
-  integrity sha512-ACTdYLAtp0QwDhiqJoI0N1SclXTgnmwfgaaux4izdQaqpaD6Lz68I2fOy1KsKfadqTydZeEqNi436AfIn3uD3g==
+aws-log@^0.10.0:
+  version "0.10.0"
+  resolved "https://registry.yarnpkg.com/aws-log/-/aws-log-0.10.0.tgz#859b23c13e95fd94101b2fea8c99527d3935d16e"
+  integrity sha512-vu/ZujgOPBscgshHzyZtKKjmXbzdiTWyHbKoRRry6h+mSL271Jqov4fE8A/8pgdaYS0ZolKlJ45TAvMmymjNMw==
   dependencies:
     common-types "^1.12.1"
     stack-trace "^0.0.10"
