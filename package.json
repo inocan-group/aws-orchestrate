@@ -37,8 +37,9 @@
   },
   "homepage": "https://github.com/inocan-group/aws-orchestrate#readme",
   "dependencies": {
+    "js-yaml": "^3.14.0",
     "lzutf8": "^0.5.5",
-    "native-dash": "^1.1.1",
+    "native-dash": "^1.4.0",
     "serialize-javascript": "^4.0.0"
   },
   "peerDependencies": {

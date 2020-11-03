@@ -14,7 +14,8 @@
     "emitDecoratorMetadata": true,
     "typeRoots": ["./node_modules/@types"],
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "strictNullChecks": true
   },
   "files": ["global.d.ts"],
   "include": ["src", "global.d.ts", "test"]
