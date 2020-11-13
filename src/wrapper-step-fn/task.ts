@@ -1,7 +1,6 @@
-import { parseArn } from '../invoke'
-import { Finalized, IConfigurableStepFn, IStore, ITask, ITaskOptions } from './types'
+import { Finalized, IConfigurableStepFn, IStore, ITask, ITaskOptions, parseArn } from '../private'
 
-export function task<T extends ITask | Finalized<ITask>>(api: () => IConfigurableStepFn<T>, commit: IStore['commit']) {
+export function task<T extends ITask | Finalized<ITask>>(api: () => IConfigurableStepFn, commit: IStore['commit']) {
   return (resourceName: string, options: ITaskOptions = {}) => {
     const payload = taskConfiguration(resourceName, options)
     commit(payload)

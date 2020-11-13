@@ -1,4 +1,4 @@
-import { IBaseState, IConfigurableStepFn, IFinalizedStepFn, IOptionsWithInput, IState } from '.'
+import { IBaseState, IConfigurableStepFn, IFinalizedStepFn, IOptionsWithInput, IState } from '../../private'
 
 export interface IPassCallable {
   (options?: IPassOptions): IConfigurableStepFn
@@ -16,7 +16,6 @@ export interface IPassOptions extends IOptionsWithInput {
 export type IPass = Omit<IPassOptions, "name"> & IBaseState & {
   readonly type: 'Pass'
   isTerminalState: false
-  isFinalized: false
 }
 
 /**

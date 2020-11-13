@@ -1,15 +1,21 @@
 import {
+  IConfigurableStepFn,
+  IFluentApi,
+  IMap,
   IMapConfiguration,
+  IMapOptions,
   IMapUseConfigurationWrapper,
+  IStepFnShorthand,
+  IStore,
   parseAndFinalizeStepFn,
-} from '.'
-import { IConfigurableStepFn, IFluentApi, IMap, IMapOptions, IStepFnShorthand, IStore } from './types'
+  ServerlessError,
+} from '../private'
 
-export function map(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
+export function map(api: () => IConfigurableStepFn, commit: IStore['commit']) {
   return (itemsPath: string, options?: IMapOptions) => {
     return {
       use: (params: IFluentApi | IStepFnShorthand) => {
-        commit('Map', mapUseConfiguration(itemsPath, options)(params))
+        commit(mapUseConfiguration(itemsPath, options)(params))
         return api()
       },
     }
@@ -19,15 +25,17 @@ export function map(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
 const mapUseConfiguration: IMapUseConfigurationWrapper<IMap> = (itemsPath, options?: IMapOptions) => (
   params: IFluentApi | IStepFnShorthand,
 ) => {
+  if (!itemsPath.startsWith('$.')) {
+    throw new ServerlessError(400, `itemsPath ${itemsPath} is not allowed. It must start with "$."`, 'bad-format')
+  }
   const finalizedStepFn = parseAndFinalizeStepFn(params)
-  console.log(finalizedStepFn.getState())
   return {
     type: 'Map',
     deployable: finalizedStepFn,
     itemsPath,
     ...options,
     isTerminalState: false,
-    ...(options?.name !== undefined ? { name: options.name, isFinalized: true } : { isFinalized: false})
+    ...(options?.name !== undefined ? { name: options.name, isFinalized: true } : { isFinalized: false }),
   }
 }
 

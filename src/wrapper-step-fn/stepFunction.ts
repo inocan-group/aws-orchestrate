@@ -13,30 +13,36 @@ import {
   CallableConfiguration,
   wait,
   Finalized,
-} from '.'
-import { parallel } from './parallel'
-import { pass } from './pass'
-import { succeedConfiguration } from './succeed'
+  IFinalizedStepFn,
+  ITask,
+  ServerlessError,
+  parallel,
+  pass,
+  parseArn,
+  goTo,
+} from '../private'
 import { hash } from 'native-dash'
 
 export const isFluentApi = (obj: IStepFnSelector): obj is IFluentApi => !isStepFunction(obj) && !Array.isArray(obj)
 export function isStepFunction(obj: IStepFnSelector): obj is IStepFn {
   return 'getState' in obj || 'finalize' in obj
 }
-// export const isFinalizedStepFn = (obj: IStepFn): obj is IFinalizedStepFn => 'getState' in obj
+export const isFinalizedStepFn = (obj: IStepFn): obj is IFinalizedStepFn => 'getState' in obj
 export const isStateDefn = (obj: IState | IStepFnOptions): obj is IState => obj !== undefined && 'type' in obj
 
-export function StepFunction<T extends IState | Finalized<IState>>(...params: (T | IStepFnOptions)[]) {
+export function StepFunction(...params: (IState | Finalized<IState> | IStepFnOptions)[]) {
   const defaultOptions = {
     autoIndexNames: false,
   }
 
-  let state: Array<IState | Finalized<IState> | T> = []
+  let state: Array<IState | Finalized<IState>> = []
 
-  const commit = (payload: T) => {
-    if (payload.isTerminalState) {
-      state = [...state, payload]
+  const commit = <T extends IState>(payload: T) => {
+    const tail = state[state.length - 1]
+    if (state.length > 0 && tail && tail.isTerminalState) {
+      throw new ServerlessError(400, 'Not allowed to extend already finalized step function', 'not-allowed')
     }
+
     state = [...state, payload]
   }
 
@@ -54,11 +60,8 @@ export function StepFunction<T extends IState | Finalized<IState>>(...params: (T
   }
 
   // TODO: Identify the type that expects last array element be FinalizedState
-
-  function configuring<TResult extends IState | Finalized<IState> = T>(options: IStepFnOptions): IConfigurableStepFn<TResult> {
-
-    const callable = <T2, T4 extends IState | Finalized<IState>>(fn: CallableConfiguration<T2, T4>) =>
-      fn(() => configuring<T4>(options), commit)
+  function configuring(options: IStepFnOptions): IConfigurableStepFn {
+    const callable = <T>(fn: CallableConfiguration<T>) => fn(() => configuring(options), commit)
 
     return {
       state,
@@ -70,20 +73,10 @@ export function StepFunction<T extends IState | Finalized<IState>>(...params: (T
       wait: callable(wait),
       parallel: callable(parallel),
       pass: callable(pass),
+      goTo: callable(goTo),
       finalize() {
-        const tail = state.pop()
-        
-        if (tail == undefined) {
-          throw Error("There must be at least one state to finalize the step function")
-        }
-        
-        if (tail && tail.isTerminalState) {
-          state = [...state, tail]
-        } else if (tail) {
-          state = [...state, tail, succeedConfiguration('succeed')]
-        }
         state = finalizeStates(state, getOptions())
-        return { getState: () => state, getOptions }
+        return { getState: () => state as Finalized<IState>[], getOptions }
       },
     }
   }
@@ -91,16 +84,25 @@ export function StepFunction<T extends IState | Finalized<IState>>(...params: (T
   return configuring({ ...defaultOptions, ...options })
 }
 
-export function finalizeStates<T extends IState>(states: (Finalized<T> | T)[], options: IStepFnOptions): Finalized<T>[] {
-  return states.map(state => {
+export function finalizeStates<T extends IState>(
+  states: (Finalized<T> | T)[],
+  options: IStepFnOptions,
+): Finalized<T>[] {
+  const lastIndex = states.length - 1
+  return states.map((state, index) => {
     if (isFinalizedState(state)) {
-      return state
+      return { ...state, isTerminalState: lastIndex === index }
     } else {
       const hashState = hash(JSON.stringify(state))
+
       return {
         ...state,
-        name: `${options.namePrefix || ''}${state.type}-${hashState}`,
+        name:
+          state.type === 'Task'
+            ? `${options.namePrefix || ''}${parseArn((state as ITask).resource).fn}`
+            : `${options.namePrefix || ''}${state.type}-${hashState}`,
         isFinalized: true,
+        isTerminalState: lastIndex === index,
       }
     }
   })

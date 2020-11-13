@@ -1,8 +1,8 @@
-import { Finalized, IConfigurableStepFn, IStore, IWait, IWaitOptions } from './types'
+import { Finalized, IConfigurableStepFn, IStore, IWait, IWaitOptions } from '../private'
 
 export function wait(api: () => IConfigurableStepFn, commit: IStore['commit']) {
   return (options?: IWaitOptions) => {
-    commit('Wait', waitConfiguration(options))
+    commit(waitConfiguration(options))
     return api()
   }
 }

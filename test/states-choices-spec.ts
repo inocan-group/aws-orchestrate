@@ -1,6 +1,6 @@
-import { Condition, IStepFnOptions, ParamsKind, State, StateMachine, StepFunction } from '../src/wrapper-step-fn'
+import { Condition, IStepFnOptions, State } from "../src/private"
 
-describe('Choices State', () => {
+describe('Choice State', () => {
   beforeEach(() => {
     process.env.AWS_REGION = 'fooregion'
     process.env.AWS_STAGE = 'dev'
@@ -11,7 +11,7 @@ describe('Choices State', () => {
   it('Defining default choice condition should be able to be configured by fluent API', () => {
     const fetchGravatar = Condition(
       c => c.default(),
-      s => s.task('fetchAvatarUrlFromGravatar')
+      s => s.task('fetchAvatarUrlFromGravatar'),
     )
 
     const fetchProfileImgUrl = State(s => s.choice([fetchGravatar]))
@@ -21,7 +21,19 @@ describe('Choices State', () => {
     expect(fetchProfileImgUrl.choices).toHaveLength(0)
   })
 
-  it('Defining choices should be able to be configured by fluent API', () => {
+  it('Defining default choice condition should be able to be configured by step function shorthand', () => {
+    const fetchAvatarUrlFromGravatar = State(s => s.task('fetchAvatarUrlFromGravatar'))
+
+    const fetchGravatar = Condition(c => c.default(), [fetchAvatarUrlFromGravatar])
+
+    const fetchProfileImgUrl = State(s => s.choice([fetchGravatar]))
+
+    expect(fetchProfileImgUrl.default).not.toBeUndefined()
+    expect(fetchProfileImgUrl.isTerminalState).toBeTrue()
+    expect(fetchProfileImgUrl.choices).toHaveLength(0)
+  })
+
+  it('Defining choice conditions should be able to be configured by fluent API', () => {
     const fetchProfileImgUrl = State(s =>
       s.choice([
         { variable: '$.type', stringEquals: 'gravatar', stepFn: s => s.task('fetchFromGravatar') },
@@ -34,10 +46,7 @@ describe('Choices State', () => {
     expect(fetchProfileImgUrl.choices).toHaveLength(2)
   })
 
-  // use shorthand term
-  // move to step fn
-  // validate terminal state about
-  it('Defining choice conditions should be able to be configured by an array of states and step fn options', () => {
+  it('Defining choice conditions should be able to be configured by step function shorthand', () => {
     const fetchFromGravatar = State(s => s.task('fetchAvatarUrlFromGravatar'))
     const saveIntoDb = State(s => s.task('SaveIntoDb'))
     const defaultOpts: IStepFnOptions = { namePrefix: 'default-' }
@@ -49,34 +58,15 @@ describe('Choices State', () => {
 
     const fetchProfileImgUrl = State(s => s.choice([defaultChoice, unavatarChoice]))
 
-    const stepFn = StepFunction(fetchProfileImgUrl)
-
-    const stateMachine = StateMachine("foo", { stepFunction: stepFn}).toJSON()
-
-    const stateNames = Object.keys(stateMachine.definition.States)
-
-    console.log(stateMachine)
-    console.log(stateNames)
-    expect(stateNames).toSatisfy((s: string) => s.startsWith("default-"))
     expect(fetchProfileImgUrl.default).not.toBeUndefined()
     expect(fetchProfileImgUrl.isTerminalState).toBeTrue()
     expect(fetchProfileImgUrl.choices).toHaveLength(1)
   })
 
-  it('Defining choice ')
+  it("Defining choice conditions variables without '$.' preffix should throw StepFunctionError", () => {
+    const sendGreatNews = State(s => s.task("sendEmailNotification"))
+    const action = () => Condition(c => c.numericEquals(20), [sendGreatNews], "score")
 
-  it('Defining a choice state within a step function should return all the states definition of all choice conditions', () => {
-    const saveBasicInfo = State(s => s.task('saveBasicInfo'))
-
-    const fetchFromGravatar = State(s => s.task('fetchAvatarUrlFromGravatar'))
-    const saveIntoDb = State(s => s.task('SaveIntoDb'))
-    const defaultChoice = Condition(c => c.default(), [fetchFromGravatar, saveIntoDb])
-
-    const fetchFromUnavatar = State(s => s.task('fetchFromUnavatar'))
-    const unavatarChoice = Condition(c => c.stringEquals('unavatar'), [fetchFromUnavatar], '$.type')
-
-    const myAwesomeStepFunction = StepFunction(saveBasicInfo).choice([defaultChoice, unavatarChoice])
-
-    expect(myAwesomeStepFunction.getState()).toHaveLength(2)
+    expect(action).toThrowError({ name: "ServerlessError", message: 'variable score is not allowed. It must start with "$."'})
   })
 })

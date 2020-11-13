@@ -1,7 +1,9 @@
-import { parseAndFinalizeStepFn, IChoiceConditionOptions } from '.'
 import {
-  IChoiceConfiguration,
+  Finalized,
+  IChoice,
+  IChoiceConditionOptions,
   IChoiceOptions,
+  IConfigurableStepFn,
   IDefaultChoiceOptions,
   IFinalizedStepFn,
   IFluentApi,
@@ -17,11 +19,12 @@ import {
   IOperand_StringGreaterThanEquals,
   IOperand_StringLessThan,
   IOperand_StringLessThanEquals,
-  IStepFnShorthand,
   IStepFnConditionApi,
+  IStepFnShorthand,
   IStore,
-  IConfigurableStepFn,
-} from './types'
+  parseAndFinalizeStepFn,
+  ServerlessError,
+} from '../private'
 
 const stringEquals = (value: string): Partial<IOperand_StringEquals> => {
   return {
@@ -98,7 +101,7 @@ const numericLessThanEquals = (value: number): Partial<IOperand_NumericLessThanE
 export const Condition = (
   cb: (api: IStepFnConditionApi) => Partial<IOperand> | Partial<IDefaultChoiceOptions>,
   stepFn: IFluentApi | IStepFnShorthand,
-  variable?: any,
+  variable?: string | undefined,
 ) => {
   const api: IStepFnConditionApi = {
     stringEquals,
@@ -117,6 +120,10 @@ export const Condition = (
 
   const operand = cb(api)
 
+  if (variable !== undefined && !variable.startsWith('$.')) {
+    throw new ServerlessError(400, `variable ${variable} is not allowed. It must start with "$."`, 'bad-format')
+  }
+
   return {
     variable,
     stepFn,
@@ -126,7 +133,7 @@ export const Condition = (
 
 export function choice(api: () => IConfigurableStepFn, commit: IStore['commit']) {
   return (choices: IChoiceConditionOptions[], options: IChoiceOptions): IFinalizedStepFn => {
-    commit('Choice', choiceConfiguration(choices, options))
+    commit(choiceConfiguration(choices, options))
 
     return api().finalize()
   }
@@ -137,10 +144,10 @@ function getDefaultChoiceStates(options: IDefaultChoiceOptions) {
   return { states: finalizedStepFn.getState() }
 }
 
-export const choiceConfiguration: IChoiceConfiguration = (
+export function choiceConfiguration(
   choices: (IDefaultChoiceOptions | IChoiceConditionOptions)[],
   choiceOptions: IChoiceOptions,
-) => {
+): IChoice | Finalized<IChoice> {
   const defaultChoiceIndex = choices.findIndex(c => 'kind' in c && c.kind === 'defaultChoice')
   const defaultDfn =
     defaultChoiceIndex in choices

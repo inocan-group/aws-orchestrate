@@ -1,6 +1,5 @@
 import { IDictionary } from 'common-types'
-import { DefaultErrorHandler, IBaseOptions, IBaseState, IConfigurableStepFn, IErrorHandler, IFluentApi, IState, IStepFnShorthand } from '.'
-import { IFinalizedStepFn } from './stepFunction'
+import { IFinalizedStepFn, IBaseOptions, IBaseState, IConfigurableStepFn, IErrorHandler, IFluentApi, IOptionsWithInput, IState, IStepFnShorthand, ErrDefn, RetryOptions } from '../../private'
 
 export type IMapUseParams = IFluentApi | IStepFnShorthand
 
@@ -23,7 +22,7 @@ export interface IMapConfiguration {
   (itemsPath: string, options?: IMapOptions): IMapUseCallable<IMap>
 }
 
-export interface IMapOptions extends IBaseOptions {
+export interface IMapOptions extends IOptionsWithInput {
    /**
    * The `ItemsPath` field’s value is a reference path identifying where in the effective input the array field is found.
    *
@@ -36,13 +35,12 @@ export interface IMapOptions extends IBaseOptions {
   /** The `MaxConcurrency`field’s value is an integer that provides an upper bound on how many invocations of the Iterator may run in parallel. For instance, a `MaxConcurrency` value of 10 will limit your Map state to 10 concurrent iterations running at one time. */
   maxConcurrency?: number;
   /** An array of objects, called Retriers that define a retry policy in case the state encounters runtime errors. */
-  retry?: string[];
-  catch?: DefaultErrorHandler
+  retry?:  Record<string, RetryOptions>
+  catch?: Record<string, ErrDefn>
 }
 
 export type IMap = Omit<IMapOptions, "name"> & IBaseState & {
   readonly type: "Map"
-  deployable: IFinalizedStepFn<unknown>
+  deployable: IFinalizedStepFn
   isTerminalState: false
-  isFinalized: false
 }
