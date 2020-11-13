@@ -1,6 +1,6 @@
-import { Finalized, IConfigurableStepFn, IStore, ISucceed } from './types'
+import { Finalized, IConfigurableStepFn, IStore, ISucceed } from '../private'
 
-export function succeed<T extends ISucceed | Finalized<ISucceed>>(api: () => IConfigurableStepFn<T>, commit: IStore["commit"]) {
+export function succeed<T extends ISucceed | Finalized<ISucceed>>(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (name?: string | undefined) => {
     commit(succeedConfiguration(name))
     return api().finalize()

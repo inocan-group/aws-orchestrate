@@ -1,9 +1,16 @@
-import { parseAndFinalizeStepFn } from './state'
-import { Finalized, IConfigurableStepFn, IParallel, IParallelBranchOptions, IParallelOptions, IStore } from './types'
+import {
+  Finalized,
+  IConfigurableStepFn,
+  IParallel,
+  IParallelBranchOptions,
+  IParallelOptions,
+  IStore,
+  parseAndFinalizeStepFn,
+} from '../private'
 
 export function parallel(api: () => IConfigurableStepFn, commit: IStore['commit']) {
   return (branches: IParallelBranchOptions[], options?: IParallelOptions) => {
-    commit('Parallel', parallelConfiguration(branches, options))
+    commit(parallelConfiguration(branches, options))
     return api()
   }
 }

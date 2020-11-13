@@ -1,5 +1,5 @@
 import { IDictionary, IStepFunctionOperand_BooleanEquals, IStepFunctionOperand_NumericLessThan } from 'common-types'
-import { IBaseOptions, IBaseState, IConfigurableStepFn, IFinalizedStepFn, IState, IStepFnSelector, TerminalState } from '.'
+import { IBaseOptions, IBaseState, IConfigurableStepFn, IFinalizedStepFn, IState, IStepFnSelector, TerminalState } from '../../private'
 
 export interface IChoiceCallable {
   (choices: (IDefaultChoiceOptions | IChoiceConditionOptions)[], options?: IChoiceOptions): IFinalizedStepFn

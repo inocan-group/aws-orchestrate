@@ -16,8 +16,9 @@ import {
   IParallelBranchOptions,
   IParallelOptions,
   IWaitOptions,
-} from '.'
-import { IPass, IPassOptions } from './pass'
+  IPassOptions,
+  IPass,
+} from '../../private'
 
 export type Result<T extends IState> = Finalized<T> | T
 
@@ -80,19 +81,26 @@ export type IStateConfiguring = {
    */
   pass(options?: IPassOptions & { name: string }): Finalized<IPass>
   pass(options?: Omit<IPassOptions, "name">): IPass 
+
+  goTo(finalizedState: Finalized<IState> | string): Finalized<IGoTo>
 }
 
-export type IState =  IConfigurableState | ITerminalState
+export type IGoTo = {
+  type: 'GoTo'
+  next: string
+  isFinalized: boolean
+} & TerminalState
 
+export type IState =  IConfigurableState | ITerminalState | IUtilState
+export type IUtilState = IGoTo
 export type ITerminalState = IChoice | ISucceed | IFail
-
 export type IConfigurableState = ITask | IMap | IWait | IParallel | IPass
 
 /**
  * This type represent a state that has already defined and should not be able to be modified
  */
-export type isFinalized = { isFinalized: true, name: string }
 export type Finalized<T extends IState> = Readonly<T & isFinalized> 
+export type isFinalized = { isFinalized: true, name: string }
 
 export type TerminalState = { isTerminalState: true }
 

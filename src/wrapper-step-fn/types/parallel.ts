@@ -1,5 +1,4 @@
-import { IBaseOptions, IBaseState, IConfigurableStepFn, IErrorHandler, IState, IStepFnSelector } from ".";
-import { IFinalizedStepFn } from "./stepFunction";
+import { IBaseOptions, IBaseState, IConfigurableStepFn, IErrorHandler, IState, IStepFnSelector, IFinalizedStepFn, ErrDefn, RetryOptions } from "../../private";
 
 export interface IParallelCallable {
   (branches: IParallelBranchOptions[], options?: IParallelOptions): IConfigurableStepFn
@@ -9,9 +8,9 @@ export interface IParallelConfiguration {
 }
 
 export interface IParallelOptions extends IBaseOptions {
+  catch?: Record<string, ErrDefn>
   /** An array of objects, called Retriers that define a retry policy in case the state encounters runtime errors. */
-  Retry?: string[];
-  Catch?: IErrorHandler[];
+  retry?:  Record<string, RetryOptions>
 }
 
 export type IParallelBranchOptions = IStepFnSelector
@@ -21,7 +20,6 @@ export type IParallel = Omit<IParallelOptions, "name"> & IBaseState & {
   readonly type: "Parallel";
   branches: IParallelBranch[]
   isTerminalState: false
-  isFinalized: false
 }
 
 export interface IParallelBranch extends Omit<IParallelBranchOptions, 'stepFn'>  { 

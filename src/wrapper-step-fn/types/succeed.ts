@@ -1,4 +1,4 @@
-import { IBaseOptions, IBaseState, IFinalizedStepFn, IState, TerminalState } from '.'
+import { IBaseOptions, IBaseState, IFinalizedStepFn, IState, TerminalState } from '../../private'
 
 export interface ISucceedCallable {
   (): IFinalizedStepFn
