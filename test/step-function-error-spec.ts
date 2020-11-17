@@ -1,5 +1,5 @@
 import { IStepFunctionTask } from 'common-types'
-import { StepFunction, StateMachine, ITask, errorHandler } from '../src/private'
+import { StepFunction, StateMachine, ITask, errorHandler, State, retryHandler } from '../src/private'
 
 describe('Step Function Builder Error Handler', () => {
   beforeEach(() => {
@@ -9,20 +9,15 @@ describe('Step Function Builder Error Handler', () => {
     process.env.APP_NAME = 'abcapp'
   })
 
-  // it("Defining error handler step function not finalized should throw error", () => {
-  //   const unfinalizedStepFn = StepFunction().task('handler1')
-  //   const fooStepFn = StepFunction().task("task1")
-  //   const defaultErrorHandler: DefaultErrorHandler = {
-  //     Timeout: unfinalizedStepFn,
-  //   }
+  it('Definig error step function should start with first state finalized', () => {
+    const fooStepFn = StepFunction({
+      defaultErrorHandler: errorHandler(e => e.default(s => s.task('foo'))),
+    }).task('task1')
 
-  //   const action = () => StateMachine("fooStateMachine", {
-  //     stepFunction: fooStepFn,
-  //     defaultErrorHandler
-  //   })
+    const action = () => StateMachine('foo', { stepFunction: fooStepFn }).toJSON()
 
-  //   expect(action).toThrowError({ name: "ServerlessError", message: "Error handler step function must be finalized"})
-  // })
+    expect(action).toThrowError({ name: 'ServerlessError', message: 'The first state must be finalized' })
+  })
 
   it('Defining error handler as state machine options should be populated in all children states', () => {
     const finalizedStepFn = StepFunction()
@@ -37,7 +32,6 @@ describe('Step Function Builder Error Handler', () => {
     }).toJSON()
 
     const resultStates = Object.values(stateMachine.definition.States)
-    console.log(resultStates)
 
     expect(
       resultStates
@@ -83,9 +77,9 @@ describe('Step Function Builder Error Handler', () => {
       .succeed('handler4')
 
     const finalizedStepFn2 = StepFunction()
-    .task('handler5', { name: 'handler5' })
-    .task('handler6', { name: 'handler6' })
-    .finalize()
+      .task('handler5', { name: 'handler5' })
+      .task('handler6', { name: 'handler6' })
+      .finalize()
 
     const fooStepFn = StepFunction({
       defaultErrorHandler: errorHandler(e => e.default(finalizedStepFn)),
@@ -98,7 +92,6 @@ describe('Step Function Builder Error Handler', () => {
     }).toJSON()
 
     const resultStates = Object.values(stateMachine.definition.States)
-    console.log(resultStates)
 
     expect(
       resultStates
@@ -108,5 +101,16 @@ describe('Step Function Builder Error Handler', () => {
           return defaultHandler.Next !== 'foo1'
         }),
     ).toBeTrue()
+  })
+
+  it('Defining state `retry` error handler should be populated to the output state definition', () => {
+    const retryOptions = { maxAttempts: 5 }
+    const fooTask = State(s => s.task('fooTask', { retry: retryHandler(e => e.default(retryOptions)) }))
+
+    const myStateMachine = StateMachine('fooStateMachine', { stepFunction: StepFunction(fooTask) }).toJSON()
+
+    expect((myStateMachine.definition.States['fooTask'] as IStepFunctionTask).Retry[0].MaxAttempts).toBe(
+      retryOptions.maxAttempts,
+    )
   })
 })

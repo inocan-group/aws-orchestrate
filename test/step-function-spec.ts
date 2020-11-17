@@ -1,4 +1,4 @@
-import { Condition, IParallelOptions, State, StepFunction } from '../src/private'
+import { condition, IParallelOptions, State, StepFunction } from '../src/private'
 
 describe('Step Function', () => {
   beforeEach(() => {
@@ -68,10 +68,10 @@ describe('Step Function', () => {
 
     const fetchFromGravatar = State(s => s.task('fetchAvatarUrlFromGravatar'))
     const saveIntoDb = State(s => s.task('SaveIntoDb'))
-    const defaultChoice = Condition(c => c.default(), [fetchFromGravatar, saveIntoDb])
+    const defaultChoice = condition(c => c.default(), [fetchFromGravatar, saveIntoDb])
 
     const fetchFromUnavatar = State(s => s.task('fetchFromUnavatar'))
-    const unavatarChoice = Condition(c => c.stringEquals('unavatar'), [fetchFromUnavatar], '$.type')
+    const unavatarChoice = condition(c => c.stringEquals('unavatar'), [fetchFromUnavatar], '$.type')
 
     const myAwesomeStepFunction = StepFunction(saveBasicInfo).choice([defaultChoice, unavatarChoice])
 
@@ -113,4 +113,6 @@ describe('Step Function', () => {
     expect(resultState.isTerminalState).toBeFalse()
     expect(resultState.type).toEqual('Parallel')
   })
+
+  it('Using finalized Step Function should throw error', () => {})
 })

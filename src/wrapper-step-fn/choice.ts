@@ -98,7 +98,7 @@ const numericLessThanEquals = (value: number): Partial<IOperand_NumericLessThanE
   }
 }
 
-export const Condition = (
+export const condition = (
   cb: (api: IStepFnConditionApi) => Partial<IOperand> | Partial<IDefaultChoiceOptions>,
   stepFn: IFluentApi | IStepFnShorthand,
   variable?: string | undefined,
