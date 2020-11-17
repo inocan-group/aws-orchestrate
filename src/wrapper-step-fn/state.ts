@@ -1,3 +1,4 @@
+import { ServerlessError } from '../errors'
 import {
   choiceConfiguration,
   failConfiguration,
@@ -36,7 +37,7 @@ export function State<T extends Finalized<IState> | IState>(cb: (api: IStateConf
     parallel: parallelConfiguration,
     wait: waitConfiguration,
     pass: passConfiguration,
-    goTo: goToConfiguration
+    goTo: goToConfiguration,
   } as IStateConfiguring
 
   return cb(configuring)
@@ -51,7 +52,47 @@ export function isFinalizedStepFnSelector(selector: IStepFnSelector): boolean {
     return isFinalizedStepFn(sf)
   } else {
     return selector.every((s: IState) => s.isTerminalState)
-  } 
+  }
+}
+
+export function parseStepFnSelector(selector: IStepFnSelector): IFinalizedStepFn {
+  if (isStepFunction(selector)) {
+    if (isFinalizedStepFn(selector)) {
+      return selector
+    } else {
+      if (!selector.state[0].isFinalized) {
+        throw new ServerlessError(400, 'The first state must be finalized', 'not-valid')
+      }
+      const c = selector.finalize()
+      return c
+    }
+  } else if (isFluentApi(selector)) {
+    const configurationApi = StepFunction()
+    const sf = selector(configurationApi)
+    if (!isFinalizedStepFn(sf)) {
+      if (!sf.state[0].isFinalized) throw new ServerlessError(400, 'The first state must be finalized', 'not-valid')
+      return sf.finalize()
+    } else {
+      return sf
+    }
+  } else {
+    let stepFnOptions: IStepFnOptions = {}
+
+    const states = selector.reduce((acc: IState[], param: IState | IStepFnOptions) => {
+      if (isStateDefn(param)) {
+        acc.push(param)
+      } else {
+        stepFnOptions = param
+      }
+      return acc
+    }, [] as IState[])
+
+    if (!states[0].isFinalized) throw new ServerlessError(400, 'The first state must be finalized', 'not-valid')
+
+    return StepFunction(...states, {
+      ...stepFnOptions,
+    }).finalize()
+  }
 }
 
 export function parseAndFinalizeStepFn(selector: IStepFnSelector): IFinalizedStepFn {

@@ -1,4 +1,4 @@
-import { Condition, IStepFnOptions, State } from "../src/private"
+import { condition, IStepFnOptions, State } from "../src/private"
 
 describe('Choice State', () => {
   beforeEach(() => {
@@ -9,7 +9,7 @@ describe('Choice State', () => {
   })
 
   it('Defining default choice condition should be able to be configured by fluent API', () => {
-    const fetchGravatar = Condition(
+    const fetchGravatar = condition(
       c => c.default(),
       s => s.task('fetchAvatarUrlFromGravatar'),
     )
@@ -24,7 +24,7 @@ describe('Choice State', () => {
   it('Defining default choice condition should be able to be configured by step function shorthand', () => {
     const fetchAvatarUrlFromGravatar = State(s => s.task('fetchAvatarUrlFromGravatar'))
 
-    const fetchGravatar = Condition(c => c.default(), [fetchAvatarUrlFromGravatar])
+    const fetchGravatar = condition(c => c.default(), [fetchAvatarUrlFromGravatar])
 
     const fetchProfileImgUrl = State(s => s.choice([fetchGravatar]))
 
@@ -50,11 +50,11 @@ describe('Choice State', () => {
     const fetchFromGravatar = State(s => s.task('fetchAvatarUrlFromGravatar'))
     const saveIntoDb = State(s => s.task('SaveIntoDb'))
     const defaultOpts: IStepFnOptions = { namePrefix: 'default-' }
-    const defaultChoice = Condition(c => c.default(), [fetchFromGravatar, saveIntoDb, defaultOpts], '$.type')
+    const defaultChoice = condition(c => c.default(), [fetchFromGravatar, saveIntoDb, defaultOpts], '$.type')
 
     const fetchFromUnavatar = State(s => s.task('fetchFromUnavatar'))
     const unavatarOpts: IStepFnOptions = { namePrefix: 'unavatar-' }
-    const unavatarChoice = Condition(c => c.stringEquals('unavatar'), [fetchFromUnavatar, unavatarOpts], '$.type')
+    const unavatarChoice = condition(c => c.stringEquals('unavatar'), [fetchFromUnavatar, unavatarOpts], '$.type')
 
     const fetchProfileImgUrl = State(s => s.choice([defaultChoice, unavatarChoice]))
 
@@ -65,7 +65,7 @@ describe('Choice State', () => {
 
   it("Defining choice conditions variables without '$.' preffix should throw StepFunctionError", () => {
     const sendGreatNews = State(s => s.task("sendEmailNotification"))
-    const action = () => Condition(c => c.numericEquals(20), [sendGreatNews], "score")
+    const action = () => condition(c => c.numericEquals(20), [sendGreatNews], "score")
 
     expect(action).toThrowError({ name: "ServerlessError", message: 'variable score is not allowed. It must start with "$."'})
   })
