@@ -12,6 +12,7 @@ import {
   IStepFunctionWait,
   IStepFunctionPass,
   IStepFunctionParallel,
+  IStepFunctionType,
 } from 'common-types'
 import { dump } from 'js-yaml'
 import {
@@ -123,8 +124,6 @@ const parseTask = (ctx: ICtx) => (stateDefn: ITask | Finalized<ITask>, options: 
 const parseSucceed = (ctx: ICtx) => (stateDefn: Result<ISucceed>, options: IStepFnOptions) => {
   const [finalizedState] = isFinalizedState(stateDefn) ? [stateDefn] : finalizeStates([stateDefn], options)
 
-  // const hashState = hash(JSON.stringify(finalizedState))
-
   ctx.definitionStates.push([
     `${options.namePrefix || ''}${finalizedState.name || `succeed-${ctx.hashState}`}`,
     {
@@ -136,8 +135,6 @@ const parseSucceed = (ctx: ICtx) => (stateDefn: Result<ISucceed>, options: IStep
 
 const parseFail = (ctx: ICtx) => (stateDefn: IFail | Finalized<IFail>, options: IStepFnOptions) => {
   const [finalizedState] = isFinalizedState(stateDefn) ? [stateDefn] : finalizeStates([stateDefn], options)
-
-  // const hashState = hash(JSON.stringify(finalizedState))
 
   ctx.definitionStates.push([
     `${options.namePrefix || ''}${finalizedState.name ? finalizedState.name : `fail-${ctx.hashState}`}`,
@@ -152,8 +149,6 @@ const parseFail = (ctx: ICtx) => (stateDefn: IFail | Finalized<IFail>, options: 
 const parseWait = (ctx: ICtx) => (stateDefn: IWait | Finalized<IWait>, options: IStepFnOptions) => {
   const [finalizedState] = isFinalizedState(stateDefn) ? [stateDefn] : finalizeStates([stateDefn], options)
 
-  // const hashState = hash(JSON.stringify(finalizedState))
-
   ctx.definitionStates.push([
     `${options.namePrefix || ''}${finalizedState.name ? finalizedState.name : `wait-${ctx.hashState}`}`,
     {
@@ -165,8 +160,6 @@ const parseWait = (ctx: ICtx) => (stateDefn: IWait | Finalized<IWait>, options: 
 
 const parsePass = (ctx: ICtx) => (stateDefn: IPass | Finalized<IPass>, options: IStepFnOptions) => {
   const [finalizedState] = isFinalizedState(stateDefn) ? [stateDefn] : finalizeStates([stateDefn], options)
-
-  // const hashState = hash(JSON.stringify(finalizedState))
 
   ctx.definitionStates.push([
     `${options.namePrefix || ''}${finalizedState.name ? finalizedState.name : `pass-${ctx.hashState}`}`,
@@ -207,13 +200,16 @@ const parseParallel = (ctx: ICtx) => (
     ? [parallelDefinition]
     : finalizeStates([parallelDefinition], options)
   const { catch: stateErrorHandler, branches, name: _, retry, ...rest } = finalizedState
+  const stateName = `${options.namePrefix || ''}${finalizedState.name ? finalizedState.name : `map-${ctx.hashState}`}`
 
-  // const hashState = hash(JSON.stringify(finalizedState))
-
-  const Branches = branches.map(branch => {
+  const Branches = branches.map((branch, index) => {
+    const branchOpts = branch.deployable.getOptions()
     return parseStepFunction(branch.deployable.getState(), {
       ...options,
-      ...branch.deployable.getOptions(),
+      ...{
+        ...branchOpts,
+        namePrefix: branchOpts.namePrefix ? branchOpts.namePrefix : `Branch${index + 1}-${stateName}-`,
+      },
     })
   })
 
@@ -236,7 +232,7 @@ const parseParallel = (ctx: ICtx) => (
   }
 
   ctx.definitionStates.push([
-    `${options.namePrefix || ''}${finalizedState.name ? finalizedState.name : `map-${ctx.hashState}`}`,
+    stateName,
     {
       ...toCammelCase<IStepFunctionParallel>(rest),
       Branches,
@@ -255,11 +251,11 @@ const parseMap = (ctx: ICtx) => (mapDefinition: IMap | Finalized<IMap>, options:
   const [finalizedState] = isFinalizedState(mapDefinition) ? [mapDefinition] : finalizeStates([mapDefinition], options)
   const { catch: stateErrorHandler, deployable: stepFn, name: _, retry, ...rest } = finalizedState
 
-  // const hashState = hash(JSON.stringify(finalizedState))
-
+  const stateName = `${options.namePrefix || ''}${finalizedState.name ? finalizedState.name : `map-${ctx.hashState}`}`
   const Iterator = parseStepFunction(mapDefinition.deployable.getState(), {
     ...options,
     ...mapDefinition.deployable.getOptions(),
+    namePrefix: `MapItem-${stateName}-`,
   })
   const errorHandler = stateErrorHandler || options.defaultErrorHandler
   let errorHandlerResult: IStepFunctionCatcher[]
@@ -280,7 +276,7 @@ const parseMap = (ctx: ICtx) => (mapDefinition: IMap | Finalized<IMap>, options:
   }
 
   ctx.definitionStates.push([
-    `${options.namePrefix || ''}${finalizedState.name ? finalizedState.name : `map-${ctx.hashState}`}`,
+    stateName,
     {
       ...toCammelCase<IStepFunctionMap>(rest),
       Iterator,
@@ -299,11 +295,18 @@ const parseChoice = (ctx: ICtx) => (choiceDefinition: IChoice, options: IStepFnO
   let choiceStates: IDictionary<IStepFunctionStep> = {},
     conditions: IStepFunctionChoiceItem<IDictionary>[] = []
 
-  choiceDefinition.choices?.forEach(c => {
+  const choiceStateName = `${
+    isFinalizedState(choiceDefinition) ? choiceDefinition.name : `${options.namePrefix || 'choice-'} ${ctx.hashState}`
+  }`
+
+  choiceDefinition.choices?.forEach((c, index) => {
     const { finalizedStepFn, ...rest } = c
 
     const rawStepFn = finalizedStepFn.getState()
-    const { States } = parseStepFunction(rawStepFn, { ...options })
+    const { States } = parseStepFunction(rawStepFn, {
+      namePrefix: `ChoiceItem${index + 1}-${choiceStateName}-`,
+      ...options,
+    })
 
     choiceStates = { ...choiceStates, ...States }
     const nextState = Object.keys(States).shift()
@@ -317,13 +320,22 @@ const parseChoice = (ctx: ICtx) => (choiceDefinition: IChoice, options: IStepFnO
     ]
   })
 
-  // const hashState = hash(JSON.stringify(choiceDefinition))
+  let defaultChoice: string | undefined
+  if (choiceDefinition.default.states) {
+    const { States } = parseStepFunction(choiceDefinition.default.states, {
+      ...options,
+      namePrefix: `Default-${choiceStateName}-`,
+    })
+    choiceStates = { ...choiceStates, ...States }
+    defaultChoice = Object.keys(States).shift()
+  }
 
   ctx.definitionStates.push([
-    `${isFinalizedState(choiceDefinition) ? choiceDefinition.name : `${options.namePrefix || 'choice-'} ${ctx.hashState}`}`,
+    choiceStateName,
     {
       Type: 'Choice',
       Choices: conditions,
+      Default: defaultChoice,
     },
   ])
 
@@ -387,38 +399,21 @@ function parseStepFunction(state: Result<IState>[], options: IStepFnOptions) {
 
   state.forEach(
     (stateDefn, index) => {
-      const call = (fn: Function) => fn({ ...ctx, hashState: hashState(index), validateState: validateState(index) })(stateDefn, options)
+      const call = (fn: Function) =>
+        fn({ ...ctx, hashState: hashState(index), validateState: validateState(index) })(stateDefn, options)
 
-      switch (stateDefn.type) {
-        case 'Task':
-          call(parseTask)
-          break
-        case 'Succeed':
-          call(parseSucceed)
-          break
-        case 'Fail':
-          call(parseFail)
-          break
-        case 'Map':
-          call(parseMap)
-          break
-        case 'Choice':
-          call(parseChoice)
-          break
-        case 'Wait':
-          call(parseWait)
-          break
-        case 'Parallel':
-          call(parseParallel)
-          break
-        case 'Pass':
-          call(parsePass)
-          break
-        case 'GoTo':
-          call(parseGoTo)
-          break
-        default:
+      const parseStateDefn: Record<string, Function> = {
+        ['Task']: parseTask,
+        ['Succeed']: parseSucceed,
+        ['Fail']: parseFail,
+        ['Map']: parseMap,
+        ['Choice']: parseChoice,
+        ['Wait']: parseWait,
+        ['Parallel']: parseParallel,
+        ['Pass']: parsePass,
+        ['GoTo']: parseGoTo,
       }
+      call(parseStateDefn[stateDefn.type])
     },
     {
       States: {},
@@ -486,7 +481,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       return dump(stateMachine)
     },
     toJSON() {
-      return  JSON.parse(JSON.stringify(stateMachine))
+      return JSON.parse(JSON.stringify(stateMachine))
     },
     visualize() {
       // TODO:
