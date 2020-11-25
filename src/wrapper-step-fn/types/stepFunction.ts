@@ -13,6 +13,7 @@ import {
   IPassOptions,
   IParallelOptions,
   ErrDefn,
+  Result,
 } from '../../private'
 
 /**
@@ -114,7 +115,7 @@ export interface IConfigurableStepFn {
  * This type represents a finalized Step Function
  */
 export interface IFinalizedStepFn {
-  getState: () => Array<Finalized<IState>>
+  getState: () => Array<Result<IState>>
   getOptions: () => IStepFnOptions
 }
 

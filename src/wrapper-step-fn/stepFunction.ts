@@ -14,14 +14,11 @@ import {
   wait,
   Finalized,
   IFinalizedStepFn,
-  ITask,
   ServerlessError,
   parallel,
   pass,
-  parseArn,
   goTo,
 } from '../private'
-import { hash } from 'native-dash'
 
 export const isFluentApi = (obj: IStepFnSelector): obj is IFluentApi => !isStepFunction(obj) && !Array.isArray(obj)
 export function isStepFunction(obj: IStepFnSelector): obj is IStepFn {
@@ -59,7 +56,6 @@ export function StepFunction(...params: (IState | Finalized<IState> | IStepFnOpt
     return options
   }
 
-  // TODO: Identify the type that expects last array element be FinalizedState
   function configuring(options: IStepFnOptions): IConfigurableStepFn {
     const callable = <T>(fn: CallableConfiguration<T>) => fn(() => configuring(options), commit)
 
@@ -75,8 +71,11 @@ export function StepFunction(...params: (IState | Finalized<IState> | IStepFnOpt
       pass: callable(pass),
       goTo: callable(goTo),
       finalize() {
-        state = finalizeStates(state, getOptions())
-        return { getState: () => state as Finalized<IState>[], getOptions }
+        const lastIndex = state.length - 1
+        state = state.map((s, index) => {
+          return { ...s, isTerminalState: lastIndex === index }
+        }) as IState[]
+        return { getState: () => state, getOptions }
       },
     }
   }
@@ -84,30 +83,30 @@ export function StepFunction(...params: (IState | Finalized<IState> | IStepFnOpt
   return configuring({ ...defaultOptions, ...options })
 }
 
-export function finalizeStates<T extends IState>(
-  states: (Finalized<T> | T)[],
-  options: IStepFnOptions,
-): Finalized<T>[] {
-  const lastIndex = states.length - 1
-  return states.map((state, index) => {
-    if (isFinalizedState(state)) {
-      return { ...state, isTerminalState: lastIndex === index }
-    } else {
-      const hashState = hash(JSON.stringify(state))
+// export function finalizeStates<T extends IState>(
+//   states: (Finalized<T> | T)[],
+//   options: IStepFnOptions,
+// ): Finalized<T>[] {
+//   const lastIndex = states.length - 1
+//   return states.map((state, index) => {
+//     if (isFinalizedState(state)) {
+//       return { ...state, isTerminalState: lastIndex === index }
+//     } else {
+//       const hashState = hash(JSON.stringify(state))
 
-      return {
-        ...state,
-        name:
-          state.type === 'Task'
-            ? `${options.namePrefix || ''}${parseArn((state as ITask).resource).fn}`
-            : `${options.namePrefix || ''}${state.type}-${hashState}`,
-        isFinalized: true,
-        isTerminalState: lastIndex === index,
-      }
-    }
-  })
-}
+//       return {
+//         ...state,
+//         name:
+//           state.type === 'Task'
+//             ? `${options.namePrefix || ''}${parseArn((state as ITask).resource).fn}`
+//             : `${options.namePrefix || ''}${state.type}-${hashState}`,
+//         isFinalized: true,
+//         isTerminalState: lastIndex === index,
+//       }
+//     }
+//   })
+// }
 
-function isFinalizedState<T extends IState>(state: Finalized<T> | T): state is Finalized<T> {
-  return state.isFinalized
-}
+// function isFinalizedState<T extends IState>(state: Finalized<T> | T): state is Finalized<T> {
+//   return state.isFinalized
+// }
