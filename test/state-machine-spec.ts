@@ -72,7 +72,7 @@ describe('State Machine', () => {
     const stateNames = Object.keys(stateMachine.definition.States)
 
     expect(stateMachine.definition.StartAt).toEqual(fetchProfileImgUrl.name)
-    expect(stateNames).toIncludeAllMembers(['ChoiceItem1-fooChoiceState-unavatar-fetchFromUnavatar', 'fooChoiceState'])
+    expect(stateNames).toIncludeAllMembers(['unavatar-fetchFromUnavatar', 'fooChoiceState'])
   })
   it('Defining state machine should only allow finalized step function be used once', () => {})
 })
