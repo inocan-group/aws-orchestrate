@@ -1,10 +1,11 @@
 import { IDictionary } from 'common-types'
 import { AwsResource, buildStepFunctionRequest, parseArn } from '../private'
 import { logger } from 'aws-log'
+import { StartExecutionOutput } from 'aws-sdk/clients/stepfunctions'
 
 export async function invokeStepFn(stepArn: string, request: IDictionary, options: IDictionary = {}) {
   const stepFn = new (await import('aws-sdk')).StepFunctions({ params: { foo: 'bar' } })
-  return new Promise((resolve, reject) => {
+  return new Promise<StartExecutionOutput>((resolve, reject) => {
     stepFn.startExecution(
       buildStepFunctionRequest(parseArn(stepArn, AwsResource.StepFunction), request),
       (err, data) => {
@@ -16,7 +17,7 @@ export async function invokeStepFn(stepArn: string, request: IDictionary, option
           e.stack = err.stack
           e.name = 'InvocationError'
           log.error(`Problem starting the step function '${stepArn}'`, e)
-          throw e
+          reject(e)
         }
         resolve(data)
       },
