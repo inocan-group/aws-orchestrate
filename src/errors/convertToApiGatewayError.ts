@@ -1,5 +1,4 @@
 import { DEFAULT_ERROR_CODE } from "./ErrorMeta";
-import { IApiGatewayErrorResponse } from "common-types";
 import { getResponseHeaders } from "../wrapper-fn/headers";
 import { IErrorClass } from "../@types";
 /**
@@ -14,7 +13,7 @@ export function convertToApiGatewayError(e: IErrorClass, defaultCode: number = D
     body: JSON.stringify({
       errorType: e.name || e.code || "Error",
       errorMessage: e.message,
-      stackTrace: e.stack
-    })
+      stackTrace: e.stack,
+    }),
   };
 }

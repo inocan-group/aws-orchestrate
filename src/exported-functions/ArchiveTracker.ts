@@ -10,10 +10,10 @@ export const ArchiveTrackerConfig: IWrapperFunction = {
   events: [
     {
       schedule: {
-        rate: "cron(0 1 * * *)"
-      }
-    }
-  ]
+        rate: "cron(0 1 * * *)",
+      },
+    },
+  ],
 };
 
 const fn: IHandlerFunction<void, void> = async (request, context) => {

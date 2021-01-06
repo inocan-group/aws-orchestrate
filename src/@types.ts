@@ -1,4 +1,6 @@
-import { ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders, getSecrets } from "./private";
+import { ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders } from "./index";
+import type { getSecrets } from './wrapper-fn/index'
+
 import {
   IAWSLambaContext,
   IAWSLambdaProxyIntegrationRequest,
@@ -7,13 +9,13 @@ import {
   IHttpResponseHeaders,
   IServerlessFunction,
   Omit,
-  arn,
+  arn
 } from "common-types";
 import type {  IAdminConfig, IMockConfig, IRealTimeAdmin } from "universal-fire";
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
 
 import { ILoggerApi, IAwsLogConfig } from "aws-log";
-
+;
 
 type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 /**
@@ -29,6 +31,7 @@ export type IWrapperFunction = IHandlerConfig;
  * (strongly suggested), events, timeouts, etc.
  */
 export type IHandlerConfig = Omit<IServerlessFunction, "handler">;
+
 
 /**
  * The API Gateway's _proxy integration request_ structure with the
@@ -406,10 +409,10 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * **Note:** this function automatically forwards `X-Correlation-Id`
    * and any secrets that the execution function has gotten
    */
-  invoke: <T = IDictionary, H = UnconstrainedHttpHeaders>(
+  invoke: <TRequest = IDictionary, THeaders = UnconstrainedHttpHeaders>(
     fnArn: string,
-    request: T,
-    additionalHeaders?: H
+    request: TRequest,
+    additionalHeaders?: THeaders
   ) => Promise<InvocationResponse>;
   /**
    * Allows the handler author to _register_ a new `LambdaSequence` for execution.

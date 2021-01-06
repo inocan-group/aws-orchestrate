@@ -3,7 +3,7 @@ import { IDictionary } from 'common-types'
 import { getRequestHeaders } from '../wrapper-fn'
 import { compress } from './compress'
 import { IOrchestratedRequest, ISerializedSequence, IOrchestratedHeaders } from '../@types'
-import { IStepFunctionTaskPayload, IStepFunctionTaskResponse } from '../private'
+import { IStepFunctionTaskPayload, IStepFunctionTaskResponse } from '../index'
 
 export function buildStepFunctionTaskInput<T>(
   body: T,

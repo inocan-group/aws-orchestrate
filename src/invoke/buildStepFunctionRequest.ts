@@ -1,6 +1,6 @@
-import { IDictionary } from 'common-types'
-import { buildOrchestratedRequest, buildStepFunctionTaskInput, getHeaderSecrets, IParsedArn } from '../private'
-import { getCorrelationId, getContext } from 'aws-log'
+import { IDictionary } from "common-types";
+import { buildOrchestratedRequest, buildStepFunctionTaskInput, getHeaderSecrets, IParsedArn } from "../index";
+import { getCorrelationId, getContext } from "aws-log";
 
 /**
  * buildRequest
@@ -13,16 +13,16 @@ import { getCorrelationId, getContext } from 'aws-log'
  *    as the EVENT payload to the new Lambda function
  */
 export function buildStepFunctionRequest(arn: IParsedArn, request: IDictionary, name?: string) {
-  const stateMachineArn = `arn:aws:states:${arn.region}:${arn.account}:stateMachine:${arn.appName}-${arn.stage}-${arn.fn}`
+  const stateMachineArn = `arn:aws:states:${arn.region}:${arn.account}:stateMachine:${arn.appName}-${arn.stage}-${arn.fn}`;
 
-  const payload = buildStepFunctionTaskInput(request)
+  const payload = buildStepFunctionTaskInput(request);
   if (request.headers) {
-    payload.headers = { ...payload.headers, ...request.headers }
+    payload.headers = { ...payload.headers, ...request.headers };
   }
 
   return {
     stateMachineArn,
     input: JSON.stringify(payload),
     name,
-  } as import('aws-sdk').StepFunctions.StartExecutionInput
+  } as import("aws-sdk").StepFunctions.StartExecutionInput;
 }

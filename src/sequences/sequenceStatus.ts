@@ -10,15 +10,8 @@ export const sequenceStatus = <T = any>(correlationId: string) =>
   /**
    * Reduces a sequence object to a simple "status" based representation
    */
-  (
-    s: LambdaSequence,
-    dataOrError?: T | IErrorClass
-  ): ISequenceTrackerStatus => {
-    const status = s.isDone
-      ? dataOrError instanceof Error
-        ? "error"
-        : "success"
-      : "running";
+  (s: LambdaSequence, dataOrError?: T | IErrorClass): ISequenceTrackerStatus => {
+    const status = s.isDone ? (dataOrError instanceof Error ? "error" : "success") : "running";
 
     const response: Omit<ISequenceTrackerStatus, "data" | "error"> = {
       status,
@@ -26,7 +19,7 @@ export const sequenceStatus = <T = any>(correlationId: string) =>
       currentFn: s.activeFn ? s.activeFn.arn : "",
       originFn: s.activeFn ? s.steps[0].arn : "",
       total: s.steps.length,
-      current: s.completed.length
+      current: s.completed.length,
     };
 
     switch (status) {

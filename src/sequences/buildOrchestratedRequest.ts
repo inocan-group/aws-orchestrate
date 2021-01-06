@@ -2,11 +2,7 @@ import { LambdaSequence } from "../LambdaSequence";
 import { IDictionary } from "common-types";
 import { getRequestHeaders } from "../wrapper-fn";
 import { compress } from "./compress";
-import {
-  IOrchestratedRequest,
-  ISerializedSequence,
-  IOrchestratedHeaders
-} from "../@types";
+import { IOrchestratedRequest, ISerializedSequence, IOrchestratedHeaders } from "../@types";
 
 export function buildOrchestratedRequest<T>(
   body: T,
@@ -22,14 +18,12 @@ export function buildOrchestratedRequest<T>(
     sequence = LambdaSequence.notASequence();
   }
 
-  const headers = additionalHeaders
-    ? { ...getRequestHeaders(), ...additionalHeaders }
-    : getRequestHeaders();
+  const headers = additionalHeaders ? { ...getRequestHeaders(), ...additionalHeaders } : getRequestHeaders();
 
   return {
     type: "orchestrated-message-body",
     body: compress<T>(body, 4096),
     sequence: compress<ISerializedSequence>(sequence.toObject(), 4096),
-    headers: compress<IOrchestratedHeaders>(headers, 4096)
+    headers: compress<IOrchestratedHeaders>(headers, 4096),
   };
 }

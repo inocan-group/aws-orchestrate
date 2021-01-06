@@ -1,7 +1,7 @@
 import { IDictionary, IHttpResponseHeaders } from "common-types";
 import { ILoggerApi, getCorrelationId, logger } from "aws-log";
-import { IOrchestratedHeaders, getLocalSecrets, saveSecretsLocally, sequenceStatus } from "../private";
-
+import { IOrchestratedHeaders, sequenceStatus } from "../index";
+import { getLocalSecrets, saveSecretsLocally } from "./index";
 import { set } from "native-dash";
 
 /**
