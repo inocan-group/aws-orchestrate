@@ -12,7 +12,7 @@ import {
   IOrchestratedResponse,
   AwsResource,
   IStepFunctionTaskResponse,
-} from './index';
+} from "./index";
 
 import {
   database,
@@ -29,7 +29,7 @@ import {
   setFnHeaders,
   IWrapperErrorContext,
   WorkflowStatus,
-} from './wrapper-fn';
+} from "./wrapper-fn";
 
 import {
   HttpStatusCodes,
@@ -37,13 +37,13 @@ import {
   IApiGatewayErrorResponse,
   IApiGatewayResponse,
   IDictionary,
-} from 'common-types';
-import type { IAdminConfig, IMockConfig } from 'universal-fire';
+} from "common-types";
+import type { IAdminConfig, IMockConfig } from "universal-fire";
 
-import { get } from 'native-dash';
-import { logger } from 'aws-log';
-import { buildStepFunctionTaskInput } from './sequences';
-import { errorHandling } from './wrapper-fn/errorHandling';
+import { get } from "native-dash";
+import { logger } from "aws-log";
+import { buildStepFunctionTaskInput } from "./sequences";
+import { errorHandling } from "./wrapper-fn/errorHandling";
 
 /**
  * **wrapper**
@@ -68,22 +68,22 @@ export const wrapper = function <I, O>(
   > {
     let result: O;
     let workflowStatus: WorkflowStatus;
-    workflowStatus = 'initializing';
+    workflowStatus = "initializing";
     context.callbackWaitsForEmptyEventLoop = false;
     const log = logger(options.loggerConfig).lambda(event, context);
-    log.info('context object', { context });
+    log.info("context object", { context });
     const msg = loggedMessages(log);
     const errorMeta: ErrorMeta = new ErrorMeta();
 
     /** the code to use for successful requests */
     let statusCode: number;
-    workflowStatus = 'unboxing-from-prior-function';
+    workflowStatus = "unboxing-from-prior-function";
     const { request, sequence, apiGateway, headers, triggeredBy } = LambdaSequence.from<I>(event);
 
     let handlerContext: IHandlerContext<I>;
 
     try {
-      workflowStatus = 'starting-try-catch';
+      workflowStatus = "starting-try-catch";
       msg.start(request, headers, context, sequence, apiGateway);
       // const segment = xray.getSegment();
       // segment.addMetadata("initialized", request);
@@ -91,11 +91,11 @@ export const wrapper = function <I, O>(
       maskLoggingForSecrets(getLocalSecrets(), log);
 
       // #region PREP
-      workflowStatus = 'prep-starting';
+      workflowStatus = "prep-starting";
       const status = sequenceStatus(log.getCorrelationId());
       const registerSequence = register(log, context);
       const invoke = invokeSequence(sequence);
-      const claims: IDictionary = JSON.parse(get(apiGateway, 'requestContext.authorizer.customClaims', '{}'));
+      const claims: IDictionary = JSON.parse(get(apiGateway, "requestContext.authorizer.customClaims", "{}"));
 
       handlerContext = {
         ...context,
@@ -114,7 +114,7 @@ export const wrapper = function <I, O>(
         apiGateway,
         getSecrets,
         setSuccessCode: (code: number) => (statusCode = code),
-        isApiGatewayRequest: triggeredBy === 'ApiGateway',
+        isApiGatewayRequest: triggeredBy === "ApiGateway",
         errorMgmt: errorMeta,
         invoke,
         triggeredBy,
@@ -122,21 +122,21 @@ export const wrapper = function <I, O>(
       //#endregion
 
       // #region CALL the HANDLER FUNCTION
-      workflowStatus = 'running-function';
+      workflowStatus = "running-function";
       result = await fn(request, handlerContext);
 
       log.debug(`handler function returned to wrapper function`, { result });
-      workflowStatus = 'function-complete';
+      workflowStatus = "function-complete";
       // #endregion CALL the HANDLER FUNCTION
 
       //#region SEQUENCE (next)
       if (sequence.isSequence && !sequence.isDone) {
-        workflowStatus = 'invoke-started';
+        workflowStatus = "invoke-started";
         const [fn, requestBody] = sequence.next<O>(result);
         msg.startingInvocation(fn, requestBody);
         const invokeParams = await invoke(fn, requestBody);
         msg.completingInvocation(fn, invokeParams);
-        workflowStatus = 'invoke-complete';
+        workflowStatus = "invoke-complete";
       } else {
         msg.notPartOfExistingSequence();
       }
@@ -144,11 +144,11 @@ export const wrapper = function <I, O>(
 
       //#region SEQUENCE (orchestration starting)
       if (getNewSequence().isSequence) {
-        workflowStatus = 'sequence-starting';
+        workflowStatus = "sequence-starting";
         msg.sequenceStarting();
         const seqResponse = await invokeNewSequence(result);
         msg.sequenceStarted(seqResponse);
-        workflowStatus = 'sequence-started';
+        workflowStatus = "sequence-started";
       } else {
         msg.notPartOfNewSequence();
       }
@@ -156,7 +156,7 @@ export const wrapper = function <I, O>(
 
       //#region SEQUENCE (send to tracker)
       if (options.sequenceTracker && sequence.isSequence) {
-        workflowStatus = 'sequence-tracker-starting';
+        workflowStatus = "sequence-tracker-starting";
         msg.sequenceTracker(options.sequenceTracker, workflowStatus);
         await invokeLambda(options.sequenceTracker, buildOrchestratedRequest<ISequenceTrackerStatus>(status(sequence)));
         if (sequence.isDone) {
@@ -168,19 +168,19 @@ export const wrapper = function <I, O>(
       //#endregion
 
       //#region RETURN-VALUES
-      workflowStatus = 'returning-values';
+      workflowStatus = "returning-values";
       switch (handlerContext.triggeredBy) {
         case AwsResource.ApiGateway:
           const response: IApiGatewayResponse = {
             statusCode: statusCode ? statusCode : result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
             headers: getResponseHeaders(),
-            body: result ? (typeof result === 'string' ? result : JSON.stringify(result)) : '',
+            body: result ? (typeof result === "string" ? result : JSON.stringify(result)) : "",
           };
           msg.returnToApiGateway(result, getResponseHeaders());
-          log.debug('the response will be', response);
+          log.debug("the response will be", response);
           return response;
         case AwsResource.StepFunction:
-          workflowStatus = 'returning-values';
+          workflowStatus = "returning-values";
           const nextStepTaskInput = buildStepFunctionTaskInput<O>(result);
           log.debug(`Wrap result and pass to the next state machine's task step`, { nextStepTaskInput });
           return nextStepTaskInput;
@@ -196,12 +196,14 @@ export const wrapper = function <I, O>(
         handlerFunction: context.functionName,
         caller: context.clientContext,
         correlationId: handlerContext.correlationId,
+        triggeredBy: handlerContext.triggeredBy,
+        awsRequestId: handlerContext.awsRequestId,
         isApiGatewayRequest: handlerContext.isApiGatewayRequest,
         request,
         workflowStatus,
       };
 
-      return errorHandling(msg, errorContext);
+      return errorHandling(msg, handlerContext.errorMgmt, errorContext);
     }
     // #endregion ERROR-HANDLING
   };

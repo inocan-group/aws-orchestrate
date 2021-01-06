@@ -8,12 +8,12 @@ actionLink: /getting-started
 
 features:
 - title: Handler Wrapper
-  details: we provide a way to wrap your handler functions which not only provides strong and consistent typing but also adds a much more capable context object to work your magic off of
+  details: Wrap your handler functions and get strong typing, error handling, logging, secret management, and more.
   link: /wrapper
-- title: Orchestration
+- title: LambdaSequence
   details: organize your functional goals into orchestrated sequences of function executions and ensure that there is a consistent way to gain visibility across the full functional graph in your logging solution
-- title: HTTP Transactions
-  details: Web clients expect an HTTP response to be functional but when start chaining together micro-services there's a tendency to move to a purely technical response that your client's can't use; this library will help you get back to functional API's
+- title: Step Functions
+  details: we provide a helpful Step Function configurator which ensures that your Step Functions are composable, strongly typed, and structurally sound before you ever publish them.
 
 footer: MIT Licensed | Copyright © Inocan Group
 ---

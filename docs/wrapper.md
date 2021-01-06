@@ -1,14 +1,18 @@
-# Serverless Wrapper
+---
+sidebarDepth: 3
+---
+# Wrapper Function
 
 This library exports a function `wrapper` which is intended to wrap all
-serverless functions. What it provides are the following:
+serverless functions. It provides the following benefits:
 
-- better "type safety" for your handler functions
-- out-of-the-box support for Lambda Sequences in a transparent manner
-- automatically configured logging (using `aws-log`)
-- better error handling
-- convenient access to connecting to a Firebase database (no code baggage though
-  if you don't use this)
+- Strong "type safety" for your handler functions
+- Consistent and strong error handling
+- Built in logging (using `aws-log`)
+- Simple access to `LambdaSequence` orchestration 
+- ~~convenient access to connecting to a Firebase database (no code baggage though
+  if you don't use this)~~
+    >  Will be deprecated soon
 
 ## Usage
 
@@ -168,76 +172,111 @@ With this one line of code you are able to get all secrets associated with `fire
 
 ## Error Handling
 
-All errors encountered in your handler function will be trapped by the `wrapper` function and will report the error in a reasonable way without any configuration. If, however, you want to take a more active role than you can by leveraging one of two distinct mechanisms:
+It is important to capture errors in a way that is consistent and which provides good context to understand happened after the fact. For this reason the wrapper function provides a concise error management API that will help you to ensure your error handling is top shelf.
 
-1. the Error Management API at `context.errorMgmt`
-2. use or extend the `HandledError` class exposed by this library
+### Known Errors
 
-### Handled Errors
+Often you will know that a certain set of externalities may result in known error states and you can ensure that these errors return useful information as well as the appropriate HTTP error code. There are two means to do this:
 
-The first concept to grok is the idea behind "handled" and "unhandled" errors. A "handled" error is where the consumer specifically/intentionally intends to throw errors given a certain set of circumstances. This is par for the course with two important exceptions:
+1. **Throwing `ServerlessError`**. Within your code you can capture this error state in a try/catch block and then throw a `ServerlessError` :
 
-1. The error which is thrown MUST have a valid HTTP status code (not part of the default Error from JS)
-2. The handler wraps all the code that consumers write to capture _unhandled_ error so it must be able to distinguish between an error that the handler author intended versus one that happened without real handling for it.
+     ```ts
+     import { ServerlessError } from 'aws-orchestrate';
+     try {
+       // ...
+     } catch(e) {
+       throw ServerlessError(404, "No sir, didn't find it", "doing-something");
+     }
+     ```
 
-Both of the above conditions are met by either using or extending the `ServerlessError` symbol from this library:
+     This is quite straight forward and doesn't really need any further explanation other than to say that you need to use the `ServerlessError` class when throwing the error.
 
-```typescript{6-7}
-const fn: IHandlerFunction<IRequest, IResponse> = async (req, ctx) {
-  try {
-    // do something which may throw something you want to handle
-  } catch(e) {
-    if(e.message.includes('not allowed')) {
-      // Something you recognized might happen
-      throw ServerlessError(403, e.message, 'not-allowed');
+2. **Error Mgmt API**. Using the wrapper's error API you can simply describe the error and it will be caught for you and transformed into a `ServerlessError` when this error is encountered. Configuration would look something like:
+
+    ```ts
+    const fn(req, ctx) {
+      ctx.errorMgmt
+        .addHandler(404, { messageContains: 'not found', 'doing-something' })
+        .addHandler(500, { messageContains: 'what dat?', 'trouble-making' });
     }
-    // this is an unhandled error just throw it and let the wrapper manage this
-    throw e;
-  }
+    ```
+
+    With this configured in the beginning of your handler, you be assured that any error which has the specified text in the message is tagged and handled as you would like. 
+    
+    In addition to the `messageContains` approach demonstrated above you can also use the `identifiedBy()` method to look for text in the error's `name` or `code` properties.
+
+### Unexpected Errors
+
+In addition to errors you _expect_ and want to shape with the approaches demonstrated in the _known errors_ section, we have errors you didn't expect. The wrapper function will make sure all of these are captured as well and thrown as `UnhandledError` messages.
+
+### Error Payload
+
+In Javascript an `Error` only has a few basic properties (e.g., message, stack, and name) but when using the wrapper function we ensure that all errors will report a richer set of information. The two error classes which will be thrown when using the wrapper function are `KnownError` and `UnexpectedError` and both implement the `IErrorContext` interface which includes:
+
+- `handlerFunction` - the name of the handler function where the error occurred (this is not immediately important to logging in that functions cloudwatch logs but becomes very useful when forwarding onto another lambda which is intended to report on the error)
+- `code` - a string based error code that can be leveraged for error handling and classification
+- `httpCode` - a numeric HTTP status code associated to the error which will be passed back to API Gateway when it is the caller of the function
+- `awsRequestId` - the unique AWS id assigned to a function's execution
+- `correlationId` - the unique id assigned to all functions in an orchestration
+- `request` - the request object that was sent in to initialize the state of the handler function
+- `workflowStatus` - the part of the handler's overall workflow in which the error occurred
+- `triggeredBy` - categorizing what _type_ of consumer called the function
+- `caller` - if called via API Gateway then all sorts of client caller info will also be added
+
+> As always, use this list as a guide but refer to the `IErrorContext` symbol for an always up-to-date reference of precisely what is available in all errors coming out of a handler function wrapped by the _wrapper_ function.
+
+This error payload will be thrown as the last step in the wrapper function ensuring that a rich set of data is available to whoever is the reciever of this error.
+
+### Error Forwarding
+
+Whether the error which occurred is a _known_ or _unexpected_ error you may want to "handle" this error in some fashion. The most common example of this is forwarding on all errors to another lambda function which will then notify the appropriate parties. This is achieved with the error API's `setDefaultHandler()` method and would be configured something like this:
+
+```ts
+const async fn(req, ctx) {
+  ctx.errorMgmt.setDefaultHandler('ReportMyError');
 }
 ```
 
-This is typically the best way to handle your expected error states but you can also use the built in error management API found at `context.errorMgmt`. An example of this could be:
+In the above example, `ReportMyError` is shorthand for another lambda function's ARN which you want to be called when an error occurs. The ARN reference can be a shorthand when you are using a handler function within the same repo but you can also use a full ARN to reference functions in other repos (so long as you have the appropriate permissions to call those functions).
 
-```typescript{2-4}
-const fn: IHandlerFunction<IRequest, IResponse> = async (req, ctx) {
-  // any error which contains the text "not allowed" in it will be mapped to the
-  // **403** error code.
-  handlerContext.errorMgmt.addHandler(403, { messageContains: "not allowed" });
+The wrapper function's responsibility in cases where a handler has been defined is to:
+
+1. **Forward Error** - makes an async invocation of the handler (passing the error as payload); this waits for AWS to confirm that this handler has been executed and then moves forward to step 2
+2. **Throw Error** - throwing the error returning this error condition to the appropriate caller. If the caller is API Gateway, the error will be restructured to a format which API Gateway expects. In this case, the wrapper function will log the full error payload 
+
+By default this forwarding will take place for _all_ errors and in most cases this is probably what you want. However, in more advanced configurations you may want to do different things with different errors. This too is possible and you should see the `setDefaultHandler()` as a _default_ way of handling the error. 
+
+For errors which you want to _specifically_ configure where to forward errors onto another function, you can do this by setting the optional `forwardTo` property that exists as part of the `IErrorContext` contract that exists in both `KnownError` and `UnexpectedError`. To illustrate this with code you might expect to see something like:
+
+```ts
+const async fn(req, ctx) {
+  ctx.errorMgmt
+    .addHandler(
+        404, 
+        "No sir, didn't find it", 
+        { forwardTo: 'MySpecialHandler' })
+    .setDefaultHandler('MyDefaultHandler');
 }
 ```
 
-### Un-Handled Errors
+or if you're throwing a known error, the signature is basically the same:
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-## Working with Sequences
-
-There are two modes in which `LambdaSequence`'s play a role in handler functions:
-
-1. **Kick-off:** a "conductor" function may define and then kick-off a `LambdaSequence`
-2. **Operating:** a function may be operating within a `LambdaSequence` and therefore need to **invoke** the next function in the sequence.
-
-In both cases the `wrapper` function will help to make this process easier.
-
-We will start with the _operating_ mode first because it is so easy. How easy? Completely transparent. In this mode your function simply goes about its responsibilities and when the function returns, the `wrapper` will detect what function comes next (if any) and send the current function's output along to this function for you (along with any other information structured by the conductor). If, for whatever reason, your handler function wants to introspect the state of the sequence -- or lack thereof -- you are given access to a `LambdaSequence` off the `context` object. For example, you can validate that a given function _is not_ running in a sequence with this conditional branching:
-
-```typescript
-if (context.sequence.isSequence) {
-  // do something
+```ts
+try {
+  // ...
+} catch(e) {
+  throw new KnownError(
+      404, 
+      "No sir, didn't find it", 
+      { forwardTo: "MySpecialHandler", underlying: e}
+  );
 }
 ```
 
-Just because you _can_ introspect whether you're running as part of a sequence or not, in most cases it will be best to have your function operate independantly of this knowledge and allow the `wrapper` to manage this for you.
+> **Note:** when using the error management API, any _underlying error_ will automatically be included in the error but as you see in the example above, if you are throwing an error you must include it yourself.
 
-In the case of a **Conductor** function, this function would be expected to start its execution _not_ being part of a sequence but instead it's responsibility is to _create_ a sequence. Once it has defined the sequence, the only step the conductor must make is to _register_ it for execution. The example below illustrates this:
+## Working with Orchestration
 
-```typescript
-import { LambdaSequence, registerSequence } from 'aws-orchestrate';
-// ...
-const sequence = LambdaSequence.add('fn1')
-  .add('fn2', { temperature: '75' })
-  .add('fn3');
+AWS provides StepFunctions as their primary solution for _orchestration_ but historically this was a pretty expensive service. As an alternative to Step Functions, this library provides the `LambdaSequence` workflow. This will be discussed in the next section and offers a completely valid and likely lower-cost solution for orchestration than Step Functions. 
 
-registerSequence(sequence);
-```
+With AWS's introduction of _express_ Step Functions, Step Functions are easier to "step into" if you will. If you prefer this option, we provide a very handy configurator for Step Functions that ensures that you have a strongly typed and properly configured Step Function before you ever attempt to deploy. This configuration will be covered as well in the section after we discuss `LambdaSequence`.

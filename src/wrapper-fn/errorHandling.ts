@@ -1,26 +1,26 @@
-import { ErrorHandler, ServerlessError } from '../errors';
-import { IWrapperErrorContext, ILoggedMessages, findError } from './index';
+import { ErrorHandler, ErrorMeta, ServerlessError } from "../errors";
+import { IWrapperErrorContext, ILoggedMessages, findError } from "./index";
 
-export function errorHandling<T>(msg: ILoggedMessages, context: IWrapperErrorContext<T>) {
-  // wrap all error handling in it's own try-catch
+/**
+ * Provides all error handling for the wrapper function and the contained
+ * handler function.
+ */
+export function errorHandling<T>(msg: ILoggedMessages, expectedErrors: ErrorMeta, context: IWrapperErrorContext<T>) {
   try {
     msg.processingError(context.error, context.workflowStatus, context.isApiGatewayRequest);
 
-    /**
-     * "found" is either handler author using the `HandledError` class themselves
-     * or using the API exposed at `context.errorMgmt`
-     **/
-    const found: ServerlessError | ErrorHandler | false =
-      context.error instanceof ServerlessError ? context.error : findError(context.error, context);
+    // Look for a "known error"
+    const found: Error =
+      context.error instanceof ServerlessError ? context.error : findError(context.error, expectedErrors);
 
-    if (found instanceof ServerlessError) {
-      found.functionName = context.functionName;
-      found.classification = found.classification.replace('aws-orchestrate/', `${found.functionName}/`);
-      found.correlationId = handlerContext.correlationId;
-      found.awsRequestId = handlerContext.awsRequestId;
+    // if (found instanceof ServerlessError) {
+    //   found.functionName = context.functionName;
+    //   found.classification = found.classification.replace("aws-orchestrate/", `${found.functionName}/`);
+    //   found.correlationId = handlerContext.correlationId;
+    //   found.awsRequestId = handlerContext.awsRequestId;
 
-      throw found;
-    }
+    //   throw found;
+    // }
 
     if (found) {
       if (!found.handling) {
@@ -57,14 +57,14 @@ export function errorHandling<T>(msg: ILoggedMessages, context: IWrapperErrorCon
       //#region UNFOUND ERROR
       log.debug(`An error is being processed by the default handling mechanism`, {
         defaultHandling: errorMeta.defaultHandling,
-        errorMessage: e.message ?? 'no error messsage',
-        stack: e.stack ?? 'no stack available',
+        errorMessage: e.message ?? "no error messsage",
+        stack: e.stack ?? "no stack available",
       });
       //#endregion
       const errPayload = { ...e, name: e.name, message: e.message, stack: e.stack };
       const handling = errorMeta.defaultHandling;
       switch (handling.type) {
-        case 'handler-fn':
+        case "handler-fn":
           //#region handle-fn
           /**
            * results are broadly three things:
@@ -85,7 +85,7 @@ export function errorHandling<T>(msg: ILoggedMessages, context: IWrapperErrorCon
                 return {
                   statusCode: result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent,
                   headers: getResponseHeaders(),
-                  body: result ? JSON.stringify(result) : '',
+                  body: result ? JSON.stringify(result) : "",
                 };
               } else {
                 return result;
@@ -106,16 +106,16 @@ export function errorHandling<T>(msg: ILoggedMessages, context: IWrapperErrorCon
           break;
         //#endregion
 
-        case 'error-forwarding':
+        case "error-forwarding":
           //#region error-forwarding
-          log.debug('The error will be forwarded to another function for handling', {
+          log.debug("The error will be forwarded to another function for handling", {
             arn: handling.arn,
           });
           await invokeLambda(handling.arn, errPayload);
           break;
         //#endregion
 
-        case 'default-error':
+        case "default-error":
           //#region default-error
           /**
            * This handles situations where the user stated that if an
@@ -124,7 +124,7 @@ export function errorHandling<T>(msg: ILoggedMessages, context: IWrapperErrorCon
            */
           handling.error.message = handling.error.message || e.message;
           handling.error.stack = e.stack;
-          handling.error.type = 'default-error';
+          handling.error.type = "default-error";
           if (isApiGatewayRequest) {
             return convertToApiGatewayError(handling.error);
           } else {
@@ -133,7 +133,7 @@ export function errorHandling<T>(msg: ILoggedMessages, context: IWrapperErrorCon
           break;
         //#endregion
 
-        case 'default':
+        case "default":
           //#region default
           // log.debug(`Error handled by default policy`, {
           //   code: errorMeta.defaultErrorCode,
@@ -155,7 +155,7 @@ export function errorHandling<T>(msg: ILoggedMessages, context: IWrapperErrorCon
         //#endregion
 
         default:
-          log.debug('Unknown handling technique for unhandled error', {
+          log.debug("Unknown handling technique for unhandled error", {
             type: (handling as any).type,
             errorMessage: e.message,
           });
@@ -173,7 +173,7 @@ export function errorHandling<T>(msg: ILoggedMessages, context: IWrapperErrorCon
     }
 
     const conductorErrorHandler: OrchestratedErrorHandler | false =
-      sequence.activeFn && sequence.activeFn.onError && typeof sequence.activeFn.onError === 'function'
+      sequence.activeFn && sequence.activeFn.onError && typeof sequence.activeFn.onError === "function"
         ? (sequence.activeFn.onError as OrchestratedErrorHandler)
         : false;
     const resolvedByConductor = async () => (conductorErrorHandler ? conductorErrorHandler(e) : false);
@@ -188,9 +188,9 @@ export function errorHandling<T>(msg: ILoggedMessages, context: IWrapperErrorCon
     } else {
       // Catch errors in error handlers
       if (
-        errorOfError.type === 'unhandled-error' ||
-        errorOfError.type === 'handled-error' ||
-        errorOfError.type === 'default-error'
+        errorOfError.type === "unhandled-error" ||
+        errorOfError.type === "handled-error" ||
+        errorOfError.type === "default-error"
       ) {
         throw new RethrowError(errorOfError);
       }

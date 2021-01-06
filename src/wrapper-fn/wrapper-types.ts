@@ -1,4 +1,5 @@
-import { IAWSLambaContext } from "common-types";
+import { arn, IAWSLambaContext } from "common-types";
+import { AwsResource } from "..";
 
 export type WorkflowStatus =
   | "initializing"
@@ -27,6 +28,23 @@ export interface IWrapperErrorContext<T = Record<string, unknown>> {
   caller?: IAWSLambaContext["clientContext"];
   isApiGatewayRequest: boolean;
   correlationId: string;
+  awsRequestId: string;
+  triggeredBy: AwsResource;
   request: T;
   workflowStatus: WorkflowStatus;
+}
+
+/**
+ * The Error payload which are guarenteed to be delivered in error conditions
+ * taking place within the _wrapper function_.
+ */
+export interface IErrorContext<T = Record<string, unknown>> extends IWrapperErrorContext<T>, Error {
+  code: string;
+  httpCode: number;
+  message: string;
+  stack: string;
+  /** an underlying error if the top level error is wrapping another */
+  underlying?: Error;
+  /** optionally state an ARN which the error should be forwarded to */
+  forwardTo?: arn;
 }
