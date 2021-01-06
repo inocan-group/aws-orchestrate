@@ -13,7 +13,9 @@ export interface IParsedArn {
 export function parseArn(arn: string, target: AwsResource = AwsResource.Lambda): IParsedArn {
   const isFullyQualified = arn.slice(0, 3) === "arn" ? true : false;
 
-  return isFullyQualified ? parseFullyQualifiedString(arn, target) : parsePartiallyQualifiedString(arn);
+  return isFullyQualified
+    ? parseFullyQualifiedString(arn, target)
+    : parsePartiallyQualifiedString(arn);
 }
 
 const ResourceArnFormatRegex: IDictionary<RegExp | undefined> = {
@@ -46,7 +48,7 @@ function parseFullyQualifiedString(arn: string, target: AwsResource): IParsedArn
  * variables.
  */
 function parsePartiallyQualifiedString(fn: string): IParsedArn {
-  let output: IParsedArn = {
+  const output: IParsedArn = {
     ...getEnvironmentVars(),
     ...{ fn: ensureFunctionName(fn.split(":").pop()) },
   };
@@ -69,7 +71,11 @@ export function getEnvironmentVars() {
   const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
   const account = process.env.AWS_ACCOUNT || process.env.AWS_ACCOUNT_ID;
   const stage =
-    process.env.AWS_STAGE || process.env.ENVIRONMENT || process.env.STAGE || process.env.NODE_ENV || getStage();
+    process.env.AWS_STAGE ||
+    process.env.ENVIRONMENT ||
+    process.env.STAGE ||
+    process.env.NODE_ENV ||
+    getStage();
   const appName = process.env.SERVICE_NAME || process.env.APP_NAME;
 
   return { region, account, stage, appName };

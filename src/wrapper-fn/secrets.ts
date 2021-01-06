@@ -45,11 +45,13 @@ export function getLocalSecrets() {
  * @param modules the modules which are have secrets that are needed; you may add an array
  * as the first parameter passed in or you can destructure values across the input
  */
-export async function getSecrets(...modules: string[] | string[][]): Promise<IDictionary<IDictionary>> {
+export async function getSecrets(
+  ...modules: string[] | string[][]
+): Promise<IDictionary<IDictionary>> {
   // segment.addAnnotation("getSecrets", "starting");
   const mods: string[] = flatten<any>(modules);
   const log = logger().reloadContext();
-  const localSecrets = getLocalSecrets();
+
   if (mods.every((i: string) => Object.keys(localSecrets).includes(i))) {
     // everything found in local secrets
     log.debug(`Call to getSecrets() resulted in 100% hit rate for modules locally`, {
@@ -92,7 +94,7 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
  * and masks the values so that they don't leak into the log files.
  */
 export function maskLoggingForSecrets(modules: IDictionary, log: ILoggerApi) {
-  let secretPaths: string[] = [];
+  const secretPaths: string[] = [];
   Object.keys(modules).forEach((mod) => {
     Object.keys(mod).forEach((s) => {
       if (typeof s === "object") {

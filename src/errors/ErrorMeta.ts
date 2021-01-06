@@ -1,5 +1,11 @@
 import { ErrorHandler } from "./ErrorHandler";
-import { IErrorIdentification, IErrorHandling, IErrorHandlerFunction, IErrorClass, IDefaultHandling } from "../@types";
+import {
+  IErrorIdentification,
+  IErrorHandling,
+  IErrorHandlerFunction,
+  IErrorClass,
+  IDefaultHandling,
+} from "../@types";
 export const DEFAULT_ERROR_CODE = 500;
 
 export interface IError {
@@ -14,6 +20,7 @@ export interface IErrorMessageControl<T extends IError = Error> {
 }
 
 export interface IExpectedErrorOptions<T extends IError = Error> {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   error?: new <T extends IError>() => T;
   /**
    * You can _prepend_ a static string to the error message's

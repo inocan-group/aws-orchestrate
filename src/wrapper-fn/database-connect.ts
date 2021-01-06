@@ -33,14 +33,17 @@ let _database: IAbstractedDatabase & IRealTimeAdmin;
  */
 export const database = async (config?: IAdminConfig | IMockConfig) => {
   const log = logger().reloadContext();
-  let serviceAccount: string = process.env.FIREBASE_SERVICE_ACCOUNT;
-  let databaseURL: string = process.env.FIREBASE_DATABASE_URL || process.env.FIREBASE_DATA_ROOT_URL;
+  const serviceAccount: string = process.env.FIREBASE_SERVICE_ACCOUNT;
+  const databaseURL: string =
+    process.env.FIREBASE_DATABASE_URL || process.env.FIREBASE_DATA_ROOT_URL;
 
   if (!_database) {
     if (!config) {
       if (serviceAccount && databaseURL) {
         config = { serviceAccount, databaseURL };
-        log.debug(`Environment variables were used to configure Firebase's Admin SDK`, { databaseURL });
+        log.debug(`Environment variables were used to configure Firebase's Admin SDK`, {
+          databaseURL,
+        });
       } else {
         const { firebase } = await getSecrets(["firebase"]);
         if (!firebase) {
@@ -53,12 +56,16 @@ export const database = async (config?: IAdminConfig | IMockConfig) => {
           databaseURL: databaseURL || firebase.DATABASE_URL,
         };
         if (!config.serviceAccount) {
-          throw new Error(`The Firebase service account could not be found in ENV or SSM variables!`);
+          throw new Error(
+            `The Firebase service account could not be found in ENV or SSM variables!`
+          );
         }
         if (!config.databaseURL) {
           throw new Error(`The Firebase database URL could not be found in ENV or SSM variables!`);
         }
-        log.debug(`A combination of ENV and SSM variables was used to configure Firebase's Admin SDK`);
+        log.debug(
+          `A combination of ENV and SSM variables was used to configure Firebase's Admin SDK`
+        );
       }
     }
 

@@ -21,6 +21,7 @@
     "build:tsc": "run-p build:es build:cjs",
     "build:es": "tsc -P tsconfig.es.json",
     "build:cjs": "tsc -P tsconfig.cjs.json",
+    "lint": "eslint src/**/*.ts && eslint test/**/*.ts",
     "watch": "yarn run-p watch:esnext watch:cjs",
     "watch:esnext": "yarn tsc -P tsconfig.esnext.json -w",
     "watch:cjs": "yarn tsc -P tsconfig.cjs.json -w",
