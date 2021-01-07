@@ -45,3 +45,19 @@ export * from "./convertToApiGatewayError";
 // Keep on being awesome.
 
 // #endregion
+
+//#region autoindexed files
+
+// index last changed at: 1st Jan, 2021, 01:14 PM ( GMT-8 )
+// export: default; exclusions: foo, bar, baz, index, private.
+// files: ErrorHandler, ErrorMeta, HandledError, ServerlessError, UnhandledError, convertToApiGatewayError.
+
+// local file exports
+export {  default as ErrorHandler} from "./ErrorHandler";
+export {  default as ErrorMeta} from "./ErrorMeta";
+export {  default as HandledError} from "./HandledError";
+export {  default as ServerlessError} from "./ServerlessError";
+export {  default as UnhandledError} from "./UnhandledError";
+export {  default as convertToApiGatewayError} from "./convertToApiGatewayError";
+
+//#endregion

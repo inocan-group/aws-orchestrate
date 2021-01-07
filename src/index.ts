@@ -49,3 +49,26 @@ export * from './shared/index'
 // Keep on being awesome.
 
 // #endregion
+
+//#region autoindexed files
+
+// index last changed at: 1st Jan, 2021, 01:14 PM ( GMT-8 )
+// export: default; exclusions: foo, bar, baz, index, private.
+// files: @types, LambdaEventParser, LambdaSequence, wrapper.
+// directories: errors, exported-functions, invoke, sequences, shared, wrapper-fn.
+
+// local file exports
+export {  default as @types} from "./@types";
+export {  default as LambdaEventParser} from "./LambdaEventParser";
+export {  default as LambdaSequence} from "./LambdaSequence";
+export {  default as wrapper} from "./wrapper";
+
+// directory exports
+export * from "./errors/index";
+export * from "./exported-functions/index";
+export * from "./invoke/index";
+export * from "./sequences/index";
+export * from "./shared/index";
+export * from "./wrapper-fn/index";
+
+//#endregion

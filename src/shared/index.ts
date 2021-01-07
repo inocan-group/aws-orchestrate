@@ -40,3 +40,18 @@ export * from "./serialize";
 // Keep on being awesome.
 
 // #endregion
+
+//#region autoindexed files
+
+// index last changed at: 1st Jan, 2021, 01:14 PM ( GMT-8 )
+// export: default; exclusions: foo, bar, baz, index, private.
+// files: decrypt, deserialize, encrypt, ensureFunctionName, serialize.
+
+// local file exports
+export {  default as decrypt} from "./decrypt";
+export {  default as deserialize} from "./deserialize";
+export {  default as encrypt} from "./encrypt";
+export {  default as ensureFunctionName} from "./ensureFunctionName";
+export {  default as serialize} from "./serialize";
+
+//#endregion

@@ -2,25 +2,21 @@ import {
   ErrorMeta,
   IHandlerContext,
   IOrchestrationRequestTypes,
-  ISequenceTrackerStatus,
   IWrapperOptions,
   LambdaSequence,
-  buildOrchestratedRequest,
   invokeSequence,
-  sequenceStatus,
-  invoke as invokeLambda,
   IOrchestratedResponse,
   AwsResource,
   IStepFunctionTaskResponse,
 } from "./index";
 
+import { sequenceStatus, buildOrchestratedRequest, buildStepFunctionTaskInput } from "./sequences";
+
 import {
   database,
   getLocalSecrets,
-  getNewSequence,
   getResponseHeaders,
   getSecrets,
-  invokeNewSequence,
   loggedMessages,
   maskLoggingForSecrets,
   registerSequence as register,
@@ -28,7 +24,9 @@ import {
   setContentType,
   setFnHeaders,
   IWrapperErrorContext,
-  WorkflowStatus,
+  errorHandling,
+  setWorkflowStatus,
+  getWorkflowStatus,
 } from "./wrapper-fn";
 
 import {
@@ -42,8 +40,6 @@ import type { IAdminConfig, IMockConfig } from "universal-fire";
 
 import { get } from "native-dash";
 import { logger } from "aws-log";
-import { buildStepFunctionTaskInput } from "./sequences";
-import { errorHandling } from "./wrapper-fn/errorHandling";
 
 /**
  * **wrapper**
@@ -64,11 +60,14 @@ export const wrapper = function <I, O>(
     event: IOrchestrationRequestTypes<I>,
     context: IAWSLambaContext
   ): Promise<
-    O | IApiGatewayResponse | IOrchestratedResponse<O> | IStepFunctionTaskResponse<O> | IApiGatewayErrorResponse
+    | O
+    | IApiGatewayResponse
+    | IOrchestratedResponse<O>
+    | IStepFunctionTaskResponse<O>
+    | IApiGatewayErrorResponse
   > {
     let result: O;
-    let workflowStatus: WorkflowStatus;
-    workflowStatus = "initializing";
+    setWorkflowStatus("initializing");
     context.callbackWaitsForEmptyEventLoop = false;
     const log = logger(options.loggerConfig).lambda(event, context);
     log.info("context object", { context });
@@ -77,13 +76,13 @@ export const wrapper = function <I, O>(
 
     /** the code to use for successful requests */
     let statusCode: number;
-    workflowStatus = "unboxing-from-prior-function";
+    setWorkflowStatus("unboxing-from-prior-function");
     const { request, sequence, apiGateway, headers, triggeredBy } = LambdaSequence.from<I>(event);
 
     let handlerContext: IHandlerContext<I>;
 
     try {
-      workflowStatus = "starting-try-catch";
+      setWorkflowStatus("starting-try-catch");
       msg.start(request, headers, context, sequence, apiGateway);
       // const segment = xray.getSegment();
       // segment.addMetadata("initialized", request);
@@ -91,11 +90,13 @@ export const wrapper = function <I, O>(
       maskLoggingForSecrets(getLocalSecrets(), log);
 
       // #region PREP
-      workflowStatus = "prep-starting";
+      setWorkflowStatus("prep-starting");
       const status = sequenceStatus(log.getCorrelationId());
       const registerSequence = register(log, context);
       const invoke = invokeSequence(sequence);
-      const claims: IDictionary = JSON.parse(get(apiGateway, "requestContext.authorizer.customClaims", "{}"));
+      const claims: IDictionary = JSON.parse(
+        get(apiGateway, "requestContext.authorizer.customClaims", "{}")
+      );
 
       handlerContext = {
         ...context,
@@ -121,58 +122,18 @@ export const wrapper = function <I, O>(
       };
       //#endregion
 
-      // #region CALL the HANDLER FUNCTION
-      workflowStatus = "running-function";
-      result = await fn(request, handlerContext);
-
-      log.debug(`handler function returned to wrapper function`, { result });
-      workflowStatus = "function-complete";
-      // #endregion CALL the HANDLER FUNCTION
-
-      //#region SEQUENCE (next)
-      if (sequence.isSequence && !sequence.isDone) {
-        workflowStatus = "invoke-started";
-        const [fn, requestBody] = sequence.next<O>(result);
-        msg.startingInvocation(fn, requestBody);
-        const invokeParams = await invoke(fn, requestBody);
-        msg.completingInvocation(fn, invokeParams);
-        workflowStatus = "invoke-complete";
-      } else {
-        msg.notPartOfExistingSequence();
-      }
-      //#endregion
-
-      //#region SEQUENCE (orchestration starting)
-      if (getNewSequence().isSequence) {
-        workflowStatus = "sequence-starting";
-        msg.sequenceStarting();
-        const seqResponse = await invokeNewSequence(result);
-        msg.sequenceStarted(seqResponse);
-        workflowStatus = "sequence-started";
-      } else {
-        msg.notPartOfNewSequence();
-      }
-      //#endregion
-
-      //#region SEQUENCE (send to tracker)
-      if (options.sequenceTracker && sequence.isSequence) {
-        workflowStatus = "sequence-tracker-starting";
-        msg.sequenceTracker(options.sequenceTracker, workflowStatus);
-        await invokeLambda(options.sequenceTracker, buildOrchestratedRequest<ISequenceTrackerStatus>(status(sequence)));
-        if (sequence.isDone) {
-          msg.sequenceTrackerComplete(true);
-        } else {
-          msg.sequenceTrackerComplete(false);
-        }
-      }
-      //#endregion
+ 
 
       //#region RETURN-VALUES
-      workflowStatus = "returning-values";
+      setWorkflowStatus("returning-values");
       switch (handlerContext.triggeredBy) {
         case AwsResource.ApiGateway:
           const response: IApiGatewayResponse = {
-            statusCode: statusCode ? statusCode : result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
+            statusCode: statusCode
+              ? statusCode
+              : result
+              ? HttpStatusCodes.Success
+              : HttpStatusCodes.NoContent,
             headers: getResponseHeaders(),
             body: result ? (typeof result === "string" ? result : JSON.stringify(result)) : "",
           };
@@ -180,9 +141,11 @@ export const wrapper = function <I, O>(
           log.debug("the response will be", response);
           return response;
         case AwsResource.StepFunction:
-          workflowStatus = "returning-values";
+          setWorkflowStatus("returning-values");
           const nextStepTaskInput = buildStepFunctionTaskInput<O>(result);
-          log.debug(`Wrap result and pass to the next state machine's task step`, { nextStepTaskInput });
+          log.debug(`Wrap result and pass to the next state machine's task step`, {
+            nextStepTaskInput,
+          });
           return nextStepTaskInput;
         default:
           log.debug(`Returning results to non-API Gateway caller`, { result });
@@ -200,7 +163,7 @@ export const wrapper = function <I, O>(
         awsRequestId: handlerContext.awsRequestId,
         isApiGatewayRequest: handlerContext.isApiGatewayRequest,
         request,
-        workflowStatus,
+        workflowStatus: getWorkflowStatus(),
       };
 
       return errorHandling(msg, handlerContext.errorMgmt, errorContext);
