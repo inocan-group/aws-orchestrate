@@ -23,7 +23,7 @@ export type WorkflowStatus =
  * handlers to best
  */
 export interface IWrapperErrorContext<T = Record<string, unknown>> {
-  error: Error;
+  error: Error & { code?: string; httpCode?: number; errorCode?: number };
   handlerFunction: string;
   caller?: IAWSLambaContext["clientContext"];
   isApiGatewayRequest: boolean;

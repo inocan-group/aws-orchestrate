@@ -175,8 +175,8 @@ export const wrapper = function <I, O>(
         request,
         workflowStatus: getWorkflowStatus(),
       };
-
-      return errorHandling(msg, handlerContext.errorMgmt, errorContext);
+      msg.processingError(e, errorContext.workflowStatus, errorContext.isApiGatewayRequest);
+      return errorHandling(log, handlerContext.errorMgmt, errorContext);
     }
     // #endregion ERROR-HANDLING
   };

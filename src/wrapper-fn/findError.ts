@@ -1,4 +1,7 @@
-import type { ErrorApi, ErrorHandler } from "../index";
+import type { ErrorApi } from "../index";
+import { IKnownError, KnownError } from "../errors";
+import { isBrilliantError } from "brilliant-errors";
+
 /**
  * **findError**
  *
@@ -8,16 +11,20 @@ import type { ErrorApi, ErrorHandler } from "../index";
 export function findError(
   e: Error & { code?: string },
   expectedErrors: ErrorApi
-): ErrorHandler | undefined {
-  let found: undefined | ErrorHandler;
+): IKnownError | undefined {
+  let found: undefined | IKnownError;
+
   expectedErrors.list.forEach((i) => {
+    if (isBrilliantError(e) && e) {
+    }
+
     if (
-      (e.code && e.code === i.identifiedBy.code) ||
-      (e.name && e.name == i.identifiedBy.name) ||
+      (e?.code && e.code === i.identifiedBy.code) ||
+      (e?.name && e.name == i.identifiedBy.name) ||
       (e.message && e.message.includes(i.identifiedBy.messageContains)) ||
       (i.identifiedBy.errorClass && e instanceof i.identifiedBy.errorClass)
     ) {
-      found = i;
+      found = KnownError.from(e, i.code);
     }
   });
 

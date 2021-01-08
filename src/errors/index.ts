@@ -2,15 +2,17 @@
 
 // #region autoindexed files
 
-// index last changed at: 1st Jan, 2021, 04:32 PM ( GMT-8 )
+// index last changed at: 1st Jan, 2021, 04:56 PM ( GMT-8 )
 // export: named; exclusions: index, private.
-// files: ErrorApi, ErrorHandler, HandledError, ServerlessError, UnhandledError, convertToApiGatewayError, error-types.
+// files: ErrorApi, ErrorHandler, HandledError, KnownError, ServerlessError, UnexpectedError, UnhandledError, convertToApiGatewayError, error-types.
 
 // local file exports
 export * from "./ErrorApi";
 export * from "./ErrorHandler";
 export * from "./HandledError";
+export * from "./KnownError";
 export * from "./ServerlessError";
+export * from "./UnexpectedError";
 export * from "./UnhandledError";
 export * from "./convertToApiGatewayError";
 export * from "./error-types";

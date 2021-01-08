@@ -1,38 +1,51 @@
-import { ErrorApi, ServerlessError } from "../../errors";
+import { ILoggerApi } from "aws-log";
+import {
+  convertToApiGatewayError,
+  ErrorApi,
+  IKnownError,
+  IUnexpectedError,
+  UnexpectedError,
+} from "../../errors";
 import { IWrapperErrorContext, ILoggedMessages, findError } from "../index";
 
 /**
  * Provides all error handling for the wrapper function and the contained
  * handler function.
  */
-export function errorHandling<T>(
-  msg: ILoggedMessages,
-  expectedErrors: ErrorApi,
-  context: IWrapperErrorContext<T>
-) {
+export function errorHandling<T>(log: ILoggerApi, api: ErrorApi, context: IWrapperErrorContext<T>) {
   try {
-    msg.processingError(context.error, context.workflowStatus, context.isApiGatewayRequest);
-
     // Look for a "known error"
-    const found: Error =
-      context.error instanceof ServerlessError
-        ? context.error
-        : findError(context.error, expectedErrors);
+    const found: IKnownError = findError(context.error, api);
+    let notFound: IUnexpectedError;
 
-    // if (found instanceof ServerlessError) {
-    //   found.functionName = context.functionName;
-    //   found.classification = found.classification.replace("aws-orchestrate/", `${found.functionName}/`);
-    //   found.correlationId = handlerContext.correlationId;
-    //   found.awsRequestId = handlerContext.awsRequestId;
+    if (!found) {
+      const code = context.error?.code || "unexpected-error";
+      const { request, correlationId, awsRequestId } = context;
+      notFound = UnexpectedError.from(context.error, code, {
+        request,
+        correlationId,
+        awsRequestId,
+      });
+    }
 
-    //   throw found;
-    // }
+    const wrappedError: IKnownError | IUnexpectedError = found || notFound;
+
+    if (wrappedError.isApiGatewayError) {
+      // log full error message so we have details in logs
+      log.error(wrappedError.getMessage(), wrappedError);
+      // Then, convert to a API Gateway message structure
+      // which reports to caller in a more limited fashion
+      return wrappedError.apiGatewayResponse();
+    } else {
+      log.error(wrappedError.getMessage(), wrappedError);
+      throw wrappedError;
+    }
 
     if (found) {
       if (!found.handling) {
         const err = new HandledError(found.code, e, log.getContext());
         if (isApiGatewayRequest) {
-          return convertToApiGatewayError(err);
+          return err;
         } else {
           throw err;
         }
@@ -49,7 +62,7 @@ export function errorHandling<T>(
         } else {
           // Known Error was resolved
           log.info(`There was an error which was resolved by a locally defined error handler`, {
-            error: e
+            error: e,
           });
         }
       }
@@ -57,7 +70,7 @@ export function errorHandling<T>(
       if (found.handling && found.handling.forwardTo) {
         log.info(`Forwarding error to the function "${found.handling.forwardTo}"`, {
           error: e,
-          forwardTo: found.handling.forwardTo
+          forwardTo: found.handling.forwardTo,
         });
         await invokeLambda(found.handling.forwardTo, e);
       }
@@ -66,7 +79,7 @@ export function errorHandling<T>(
       log.debug(`An error is being processed by the default handling mechanism`, {
         defaultHandling: errorMeta.defaultHandling,
         errorMessage: e.message ?? "no error messsage",
-        stack: e.stack ?? "no stack available"
+        stack: e.stack ?? "no stack available",
       });
       //#endregion
       const errPayload = { ...e, name: e.name, message: e.message, stack: e.stack };
@@ -93,7 +106,7 @@ export function errorHandling<T>(
                 return {
                   statusCode: result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent,
                   headers: getResponseHeaders(),
-                  body: result ? JSON.stringify(result) : ""
+                  body: result ? JSON.stringify(result) : "",
                 };
               } else {
                 return result;
@@ -117,7 +130,7 @@ export function errorHandling<T>(
         case "error-forwarding":
           //#region error-forwarding
           log.debug("The error will be forwarded to another function for handling", {
-            arn: handling.arn
+            arn: handling.arn,
           });
           await invokeLambda(handling.arn, errPayload);
           break;
@@ -165,7 +178,7 @@ export function errorHandling<T>(
         default:
           log.debug("Unknown handling technique for unhandled error", {
             type: (handling as any).type,
-            errorMessage: e.message
+            errorMessage: e.message,
           });
           throw new UnhandledError(errorMeta.defaultErrorCode, e);
       }
