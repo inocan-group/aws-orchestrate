@@ -10,7 +10,7 @@ import {
   IStepFunctionTaskResponse,
 } from "./index";
 
-import { sequenceStatus, buildOrchestratedRequest, buildStepFunctionTaskInput } from "./sequences";
+import { sequenceStatus, buildOrchestratedRequest, buildStepFunctionTaskInput, manageSequence } from "./sequences";
 
 import {
   database,
@@ -91,7 +91,7 @@ export const wrapper = function <I, O>(
 
       // #region PREP
       setWorkflowStatus("prep-starting");
-      const status = sequenceStatus(log.getCorrelationId());
+      
       const registerSequence = register(log, context);
       const invoke = invokeSequence(sequence);
       const claims: IDictionary = JSON.parse(
@@ -122,7 +122,14 @@ export const wrapper = function <I, O>(
       };
       //#endregion
 
- 
+      // #region CALL the HANDLER FUNCTION
+      setWorkflowStatus("running-function");
+      result = await fn(request, handlerContext);
+      log.debug(`handler function returned to wrapper function`, { result });
+      setWorkflowStatus("function-complete");
+      // #endregion CALL the HANDLER FUNCTION
+
+      await manageSequence<O>(sequence, handlerContext.correlationId, msg, options);
 
       //#region RETURN-VALUES
       setWorkflowStatus("returning-values");
@@ -141,7 +148,6 @@ export const wrapper = function <I, O>(
           log.debug("the response will be", response);
           return response;
         case AwsResource.StepFunction:
-          setWorkflowStatus("returning-values");
           const nextStepTaskInput = buildStepFunctionTaskInput<O>(result);
           log.debug(`Wrap result and pass to the next state machine's task step`, {
             nextStepTaskInput,

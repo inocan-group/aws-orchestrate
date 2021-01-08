@@ -1,19 +1,27 @@
-import { getNewSequence, ILoggedMessages } from "..";
-import { setWorkflowStatus } from "../wrapper-fn/workflowStatus";
+import {
+  buildOrchestratedRequest,
+  getNewSequence,
+  ILoggedMessages,
+  ISequenceTrackerStatus,
+  IWrapperOptions,
+  invoke,
+  sequenceStatus
+} from "..";
+import { getWorkflowStatus, invokeNewSequence, setWorkflowStatus } from "../wrapper-fn";
+import { LambdaSequence } from "../LambdaSequence";
 
 /**
  * Manages running a wrapped handler function through the
- * workflow of a LambdaSequence.
+ * workflow of a LambdaSequence. If this function is not
+ * being managed as part of sequence, it will return gracefully.
  */
-export async function manageSequence(msg: ILoggedMessages, log, req, ctx) {
-  // #region CALL the HANDLER FUNCTION
-  setWorkflowStatus("running-function");
-  result = await fn(request, handlerContext);
-  log.debug(`handler function returned to wrapper function`, { result });
-  setWorkflowStatus("function-complete");
-  // #endregion CALL the HANDLER FUNCTION
-
-  //#region SEQUENCE (next)
+export async function manageSequence<O>(
+  sequence: LambdaSequence,
+  correlationId: string,
+  msg: ILoggedMessages,
+  options: IWrapperOptions
+): Promise<void> {
+  // #region SEQUENCE (next)
   if (sequence.isSequence && !sequence.isDone) {
     setWorkflowStatus("invoke-started");
     const [fn, requestBody] = sequence.next<O>(result);
@@ -24,9 +32,9 @@ export async function manageSequence(msg: ILoggedMessages, log, req, ctx) {
   } else {
     msg.notPartOfExistingSequence();
   }
-  //#endregion
+  // #endregion
 
-  //#region SEQUENCE (orchestration starting)
+  // #region SEQUENCE (orchestration starting)
   if (getNewSequence().isSequence) {
     setWorkflowStatus("sequence-starting");
     msg.sequenceStarting();
@@ -36,13 +44,14 @@ export async function manageSequence(msg: ILoggedMessages, log, req, ctx) {
   } else {
     msg.notPartOfNewSequence();
   }
-  //#endregion
+  // #endregion
 
-  //#region SEQUENCE (send to tracker)
+  // #region SEQUENCE (send to tracker)
   if (options.sequenceTracker && sequence.isSequence) {
     setWorkflowStatus("sequence-tracker-starting");
+    const status = sequenceStatus(correlationId);
     msg.sequenceTracker(options.sequenceTracker, getWorkflowStatus());
-    await invokeLambda(
+    await invoke(
       options.sequenceTracker,
       buildOrchestratedRequest<ISequenceTrackerStatus>(status(sequence))
     );
@@ -52,5 +61,6 @@ export async function manageSequence(msg: ILoggedMessages, log, req, ctx) {
       msg.sequenceTrackerComplete(false);
     }
   }
+
   //#endregion
 }
