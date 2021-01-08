@@ -4,14 +4,11 @@
 
 // index last changed at: 1st Jan, 2021, 04:22 PM ( GMT-8 )
 // export: named; exclusions: index, private.
-// files: decrypt, deserialize, encrypt, ensureFunctionName, serialize.
+// files: errorHandling, manageSequence.
 
 // local file exports
-export * from "./decrypt";
-export * from "./deserialize";
-export * from "./encrypt";
-export * from "./ensureFunctionName";
-export * from "./serialize";
+export * from "./errorHandling";
+export * from "./manageSequence";
 
 // Note:
 // -----

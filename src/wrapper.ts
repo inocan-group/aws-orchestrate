@@ -1,5 +1,5 @@
 import {
-  ErrorMeta,
+  ErrorApi,
   IHandlerContext,
   IOrchestrationRequestTypes,
   IWrapperOptions,
@@ -10,7 +10,7 @@ import {
   IStepFunctionTaskResponse,
 } from "./index";
 
-import { sequenceStatus, buildOrchestratedRequest, buildStepFunctionTaskInput, manageSequence } from "./sequences";
+import { sequenceStatus, buildOrchestratedRequest, buildStepFunctionTaskInput } from "./sequences";
 
 import {
   database,
@@ -24,9 +24,10 @@ import {
   setContentType,
   setFnHeaders,
   IWrapperErrorContext,
-  errorHandling,
   setWorkflowStatus,
   getWorkflowStatus,
+  manageSequence,
+  errorHandling,
 } from "./wrapper-fn";
 
 import {
@@ -72,7 +73,7 @@ export const wrapper = function <I, O>(
     const log = logger(options.loggerConfig).lambda(event, context);
     log.info("context object", { context });
     const msg = loggedMessages(log);
-    const errorMeta: ErrorMeta = new ErrorMeta();
+    const errorMeta: ErrorApi = new ErrorApi();
 
     /** the code to use for successful requests */
     let statusCode: number;
@@ -91,7 +92,7 @@ export const wrapper = function <I, O>(
 
       // #region PREP
       setWorkflowStatus("prep-starting");
-      
+
       const registerSequence = register(log, context);
       const invoke = invokeSequence(sequence);
       const claims: IDictionary = JSON.parse(
@@ -120,7 +121,7 @@ export const wrapper = function <I, O>(
         invoke,
         triggeredBy,
       };
-      //#endregion
+      // #endregion PREP
 
       // #region CALL the HANDLER FUNCTION
       setWorkflowStatus("running-function");
@@ -129,9 +130,11 @@ export const wrapper = function <I, O>(
       setWorkflowStatus("function-complete");
       // #endregion CALL the HANDLER FUNCTION
 
-      await manageSequence<O>(sequence, handlerContext.correlationId, msg, options);
+      // #region SEQUENCES
+      await manageSequence<O>(sequence, result, handlerContext.correlationId, msg, options);
+      // #endregion
 
-      //#region RETURN-VALUES
+      // #region RETURN-VALUES
       setWorkflowStatus("returning-values");
       switch (handlerContext.triggeredBy) {
         case AwsResource.ApiGateway:
@@ -157,7 +160,8 @@ export const wrapper = function <I, O>(
           log.debug(`Returning results to non-API Gateway caller`, { result });
           return result;
       }
-      // #endregion
+      // #endregion RETURN-VALUES
+
       // #region ERROR-HANDLING
     } catch (e) {
       const errorContext: IWrapperErrorContext<I> = {

@@ -1,11 +1,14 @@
-import type { ErrorMeta, ErrorHandler } from "../index";
+import type { ErrorApi, ErrorHandler } from "../index";
 /**
  * **findError**
  *
  * Look for the error encountered within the "known errors" that
  * the function defined and return it's `ErrorHandler` if found.
  */
-export function findError(e: Error & { code?: string }, expectedErrors: ErrorMeta): ErrorHandler | undefined {
+export function findError(
+  e: Error & { code?: string },
+  expectedErrors: ErrorApi
+): ErrorHandler | undefined {
   let found: undefined | ErrorHandler;
   expectedErrors.list.forEach((i) => {
     if (

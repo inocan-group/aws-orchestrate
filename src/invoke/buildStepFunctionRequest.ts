@@ -1,6 +1,5 @@
 import { IDictionary } from "common-types";
-import { buildOrchestratedRequest, buildStepFunctionTaskInput, getHeaderSecrets, IParsedArn } from "../index";
-import { getCorrelationId, getContext } from "aws-log";
+import { buildStepFunctionTaskInput, IParsedArn } from "../index";
 
 /**
  * buildRequest
@@ -23,6 +22,6 @@ export function buildStepFunctionRequest(arn: IParsedArn, request: IDictionary, 
   return {
     stateMachineArn,
     input: JSON.stringify(payload),
-    name,
+    name
   } as import("aws-sdk").StepFunctions.StartExecutionInput;
 }

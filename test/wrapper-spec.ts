@@ -3,7 +3,7 @@ import { wrapper, IOrchestratedRequest } from "../src/index";
 import { LambdaSequence } from "../src/LambdaSequence";
 import { HandledError } from "../src/errors/HandledError";
 import { UnhandledError } from "../src/errors/UnhandledError";
-import { DEFAULT_ERROR_CODE } from "../src/errors/ErrorMeta";
+import { DEFAULT_ERROR_CODE } from "../src/errors/ErrorApi";
 
 interface IRequest {
   foo: string;

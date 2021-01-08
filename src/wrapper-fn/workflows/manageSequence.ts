@@ -1,14 +1,15 @@
+import { IWrapperOptions } from "../../@types";
 import {
-  buildOrchestratedRequest,
   getNewSequence,
+  getWorkflowStatus,
   ILoggedMessages,
-  ISequenceTrackerStatus,
-  IWrapperOptions,
-  invoke,
-  sequenceStatus
+  invokeNewSequence,
+  setWorkflowStatus
 } from "..";
-import { getWorkflowStatus, invokeNewSequence, setWorkflowStatus } from "../wrapper-fn";
-import { LambdaSequence } from "../LambdaSequence";
+import { LambdaSequence } from "../../LambdaSequence";
+import { invoke } from "../../invoke";
+import { buildOrchestratedRequest, sequenceStatus } from "../../sequences";
+import { ISequenceTrackerStatus } from "../../exported-functions";
 
 /**
  * Manages running a wrapped handler function through the
@@ -17,6 +18,7 @@ import { LambdaSequence } from "../LambdaSequence";
  */
 export async function manageSequence<O>(
   sequence: LambdaSequence,
+  result: Readonly<O>,
   correlationId: string,
   msg: ILoggedMessages,
   options: IWrapperOptions

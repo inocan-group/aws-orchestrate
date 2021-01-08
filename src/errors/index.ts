@@ -2,21 +2,18 @@
 
 // #region autoindexed files
 
-// index last changed at: 1st Jan, 2021, 05:33 PM ( GMT-8 )
+// index last changed at: 1st Jan, 2021, 04:32 PM ( GMT-8 )
 // export: named; exclusions: index, private.
-// files: CallDepthExceeded, ErrorHandler, ErrorMeta, ErrorWithinError, HandledError, LambdaError, RethrowError, ServerlessError, UnhandledError, convertToApiGatewayError.
+// files: ErrorApi, ErrorHandler, HandledError, ServerlessError, UnhandledError, convertToApiGatewayError, error-types.
 
 // local file exports
-export * from "./CallDepthExceeded";
+export * from "./ErrorApi";
 export * from "./ErrorHandler";
-export * from "./ErrorMeta";
-export * from "./ErrorWithinError";
 export * from "./HandledError";
-export * from "./LambdaError";
-export * from "./RethrowError";
 export * from "./ServerlessError";
 export * from "./UnhandledError";
 export * from "./convertToApiGatewayError";
+export * from "./error-types";
 
 // Note:
 // -----
@@ -45,19 +42,3 @@ export * from "./convertToApiGatewayError";
 // Keep on being awesome.
 
 // #endregion
-
-//#region autoindexed files
-
-// index last changed at: 1st Jan, 2021, 01:14 PM ( GMT-8 )
-// export: default; exclusions: foo, bar, baz, index, private.
-// files: ErrorHandler, ErrorMeta, HandledError, ServerlessError, UnhandledError, convertToApiGatewayError.
-
-// local file exports
-export {  default as ErrorHandler} from "./ErrorHandler";
-export {  default as ErrorMeta} from "./ErrorMeta";
-export {  default as HandledError} from "./HandledError";
-export {  default as ServerlessError} from "./ServerlessError";
-export {  default as UnhandledError} from "./UnhandledError";
-export {  default as convertToApiGatewayError} from "./convertToApiGatewayError";
-
-//#endregion

@@ -1,17 +1,23 @@
-import { ErrorHandler, ErrorMeta, ServerlessError } from "../errors";
-import { IWrapperErrorContext, ILoggedMessages, findError } from "./index";
+import { ErrorApi, ServerlessError } from "../../errors";
+import { IWrapperErrorContext, ILoggedMessages, findError } from "../index";
 
 /**
  * Provides all error handling for the wrapper function and the contained
  * handler function.
  */
-export function errorHandling<T>(msg: ILoggedMessages, expectedErrors: ErrorMeta, context: IWrapperErrorContext<T>) {
+export function errorHandling<T>(
+  msg: ILoggedMessages,
+  expectedErrors: ErrorApi,
+  context: IWrapperErrorContext<T>
+) {
   try {
     msg.processingError(context.error, context.workflowStatus, context.isApiGatewayRequest);
 
     // Look for a "known error"
     const found: Error =
-      context.error instanceof ServerlessError ? context.error : findError(context.error, expectedErrors);
+      context.error instanceof ServerlessError
+        ? context.error
+        : findError(context.error, expectedErrors);
 
     // if (found instanceof ServerlessError) {
     //   found.functionName = context.functionName;
@@ -42,14 +48,16 @@ export function errorHandling<T>(msg: ILoggedMessages, expectedErrors: ErrorMeta
           }
         } else {
           // Known Error was resolved
-          log.info(`There was an error which was resolved by a locally defined error handler`, { error: e });
+          log.info(`There was an error which was resolved by a locally defined error handler`, {
+            error: e
+          });
         }
       }
 
       if (found.handling && found.handling.forwardTo) {
         log.info(`Forwarding error to the function "${found.handling.forwardTo}"`, {
           error: e,
-          forwardTo: found.handling.forwardTo,
+          forwardTo: found.handling.forwardTo
         });
         await invokeLambda(found.handling.forwardTo, e);
       }
@@ -58,7 +66,7 @@ export function errorHandling<T>(msg: ILoggedMessages, expectedErrors: ErrorMeta
       log.debug(`An error is being processed by the default handling mechanism`, {
         defaultHandling: errorMeta.defaultHandling,
         errorMessage: e.message ?? "no error messsage",
-        stack: e.stack ?? "no stack available",
+        stack: e.stack ?? "no stack available"
       });
       //#endregion
       const errPayload = { ...e, name: e.name, message: e.message, stack: e.stack };
@@ -85,7 +93,7 @@ export function errorHandling<T>(msg: ILoggedMessages, expectedErrors: ErrorMeta
                 return {
                   statusCode: result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent,
                   headers: getResponseHeaders(),
-                  body: result ? JSON.stringify(result) : "",
+                  body: result ? JSON.stringify(result) : ""
                 };
               } else {
                 return result;
@@ -109,7 +117,7 @@ export function errorHandling<T>(msg: ILoggedMessages, expectedErrors: ErrorMeta
         case "error-forwarding":
           //#region error-forwarding
           log.debug("The error will be forwarded to another function for handling", {
-            arn: handling.arn,
+            arn: handling.arn
           });
           await invokeLambda(handling.arn, errPayload);
           break;
@@ -157,7 +165,7 @@ export function errorHandling<T>(msg: ILoggedMessages, expectedErrors: ErrorMeta
         default:
           log.debug("Unknown handling technique for unhandled error", {
             type: (handling as any).type,
-            errorMessage: e.message,
+            errorMessage: e.message
           });
           throw new UnhandledError(errorMeta.defaultErrorCode, e);
       }
@@ -173,10 +181,13 @@ export function errorHandling<T>(msg: ILoggedMessages, expectedErrors: ErrorMeta
     }
 
     const conductorErrorHandler: OrchestratedErrorHandler | false =
-      sequence.activeFn && sequence.activeFn.onError && typeof sequence.activeFn.onError === "function"
+      sequence.activeFn &&
+      sequence.activeFn.onError &&
+      typeof sequence.activeFn.onError === "function"
         ? (sequence.activeFn.onError as OrchestratedErrorHandler)
         : false;
-    const resolvedByConductor = async () => (conductorErrorHandler ? conductorErrorHandler(e) : false);
+    const resolvedByConductor = async () =>
+      conductorErrorHandler ? conductorErrorHandler(e) : false;
 
     const forwardedByConductor: OrchestratedErrorForwarder | false =
       sequence.activeFn && sequence.activeFn.onError && Array.isArray(sequence.activeFn.onError)
