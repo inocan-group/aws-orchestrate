@@ -1,4 +1,6 @@
-import { ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders, getSecrets } from "./private";
+import { ErrorApi, LambdaSequence, UnconstrainedHttpHeaders } from "./index";
+import type { getSecrets } from "./wrapper-fn/index";
+
 import {
   IAWSLambaContext,
   IAWSLambdaProxyIntegrationRequest,
@@ -9,17 +11,15 @@ import {
   Omit,
   arn,
 } from "common-types";
-import type {  IAdminConfig, IMockConfig, IRealTimeAdmin } from "universal-fire";
+import type { IAdminConfig, IMockConfig, IRealTimeAdmin } from "universal-fire";
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
 
 import { ILoggerApi, IAwsLogConfig } from "aws-log";
-
-
 type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 /**
  * The meta-data for a handler function; this symbol is now deprecated
  * in favor of `IHandlerMeta`.
- * 
+ *
  * @deprecated
  */
 export type IWrapperFunction = IHandlerConfig;
@@ -51,7 +51,7 @@ export interface IWrapperOptions {
    */
   sequenceTracker?: arn;
 
-  loggerConfig?: Partial<IAwsLogConfig>
+  loggerConfig?: Partial<IAwsLogConfig>;
 }
 
 export type IExpectedHeaders = IHttpRequestHeaders & IDictionary;
@@ -144,23 +144,23 @@ export interface ICompressedSection {
   data: string;
 }
 /** @inheritdoc */
-export type IStepFunctionTaskRequest<T> =  IStepFunctionTaskPayload<T>
+export type IStepFunctionTaskRequest<T> = IStepFunctionTaskPayload<T>;
 /** @inheritdoc */
-export type IStepFunctionTaskResponse<T> =  IStepFunctionTaskPayload<T>
+export type IStepFunctionTaskResponse<T> = IStepFunctionTaskPayload<T>;
 
 /**
  *  **IStepFunctionTaskPayload**
- * 
+ *
  * When making a step function invocation _body_ it's going to be the payload that the user return from his lambda function
  * or it will contain the input that the user receive as `request`
- * 
- * It's being described as `payload` because it's a type that is going to be used to wrap the state machine's state and 
+ *
+ * It's being described as `payload` because it's a type that is going to be used to wrap the state machine's state and
  * make the user to have the same experience of `fn`-to-`fn` functionality. Ex: (Passing client context props as ssm secrets, correlationId, etc)
  */
 export interface IStepFunctionTaskPayload<T> {
-  type: "step-fn-message-body",
-  body: T,
-  headers: IOrchestratedHeaders | ICompressedSection
+  type: "step-fn-message-body";
+  body: T;
+  headers: IOrchestratedHeaders | ICompressedSection;
 }
 
 /**
@@ -186,7 +186,7 @@ export interface IOrchestratedResponse<T> {
   type: "orchestrated-message-body";
   body: T | ICompressedSection;
   sequence: ISerializedSequence | ICompressedSection;
-  headers: IOrchestratedHeaders | ICompressedSection; 
+  headers: IOrchestratedHeaders | ICompressedSection;
 }
 
 /**
@@ -240,7 +240,7 @@ export interface ILambaSequenceFromResponse<T> {
   apiGateway?: IAWSLambdaProxyIntegrationRequest;
   sequence: LambdaSequence;
   headers: Omit<IOrchestratedHeaders, "X-Correlation-Id"> | IHttpRequestHeaders;
-  triggeredBy: AwsResource
+  triggeredBy: AwsResource;
 }
 
 /**
@@ -270,9 +270,9 @@ export interface IErrorIdentification {
  * It should be become bigger as we need more resources types
  */
 export enum AwsResource {
-  Lambda = 'Lambda',
-  StepFunction = 'StepFunction',
-  ApiGateway = 'ApiGateway',
+  Lambda = "Lambda",
+  StepFunction = "StepFunction",
+  ApiGateway = "ApiGateway",
 }
 
 export interface IErrorHandling {
@@ -384,7 +384,7 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * Allows you to manage how to handle errors which are encountered; both _expected_
    * and _unexpected_ are captured and each can be handled in whichever way you prefer.
    */
-  errorMgmt: ErrorMeta;
+  errorMgmt: ErrorApi;
   /**
    * The **header** for any API Gateway originated function is `appliacation/json` but this
    * can be changed to something else if needed.
@@ -406,10 +406,10 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * **Note:** this function automatically forwards `X-Correlation-Id`
    * and any secrets that the execution function has gotten
    */
-  invoke: <T = IDictionary, H = UnconstrainedHttpHeaders>(
+  invoke: <TRequest = IDictionary, THeaders = UnconstrainedHttpHeaders>(
     fnArn: string,
-    request: T,
-    additionalHeaders?: H
+    request: TRequest,
+    additionalHeaders?: THeaders
   ) => Promise<InvocationResponse>;
   /**
    * Allows the handler author to _register_ a new `LambdaSequence` for execution.

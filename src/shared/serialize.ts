@@ -1,5 +1,5 @@
 import { IDictionary } from "common-types";
-import { encrypt } from "../private";
+import { encrypt } from "../index";
 
 /**
  * **serialize**

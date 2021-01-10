@@ -13,7 +13,10 @@ interface Console {
   _restored: boolean;
   // Console: typeof NodeJS.Console;
   assert(value: any, message?: string, ...optionalParams: any[]): void;
-  dir(obj: any, options?: { showHidden?: boolean; depth?: number; colors?: boolean }): void;
+  dir(
+    obj: any,
+    options?: { showHidden?: boolean; depth?: number; colors?: boolean }
+  ): void;
   error(message?: any, ...optionalParams: any[]): void;
   info(message?: any, ...optionalParams: any[]): void;
   log(message?: any, ...optionalParams: any[]): void;
@@ -45,7 +48,9 @@ export function setupEnv() {
       process.env.AWS_STAGE = "test";
     }
     const current = process.env;
-    const yamlConfig: IDictionary = yaml.load(fs.readFileSync("./env.yml", "utf8"));
+    const yamlConfig: IDictionary = yaml.load(
+      fs.readFileSync("./env.yml", "utf8")
+    ) as IDictionary;
     const combined = {
       ...yamlConfig[process.env.AWS_STAGE],
       ...process.env,

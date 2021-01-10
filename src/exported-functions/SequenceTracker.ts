@@ -1,4 +1,5 @@
-import { IHandlerFunction, IErrorClass, IWrapperFunction, wrapper, getSecrets } from "../private";
+import { IHandlerFunction, IErrorClass, IWrapperFunction, wrapper } from "../index";
+import { getSecrets } from "../wrapper-fn";
 
 export const SequenceTrackerConfig: IWrapperFunction = {
   description: `Allows writing the status of LambdaSequence's to Firebase to open up the possibility of providing functional HTTP statuses`,

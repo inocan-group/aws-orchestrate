@@ -1,8 +1,10 @@
 import { HttpStatusCodes, IDictionary } from "common-types";
-import { IApiGateway, IErrorClass, LambdaSequence, getNewSequence, getRequestHeaders } from "../private";
-
+import { IApiGateway, IErrorClass, LambdaSequence } from "../index";
+import { getNewSequence, getRequestHeaders } from "./index";
 import { ILoggerApi } from "aws-log";
 import { get } from "native-dash";
+
+export type ILoggedMessages = ReturnType<typeof loggedMessages>;
 
 /**
  * A collection of log messages that the wrapper function will emit
@@ -18,7 +20,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
   ) {
     log.info(
       `The handler function ${get(context, "functionName")} has started.  ${
-      get(sequence, "isSequence", false) ? ` [ ${log.getCorrelationId()} ].` : " [ not part of sequence ]."
+        get(sequence, "isSequence", false) ? ` [ ${log.getCorrelationId()} ].` : " [ not part of sequence ]."
       }`,
       {
         request,
@@ -38,7 +40,9 @@ export const loggedMessages = (log: ILoggerApi) => ({
   },
 
   sequenceStarted(seqResponse: any) {
-    log.debug(`The NEW sequence this function registered was successfully invoked`, { seqResponse });
+    log.debug(`The NEW sequence this function registered was successfully invoked`, {
+      seqResponse,
+    });
   },
 
   startingInvocation(arn: string, params: IDictionary) {
@@ -87,11 +91,11 @@ export const loggedMessages = (log: ILoggerApi) => ({
    * as soon as an error is detected in the wrapper, write a log message about the error
    */
   processingError: (e: IErrorClass, workflowStatus: string, isApiGateway: boolean = false) => {
-    const stack = e.stack
+    const stack = e.stack;
     const errorMessage = e.message ?? "no-message";
     log.info(
       `Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}${
-      isApiGateway ? ", ApiGateway" : ""
+        isApiGateway ? ", ApiGateway" : ""
       } ]`,
       {
         errorMessage,

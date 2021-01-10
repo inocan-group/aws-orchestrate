@@ -3,8 +3,7 @@ import { wrapper, IOrchestratedRequest } from "../src/index";
 import { LambdaSequence } from "../src/LambdaSequence";
 import { HandledError } from "../src/errors/HandledError";
 import { UnhandledError } from "../src/errors/UnhandledError";
-import { DEFAULT_ERROR_CODE } from "../src/errors/ErrorMeta";
-import { HttpStatusCodes } from "common-types";
+import { DEFAULT_ERROR_CODE } from "../src/errors/ErrorApi";
 
 interface IRequest {
   foo: string;
@@ -26,7 +25,10 @@ const handlerErrorFn: IHandlerFunction<IRequest, IResponse> = async (event, cont
   throw new Error("this is an error god dammit");
 };
 
-const handlerErrorFnWithDefaultChanged: IHandlerFunction<IRequest, IResponse> = async (event, context) => {
+const handlerErrorFnWithDefaultChanged: IHandlerFunction<IRequest, IResponse> = async (
+  event,
+  context
+) => {
   context.errorMgmt.setDefaultErrorCode(400);
   throw new Error("this is an error god dammit");
 };
@@ -34,8 +36,15 @@ const handlerErrorFnWithDefaultChanged: IHandlerFunction<IRequest, IResponse> = 
 const handlerErrorFnWithKnownErrors: (
   cbResult: boolean,
   isHandled: boolean
-) => IHandlerFunction<IRequest, IResponse> = (cbResult, isHandled = false) => async (event, context) => {
-  context.errorMgmt.addHandler(404, { errorClass: HandledError }, { callback: (e) => cbResult });
+) => IHandlerFunction<IRequest, IResponse> = (cbResult, isHandled = false) => async (
+  event,
+  context
+) => {
+  context.errorMgmt.addHandler(
+    404,
+    { errorClass: HandledError },
+    { callback: (e) => cbResult }
+  );
   const BOGUS_ERROR_CODE = 399;
 
   if (isHandled) {
@@ -56,9 +65,7 @@ const simpleEvent: IRequest = {
 
 const orchestrateEvent: IOrchestratedRequest<IRequest> = {
   type: "orchestrated-message-body",
-  sequence: LambdaSequence.add("fn1")
-    .add("fn2", { foo: 1, bar: 2 })
-    .toObject(),
+  sequence: LambdaSequence.add("fn1").add("fn2", { foo: 1, bar: 2 }).toObject(),
   headers: {
     "Content-Type": "application/json",
     "X-Correlation-Id": "12345",
@@ -185,13 +192,19 @@ describe("Handler Wrapper => ", () => {
       // error is handled
       expect(response).toBeUndefined();
     } catch (e) {
-      throw new Error("there should not have been an error when callback resolves the error");
+      throw new Error(
+        "there should not have been an error when callback resolves the error"
+      );
     }
   });
 
   it("Known error is identified with part of 'message'", async () => {
     const fn: IHandlerFunction<IRequest, IResponse> = async (event, context) => {
-      context.errorMgmt.addHandler(401, { messageContains: "help me" }, { callback: () => false });
+      context.errorMgmt.addHandler(
+        401,
+        { messageContains: "help me" },
+        { callback: () => false }
+      );
       const e = Error("help me") as Error & { code: string };
       e.code = "secret-code";
       e.name = "named and shamed";

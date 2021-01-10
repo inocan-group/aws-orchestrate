@@ -1,7 +1,7 @@
 import { IDictionary, IHttpResponseHeaders } from "common-types";
 import { ILoggerApi, getCorrelationId, logger } from "aws-log";
-import { IOrchestratedHeaders, getLocalSecrets, saveSecretsLocally, sequenceStatus } from "../private";
-
+import { IOrchestratedHeaders, sequenceStatus } from "../index";
+import { getLocalSecrets, saveSecretsLocally } from "./index";
 import { set } from "native-dash";
 
 /**
@@ -47,16 +47,19 @@ export function getContentType() {
  * point by a call to `getLocalSecrets()`.
  */
 export function saveSecretHeaders(headers: IDictionary, log: ILoggerApi) {
-  let secrets: string[] = [];
-  const localSecrets = Object.keys(headers).reduce((headerSecrets: IDictionary, key: keyof typeof headers & string) => {
-    if (key.slice(0, 4) === `O-S-`) {
-      const [module, name] = key.slice(4).split("/");
-      const dotPath = `${module}.${name}`;
-      set(headerSecrets, dotPath, headers[key]);
-      secrets.push(dotPath);
-    }
-    return headerSecrets;
-  }, {});
+  const secrets: string[] = [];
+  const localSecrets = Object.keys(headers).reduce(
+    (headerSecrets: IDictionary, key: keyof typeof headers & string) => {
+      if (key.slice(0, 4) === `O-S-`) {
+        const [module, name] = key.slice(4).split("/");
+        const dotPath = `${module}.${name}`;
+        set(headerSecrets, dotPath, headers[key]);
+        secrets.push(dotPath);
+      }
+      return headerSecrets;
+    },
+    {}
+  );
   if (secrets.length > 0) {
     log.debug(`Secrets [ ${secrets.length} ] from headers were identified`, {
       secrets,
@@ -73,29 +76,34 @@ export function saveSecretHeaders(headers: IDictionary, log: ILoggerApi) {
 export function getHeaderSecrets() {
   const log = logger().reloadContext();
   const modules = getLocalSecrets();
-  return Object.keys(modules).reduce((headerSecrets: IDictionary, mod: keyof typeof modules & string) => {
-    const secrets = modules[mod];
-    if (typeof secrets === "object") {
-      Object.keys(secrets).forEach((secret) => {
-        headerSecrets[`O-S-${mod}/${secret}`] = modules[mod][secret];
-      });
-    } else {
-      log.warn(
-        `Attempt to generate header secrets but module "${mod}" is not a hash of name/values. Ignoring this module but continuing.`,
-        {
-          module: mod,
-          type: typeof secrets,
-          localModules: Object.keys(modules),
-        }
-      );
-    }
-    return headerSecrets;
-  }, {});
+  return Object.keys(modules).reduce(
+    (headerSecrets: IDictionary, mod: keyof typeof modules & string) => {
+      const secrets = modules[mod];
+      if (typeof secrets === "object") {
+        Object.keys(secrets).forEach((secret) => {
+          headerSecrets[`O-S-${mod}/${secret}`] = modules[mod][secret];
+        });
+      } else {
+        log.warn(
+          `Attempt to generate header secrets but module "${mod}" is not a hash of name/values. Ignoring this module but continuing.`,
+          {
+            module: mod,
+            type: typeof secrets,
+            localModules: Object.keys(modules),
+          }
+        );
+      }
+      return headerSecrets;
+    },
+    {}
+  );
 }
 
 export function setContentType(type: string) {
   if (!type.includes("/")) {
-    throw new Error(`The value sent to setContentType ("${type}") is not valid; it must be a valid MIME type.`);
+    throw new Error(
+      `The value sent to setContentType ("${type}") is not valid; it must be a valid MIME type.`
+    );
   }
   contentType = type;
 }

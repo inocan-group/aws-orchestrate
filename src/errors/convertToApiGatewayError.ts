@@ -1,12 +1,14 @@
-import { DEFAULT_ERROR_CODE } from "./ErrorMeta";
-import { IApiGatewayErrorResponse } from "common-types";
+import { DEFAULT_ERROR_CODE } from "./ErrorApi";
 import { getResponseHeaders } from "../wrapper-fn/headers";
 import { IErrorClass } from "../@types";
 /**
  * converts an `Error` (or subclass) into a error hash
  * which **API Gateway** can process.
  */
-export function convertToApiGatewayError(e: IErrorClass, defaultCode: number = DEFAULT_ERROR_CODE): any {
+export function convertToApiGatewayError(
+  e: IErrorClass,
+  defaultCode: number = DEFAULT_ERROR_CODE
+): any {
   return {
     isBase64Encoded: false,
     headers: getResponseHeaders(),
@@ -14,7 +16,7 @@ export function convertToApiGatewayError(e: IErrorClass, defaultCode: number = D
     body: JSON.stringify({
       errorType: e.name || e.code || "Error",
       errorMessage: e.message,
-      stackTrace: e.stack
-    })
+      stackTrace: e.stack,
+    }),
   };
 }

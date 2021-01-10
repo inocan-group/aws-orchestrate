@@ -1,32 +1,13 @@
 import { ErrorHandler } from "./ErrorHandler";
-import { IErrorIdentification, IErrorHandling, IErrorHandlerFunction, IErrorClass, IDefaultHandling } from "../@types";
+import {
+  IErrorIdentification,
+  IErrorHandling,
+  IErrorHandlerFunction,
+  IErrorClass,
+  IDefaultHandling,
+} from "../@types";
+
 export const DEFAULT_ERROR_CODE = 500;
-
-export interface IError {
-  message?: string;
-  name?: string;
-  code?: string;
-  stack?: string;
-}
-
-export interface IErrorMessageControl<T extends IError = Error> {
-  (err: T): string | string;
-}
-
-export interface IExpectedErrorOptions<T extends IError = Error> {
-  error?: new <T extends IError>() => T;
-  /**
-   * You can _prepend_ a static string to the error message's
-   * "message" or instead have the error passed into a function
-   * to generate the message.
-   */
-  message?: IErrorMessageControl<T>;
-  /**
-   * Set to true if this error should be thrown in the event of
-   * and unhandled error.
-   */
-  isDefault?: boolean;
-}
 
 /**
  * Is a container for a serverless function that
@@ -40,7 +21,7 @@ export interface IExpectedErrorOptions<T extends IError = Error> {
  * By default, all errors are given a 500 exit code and log the error at the "error" severity
  * level but perform no additional work.
  */
-export class ErrorMeta {
+export class ErrorApi {
   private _errors: ErrorHandler[] = [];
   private _defaultErrorCode: number = DEFAULT_ERROR_CODE;
   private _arn: string;
@@ -84,8 +65,8 @@ export class ErrorMeta {
     return this;
   }
 
-  setDefaultHandler(fn: IErrorHandlerFunction): ErrorMeta;
-  setDefaultHandler(err: Error): ErrorMeta;
+  setDefaultHandler(fn: IErrorHandlerFunction): ErrorApi;
+  setDefaultHandler(err: Error): ErrorApi;
   /**
    * **setDefaultHandler**
    *
@@ -102,15 +83,15 @@ export class ErrorMeta {
    *
    * In all cases, it will replace the runtime error's stack with what was passed in.
    */
-  setDefaultHandler(fn: (err: Error) => Promise<boolean> | boolean): ErrorMeta;
+  setDefaultHandler(fn: (err: Error) => Promise<boolean> | boolean): ErrorApi;
   /**
    * **setDefaultHandler**
    *
    * @param arn the function's arn (this can be the abbreviated variety so long as
    * proper ENV variables are set)
    */
-  setDefaultHandler(arn: string): ErrorMeta;
-  setDefaultHandler(param: string | Error | IErrorHandlerFunction): ErrorMeta {
+  setDefaultHandler(arn: string): ErrorApi;
+  setDefaultHandler(param: string | Error | IErrorHandlerFunction): ErrorApi {
     switch (typeof param) {
       case "string":
         this._arn = param;
