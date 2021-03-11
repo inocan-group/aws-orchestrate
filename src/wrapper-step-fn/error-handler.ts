@@ -1,10 +1,6 @@
 import { hash } from 'native-dash'
-import {
-  ErrDefn,
-  IErrHandlerApi,
-  IErrorHandlerPointer,
-  IErrorTypeSelector,
-} from '../private'
+import { ServerlessError } from '../errors'
+import { ErrDefn, IErrHandlerApi, IErrorHandlerPointer, IErrorTypeSelector } from '../private'
 import {
   Finalized,
   IConfigurableStepFn,
@@ -58,7 +54,7 @@ const defaultRetryHandler = (state: Record<string, RetryOptions>) => (options: R
 /**
  * Define how step function's errors or lambda fn execution errors are going to be handled with a fluent API syntax
  * Allows to configure options to make our state to be executed again.
- * 
+ *
  * @param handlerFn a callback that exposes methods to be used to defined an error retry handler.
  */
 export function retryHandler(handlerFn: (r: IRetryHandlerApi) => Record<string, RetryOptions>) {
@@ -74,7 +70,7 @@ export function retryHandler(handlerFn: (r: IRetryHandlerApi) => Record<string, 
 /**
  * Define how step function's errors or lambda fn execution errors are going to be handled with a fluent API syntax
  * It let you continue to a fallback state or whatever user defined state such as `ErrorNotification`
- * 
+ *
  * @param handlerFn a callback that exposes methods to be used to defined an error handler.
  */
 export function errorHandler(handlerFn: (e: IErrHandlerApi) => Record<string, ErrDefn>) {
@@ -117,7 +113,12 @@ function isState(obj: Finalized<IState> | IFinalizedStepFn): obj is Finalized<IS
 }
 
 function getFirstState(finalizedStepFn: IFinalizedStepFn) {
-  const [firstState, ..._] = [...finalizedStepFn.getState()]
+  const [firstState] = [...finalizedStepFn.getState()]
+
+  if (!('name' in firstState)) {
+    // TODO
+    throw new ServerlessError(500, 'as', '')
+  }
   return firstState.name
 }
 export function goToConfiguration(finalizedState: Finalized<IState> | IFinalizedStepFn | string): Finalized<IGoTo> {

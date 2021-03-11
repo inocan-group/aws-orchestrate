@@ -1,7 +1,7 @@
 import * as helpers from './testing/helpers'
 
 import { IAWSLambaContext, IAWSLambdaProxyIntegrationRequest } from 'common-types'
-import { IHandlerContext, IHandlerFunction, ServerlessError, wrapper } from '../src/index'
+import { IHandlerFunction, ServerlessError, wrapper } from '../src/index'
 
 const CORRELATION_ID = 'c-123'
 const AWS_REQUEST_ID = '1234'
