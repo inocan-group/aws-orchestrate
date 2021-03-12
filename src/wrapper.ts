@@ -190,7 +190,7 @@ export const wrapper = function <I, O>(
         case AwsResource.ApiGateway:
           const response: IApiGatewayResponse = {
             statusCode: statusCode ? statusCode : result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
-            headers: getResponseHeaders(),
+            headers: getResponseHeaders() as IDictionary,
             body: result ? (typeof result === 'string' ? result : JSON.stringify(result)) : '',
           }
           msg.returnToApiGateway(result, getResponseHeaders())
@@ -290,7 +290,7 @@ export const wrapper = function <I, O>(
                   if (isApiGatewayRequest) {
                     return {
                       statusCode: result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent,
-                      headers: getResponseHeaders(),
+                      headers: getResponseHeaders() as IDictionary,
                       body: result ? JSON.stringify(result) : '',
                     }
                   } else {
