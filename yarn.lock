@@ -4048,10 +4048,10 @@ common-types@^1.12.1, common-types@^1.12.12, common-types@^1.14.3, common-types@
   dependencies:
     "@types/json-schema" "^7.0.4"
 
-common-types@^1.20.2:
-  version "1.20.2"
-  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.20.2.tgz#dc8c99eea656b2116c3cd7a8a5c30420773ab5bf"
-  integrity sha512-uAaKw2R6fy3t3iPRTqdLTvlmpAgDS1p3GbmkOMDd1Cemt08aAsBpYyqJ8UN8hyze4uacvHCKnaOJtv1WhqMJVQ==
+common-types@^1.20.3:
+  version "1.20.3"
+  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.20.3.tgz#176099b3c5000969e4659682176f9b221dc5e5bf"
+  integrity sha512-zA96DmsMBWvMURKy1t4C02LV8A76YDisAnQyG24rnwW4zn32sPsDZTbR5PdUS/lEDigEHJ3zOI6P6bRx2A1xDg==
 
 commondir@^1.0.1:
   version "1.0.1"
