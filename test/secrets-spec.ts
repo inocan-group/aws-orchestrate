@@ -5,7 +5,7 @@ describe('Secrets => ', () => {
   it('Secrets must be masked with asterisk', () => {
     const secretsModules = {
       aws: {
-        foo: 'aws.foo',
+        foo: '+1123123123',
         bar: 'aws.bar',
       },
       firebase: {
@@ -15,7 +15,7 @@ describe('Secrets => ', () => {
     const l = logger()
     maskLoggingForSecrets(secretsModules, l)
 
-    const logResult = l.info('aws.foo')
-    expect(logResult.message).toEqual('*******')
+    const logResult = l.info('+1123123123')
+    expect(logResult.message).toEqual('************')
   })
 })
