@@ -1,5 +1,4 @@
 import { ILoggerApi, logger } from 'aws-log'
-
 import { IDictionary } from 'common-types'
 import { SSM } from 'aws-ssm'
 import { flatten } from 'native-dash'
@@ -84,6 +83,10 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
   return secrets
 }
 
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
 /**
  * Goes through a set of secrets -- organized by `[module].[name] = secret` --
  * and masks the values so that they don't leak into the log files.
@@ -92,7 +95,8 @@ export function maskLoggingForSecrets(modules: IDictionary, log: ILoggerApi) {
   let secretPaths: string[] = []
   Object.keys(modules).forEach(mod => {
     Object.keys(modules[mod]).forEach(s => {
-      log.addToMaskedValues(modules[mod][s])
+      const escapedStr = escapeRegExp(modules[mod][s]);
+      log.addToMaskedValues(escapedStr)
       secretPaths.push(`${mod}/${s}`)
     })
   })
