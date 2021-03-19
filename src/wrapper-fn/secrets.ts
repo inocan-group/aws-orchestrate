@@ -91,11 +91,9 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
 export function maskLoggingForSecrets(modules: IDictionary, log: ILoggerApi) {
   let secretPaths: string[] = []
   Object.keys(modules).forEach(mod => {
-    Object.keys(mod).forEach(s => {
-      if (typeof s === 'object') {
-        log.addToMaskedValues(modules[mod][s])
-        secretPaths.push(`${mod}/${s}`)
-      }
+    Object.keys(modules[mod]).forEach(s => {
+      log.addToMaskedValues(modules[mod][s])
+      secretPaths.push(`${mod}/${s}`)
     })
   })
   if (secretPaths.length > 0) {
