@@ -8,6 +8,8 @@ import {
   IServerlessFunction,
   Omit,
   arn,
+  IAwsLambdaProxyRequestContextV2,
+  IAWSLambdaProxyIntegrationRequestV2,
 } from "common-types";
 import type {  IAdminConfig, IMockConfig, IRealTimeAdmin } from "universal-fire";
 import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
@@ -28,7 +30,7 @@ export type IWrapperFunction = IHandlerConfig;
  * The _meta-data_ for a handler function. This can include a description
  * (strongly suggested), events, timeouts, etc.
  */
-export type IHandlerConfig = Omit<IServerlessFunction, "handler">;
+export type IHandlerConfig = Omit<IServerlessFunction & { handler: string }, 'handler'>;
 
 /**
  * The API Gateway's _proxy integration request_ structure with the
@@ -200,6 +202,7 @@ export type IOrchestrationRequestTypes<T> =
   | IOrchestratedRequest<T>
   | IBareRequest<T>
   | IAWSLambdaProxyIntegrationRequest
+  | IAwsLambdaProxyRequestContextV2
   | IStepFunctionTaskRequest<T>;
 
 /**
@@ -237,7 +240,7 @@ export type ILambdaFunctionType = "task" | "fan-out" | "fan-in" | "other";
 
 export interface ILambaSequenceFromResponse<T> {
   request: T;
-  apiGateway?: IAWSLambdaProxyIntegrationRequest;
+  apiGateway?: IAWSLambdaProxyIntegrationRequest | IAWSLambdaProxyIntegrationRequestV2;
   sequence: LambdaSequence;
   headers: Omit<IOrchestratedHeaders, "X-Correlation-Id"> | IHttpRequestHeaders;
   triggeredBy: AwsResource
@@ -374,7 +377,7 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * The API Gateway "proxy integration" request data; this is left blank if the call was not
    * made from API Gateway (or the function is not using proxy integration)
    */
-  apiGateway: IAWSLambdaProxyIntegrationRequest;
+  apiGateway: IAWSLambdaProxyIntegrationRequest | IAWSLambdaProxyIntegrationRequestV2;
   /**
    * A boolean flag which indicates whether the current execution was started by an API Gateway
    * event.

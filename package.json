@@ -1,7 +1,7 @@
 {
   "name": "aws-orchestrate",
   "description": "This library is intended to help projects intending to build a \"micro-service architecture\" to achieve those ambitions with some handy orchestration classes and types.",
-  "version": "0.15.1",
+  "version": "0.16.3",
   "main": "dist/cjs/index.js",
   "module": "dist/es/index.js",
   "typings": "dist/es/index.d.ts",
@@ -78,8 +78,8 @@
     "aws-ssm": "^0.3.11",
     "babel-jest": "^26.0.1",
     "chai": "^4.2.0",
-    "common-types": "^1.19.0",
     "do-devops": "^0.5.5",
+    "common-types": "^1.20.3",
     "jest": "^26.0.1",
     "jest-extended": "^0.11.5",
     "madge": "^3.9.2",

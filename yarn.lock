@@ -4191,10 +4191,17 @@ common-types@^1.12.1, common-types@^1.12.12, common-types@^1.14.3, common-types@
   dependencies:
     "@types/json-schema" "^7.0.4"
 
+<<<<<<< HEAD
 common-types@^1.19.0:
   version "1.20.0"
   resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.20.0.tgz#14971e57db24475a603dcf17cba95b8ef9c33fe0"
   integrity sha512-InVu2UzEZOVX33Vrs7ZwxJmMvkE9qmLtTqqFICowKo2D2Mc2bUfBik5TDZ9UVzn1qayCQSoLa8P1mmKF+kFL9g==
+=======
+common-types@^1.20.3:
+  version "1.20.3"
+  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.20.3.tgz#176099b3c5000969e4659682176f9b221dc5e5bf"
+  integrity sha512-zA96DmsMBWvMURKy1t4C02LV8A76YDisAnQyG24rnwW4zn32sPsDZTbR5PdUS/lEDigEHJ3zOI6P6bRx2A1xDg==
+>>>>>>> develop
 
 commondir@^1.0.1:
   version "1.0.1"
