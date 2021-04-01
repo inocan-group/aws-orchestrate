@@ -6,7 +6,7 @@ export class ServerlessError extends Error {
    * the `wrapper` function will accept this error as a known
    * error and pass it through
    */
-  name: string = "ServerlessError";
+  name = "ServerlessError";
 
   /**
    * A string based `code` for the error which is useful/handy for consumers to potentially handle

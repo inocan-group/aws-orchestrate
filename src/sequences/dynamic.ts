@@ -1,5 +1,5 @@
-import { IOrchestratedDynamicProperty } from "../@types";
 import { IDictionary } from "common-types";
+import { IOrchestratedDynamicProperty } from "../@types";
 
 /**
  * A helper function for Orchestrators which produces a
@@ -26,7 +26,5 @@ export function dynamic<T = any>(
 }
 
 export function isDynamic(obj: IDictionary) {
-  return obj?.type === "orchestrated-dynamic-property" && obj.lookup
-    ? true
-    : false;
+  return !!(obj?.type === "orchestrated-dynamic-property" && obj.lookup);
 }

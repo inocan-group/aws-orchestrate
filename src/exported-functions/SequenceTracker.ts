@@ -1,19 +1,19 @@
-import { IHandlerFunction, IErrorClass, IWrapperFunction, wrapper, getSecrets } from '../private'
+import { IHandlerFunction, IErrorClass, IWrapperFunction, wrapper, getSecrets } from '../private';
 
 export const SequenceTrackerConfig: IWrapperFunction = {
   description: `Allows writing the status of LambdaSequence's to Firebase to open up the possibility of providing functional HTTP statuses`,
-}
+};
 
 const fn: IHandlerFunction<ISequenceTrackerRequest, ISequenceTrackerStatus> = async (event, context) => {
-  const firebaseModule = event.firebaseSecretLocation || 'firebase/SERVICE_ACCOUNT'
-  const secrets = await getSecrets([firebaseModule])
-  const stage = process.env.AWS_STAGE || process.env.NODE_ENV
+  const firebaseModule = event.firebaseSecretLocation || 'firebase/SERVICE_ACCOUNT';
+  const secrets = await getSecrets([firebaseModule]);
+  const stage = process.env.AWS_STAGE || process.env.NODE_ENV;
   if (!stage) {
-    throw new Error(`The "stage" could not be determined; set the AWS_STAGE or NODE_ENV environment variables!`)
+    throw new Error(`The "stage" could not be determined; set the AWS_STAGE or NODE_ENV environment variables!`);
   }
 
-  return event.status
-}
+  return event.status;
+};
 
 export interface ISequenceTrackerRequest {
   status: ISequenceTrackerStatus
@@ -62,7 +62,7 @@ export interface ISequenceTrackerStatusRunning extends ISequenceTrackerStatusBas
 export type ISequenceTrackerStatus =
   | ISequenceTrackerStatusSuccess
   | ISequenceTrackerStatusError
-  | ISequenceTrackerStatusRunning
+  | ISequenceTrackerStatusRunning;
 
 /**
  * This function is provided as an _export_ for consumers to use
@@ -91,4 +91,4 @@ export type ISequenceTrackerStatus =
  * For more information see the docs at:
  * [SequenceTracker](aws-orchestrate.netlify.com/transaction#SequenceTracker)
  */
-export const SequenceTracker = wrapper(fn)
+export const SequenceTracker = wrapper(fn);

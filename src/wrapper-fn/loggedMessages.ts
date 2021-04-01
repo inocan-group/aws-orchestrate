@@ -1,8 +1,8 @@
 import { HttpStatusCodes, IDictionary } from "common-types";
-import { IApiGateway, IErrorClass, LambdaSequence, getNewSequence, getRequestHeaders } from "../private";
 
 import { ILoggerApi } from "aws-log";
 import { get } from "native-dash";
+import { IApiGateway, IErrorClass, LambdaSequence, getNewSequence, getRequestHeaders } from "../private";
 
 /**
  * A collection of log messages that the wrapper function will emit
@@ -86,8 +86,8 @@ export const loggedMessages = (log: ILoggerApi) => ({
   /**
    * as soon as an error is detected in the wrapper, write a log message about the error
    */
-  processingError: (e: IErrorClass, workflowStatus: string, isApiGateway: boolean = false) => {
-    const stack = e.stack
+  processingError: (e: IErrorClass, workflowStatus: string, isApiGateway = false) => {
+    const stack = e.stack;
     const errorMessage = e.message ?? "no-message";
     log.info(
       `Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}${

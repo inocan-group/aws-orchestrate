@@ -1,7 +1,7 @@
 import { compress as c, decompress as d } from "lzutf8";
+import { HttpStatusCodes } from "common-types";
 import { ICompressedSection } from "../@types";
 import { UnhandledError } from "../errors/UnhandledError";
-import { HttpStatusCodes } from "common-types";
 
 /**
  * compresses large payloads larger than 4k (or whatever size
@@ -46,15 +46,13 @@ function compressionHandler(data: string) {
 export function isCompressedSection<T>(
   data: T | ICompressedSection
 ): data is ICompressedSection {
-  return typeof data === "object" &&
-    (data as ICompressedSection).compressed === true
-    ? true
-    : false;
+  return !!(typeof data === "object" &&
+    (data as ICompressedSection).compressed === true);
 }
 
 export function decompress<T = any>(
   data: T | ICompressedSection,
-  parse: boolean = true
+  parse = true
 ): T {
   const parser = parse ? JSON.parse : (a: any) => a;
 

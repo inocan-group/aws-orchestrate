@@ -1,22 +1,22 @@
-import { IDictionary, IHttpRequestHeaders } from 'common-types'
-import { logger } from 'aws-log'
+import { IDictionary, IHttpRequestHeaders } from 'common-types';
+import { logger } from 'aws-log';
 import {
   IOrchestratedRequest,
   LambdaSequence,
   buildOrchestratedRequest,
   parseArn,
   buildInvocationRequest,
-} from '../private'
+} from '../private';
 
-export type InvocationResponse = import('aws-sdk').Lambda.InvocationResponse
+export type InvocationResponse = import('aws-sdk').Lambda.InvocationResponse;
 
 export type LambdaInvocation<T = IDictionary, H = UnconstrainedHttpHeaders> = (
   fnArn: string,
   request: T,
   additionalHeaders?: H,
-) => Promise<InvocationResponse>
+) => Promise<InvocationResponse>;
 
-export type UnconstrainedHttpHeaders = IDictionary<string | number | boolean>
+export type UnconstrainedHttpHeaders = IDictionary<string | number | boolean>;
 
 /**
  * **invoke**
@@ -46,20 +46,20 @@ export async function invoke<T = IDictionary>(
   headers?: IHttpRequestHeaders,
 ): Promise<InvocationResponse> {
   // TODO: come back to this idea of "headers" here
-  const lambda = new (await import('aws-sdk')).Lambda()
+  const lambda = new (await import('aws-sdk')).Lambda();
   return new Promise((resolve, reject) => {
     lambda.invoke(buildInvocationRequest(parseArn(fnArn), request), (err, data) => {
       if (err) {
-        const { error } = logger().reloadContext()
-        const e = new Error(err.message)
-        e.stack = err.stack
-        e.name = 'InvocationError'
-        error(e, err)
-        throw e
+        const { error } = logger().reloadContext();
+        const e = new Error(err.message);
+        e.stack = err.stack;
+        e.name = 'InvocationError';
+        error(e, err);
+        throw e;
       }
-      resolve(data)
-    })
-  })
+      resolve(data);
+    });
+  });
 }
 
 /**
@@ -75,8 +75,8 @@ export async function invoke<T = IDictionary>(
  */
 export function invokeSequence(sequence: LambdaSequence) {
   return <T = IDictionary, H = UnconstrainedHttpHeaders>(fnArn: string, request: T, additionalHeaders?: H) => {
-    const boxedRequest = buildOrchestratedRequest<T>(request, sequence, additionalHeaders)
+    const boxedRequest = buildOrchestratedRequest<T>(request, sequence, additionalHeaders);
 
-    return invoke<IOrchestratedRequest<T>>(fnArn, boxedRequest)
-  }
+    return invoke<IOrchestratedRequest<T>>(fnArn, boxedRequest);
+  };
 }

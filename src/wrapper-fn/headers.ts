@@ -1,8 +1,8 @@
 import { IDictionary, IHttpResponseHeaders } from "common-types";
 import { ILoggerApi, getCorrelationId, logger } from "aws-log";
+import { set } from "native-dash";
 import { IOrchestratedHeaders, getLocalSecrets, saveSecretsLocally, sequenceStatus } from "../private";
 
-import { set } from "native-dash";
 
 /**
  * Ensures that frontend clients who call Lambda's
@@ -47,7 +47,7 @@ export function getContentType() {
  * point by a call to `getLocalSecrets()`.
  */
 export function saveSecretHeaders(headers: IDictionary, log: ILoggerApi) {
-  let secrets: string[] = [];
+  const secrets: string[] = [];
   const localSecrets = Object.keys(headers).reduce((headerSecrets: IDictionary, key: keyof typeof headers & string) => {
     if (key.slice(0, 4) === `O-S-`) {
       const [module, name] = key.slice(4).split("/");
@@ -109,7 +109,7 @@ export function getFnHeaders() {
 
 export function setFnHeaders(headers: IDictionary<string>) {
   if (typeof headers !== "object") {
-    throw new Error(
+    throw new TypeError(
       `The value sent to setHeaders is not the required type. Was "${typeof headers}"; expected "object".`
     );
   }
@@ -120,14 +120,14 @@ function getBaseHeaders(opts: IHttpResponseHeaders & IDictionary) {
   const correlationId = getCorrelationId();
   const sequenceInfo = opts.sequence
     ? {
-        ["O-Sequence-Status"]: JSON.stringify(sequenceStatus(correlationId)(opts.sequence)),
+        "O-Sequence-Status": JSON.stringify(sequenceStatus(correlationId)(opts.sequence)),
       }
     : {};
 
   return {
     ...sequenceInfo,
     ...getFnHeaders(),
-    ["X-Correlation-Id"]: getCorrelationId(),
+    "X-Correlation-Id": getCorrelationId(),
   };
 }
 

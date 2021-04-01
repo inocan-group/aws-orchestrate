@@ -6,5 +6,5 @@ import { LambdaSequence } from "../LambdaSequence";
  * as well invokation requests to other Lambda functions.
  */
 export function serializeSequence(s: LambdaSequence): string {
-  return;
+  
 }

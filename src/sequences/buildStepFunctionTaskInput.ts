@@ -1,9 +1,9 @@
-import { LambdaSequence } from '../LambdaSequence'
-import { IDictionary } from 'common-types'
-import { getRequestHeaders } from '../wrapper-fn'
-import { compress } from './compress'
-import { IOrchestratedRequest, ISerializedSequence, IOrchestratedHeaders } from '../@types'
-import { IStepFunctionTaskPayload, IStepFunctionTaskResponse } from '../private'
+import { IDictionary } from 'common-types';
+import { LambdaSequence } from '../LambdaSequence';
+import { getRequestHeaders } from '../wrapper-fn';
+import { IOrchestratedRequest, ISerializedSequence, IOrchestratedHeaders } from '../@types';
+import { IStepFunctionTaskPayload, IStepFunctionTaskResponse } from '../private';
+import { compress } from './compress';
 
 export function buildStepFunctionTaskInput<T>(
   body: T,
@@ -14,11 +14,11 @@ export function buildStepFunctionTaskInput<T>(
    */
   additionalHeaders?: IDictionary,
 ): IStepFunctionTaskPayload<T> {
-  const headers = additionalHeaders ? { ...getRequestHeaders(), ...additionalHeaders } : getRequestHeaders()
+  const headers = additionalHeaders ? { ...getRequestHeaders(), ...additionalHeaders } : getRequestHeaders();
 
   return {
     type: 'step-fn-message-body',
-    body: body,
+    body,
     headers: compress<IOrchestratedHeaders>(headers, 4096),
-  }
+  };
 }
