@@ -21,9 +21,9 @@ export class HandledError extends Error {
    * creates an error to be thrown by a **Lambda** function which
    * was initiatiated by a
    */
-  public static lambdaError(errorCode: number, e: Error, context: IAwsLogContext) {
-    const obj = new HandledError(errorCode, e, context);
-  }
+  // public static lambdaError(errorCode: number, e: Error, context: IAwsLogContext) {
+  //   const obj = new HandledError(errorCode, e, context);
+  // }
 
   /**
    * The `name` is proxied through if underlying error has one that is NOT just **Error**;

@@ -1,22 +1,21 @@
-import { IDictionary, IHttpRequestHeaders } from 'common-types';
-import { logger } from 'aws-log';
+import { IDictionary } from "common-types";
+import { logger } from "aws-log";
 import {
   IOrchestratedRequest,
   LambdaSequence,
   buildOrchestratedRequest,
   parseArn,
   buildInvocationRequest,
-} from '../private';
+} from "../private";
 
-export type InvocationResponse = import('aws-sdk').Lambda.InvocationResponse;
+export type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 
+export type UnconstrainedHttpHeaders = IDictionary<string | number | boolean>;
 export type LambdaInvocation<T = IDictionary, H = UnconstrainedHttpHeaders> = (
   fnArn: string,
   request: T,
-  additionalHeaders?: H,
+  additionalHeaders?: H
 ) => Promise<InvocationResponse>;
-
-export type UnconstrainedHttpHeaders = IDictionary<string | number | boolean>;
 
 /**
  * **invoke**
@@ -39,21 +38,21 @@ export async function invoke<T = IDictionary>(
    */
   fnArn: string,
   /** the request object to be passed to the calling function */
-  request: T,
+  request: T
   /**
    * The request headers to send along with the request
    */
-  headers?: IHttpRequestHeaders,
+  // headers?: IHttpRequestHeaders
 ): Promise<InvocationResponse> {
   // TODO: come back to this idea of "headers" here
-  const lambda = new (await import('aws-sdk')).Lambda();
-  return new Promise((resolve, reject) => {
+  const lambda = new (await import("aws-sdk")).Lambda();
+  return new Promise((resolve) => {
     lambda.invoke(buildInvocationRequest(parseArn(fnArn), request), (err, data) => {
       if (err) {
         const { error } = logger().reloadContext();
         const e = new Error(err.message);
         e.stack = err.stack;
-        e.name = 'InvocationError';
+        e.name = "InvocationError";
         error(e, err);
         throw e;
       }
