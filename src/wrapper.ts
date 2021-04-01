@@ -14,7 +14,6 @@ import {
   UnhandledError,
   buildOrchestratedRequest,
   convertToApiGatewayError,
-  database,
   findError,
   getLocalSecrets,
   getNewSequence,
@@ -42,7 +41,6 @@ import {
   IDictionary,
   isLambdaProxyRequest,
 } from 'common-types'
-import type { IAdminConfig, IMockConfig } from 'universal-fire'
 
 import { get } from 'native-dash'
 import { logger } from 'aws-log'
@@ -123,7 +121,6 @@ export const wrapper = function <I, O>(
         queryParameters: apiGateway?.queryStringParameters || {},
         setHeaders: setFnHeaders,
         setContentType,
-        database: (config?: IAdminConfig | IMockConfig) => database(config),
         sequence,
         registerSequence,
         isSequence: sequence.isSequence,

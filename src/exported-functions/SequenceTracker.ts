@@ -1,71 +1,68 @@
-import { IHandlerFunction, IErrorClass, IWrapperFunction, wrapper, getSecrets } from "../private";
+import { IHandlerFunction, IErrorClass, IWrapperFunction, wrapper, getSecrets } from '../private'
 
 export const SequenceTrackerConfig: IWrapperFunction = {
   description: `Allows writing the status of LambdaSequence's to Firebase to open up the possibility of providing functional HTTP statuses`,
-};
+}
 
 const fn: IHandlerFunction<ISequenceTrackerRequest, ISequenceTrackerStatus> = async (event, context) => {
-  const firebaseModule = event.firebaseSecretLocation || "firebase/SERVICE_ACCOUNT";
-  const secrets = await getSecrets([firebaseModule]);
-  const db = await context.database(secrets.firebase.SERVICE_ACCOUNT);
-  const stage = process.env.AWS_STAGE || process.env.NODE_ENV;
+  const firebaseModule = event.firebaseSecretLocation || 'firebase/SERVICE_ACCOUNT'
+  const secrets = await getSecrets([firebaseModule])
+  const stage = process.env.AWS_STAGE || process.env.NODE_ENV
   if (!stage) {
-    throw new Error(`The "stage" could not be determined; set the AWS_STAGE or NODE_ENV environment variables!`);
+    throw new Error(`The "stage" could not be determined; set the AWS_STAGE or NODE_ENV environment variables!`)
   }
-  const databasePath = `aws-orchestrate/${stage}/${event.status.correlationId}`;
-  await db.set<ISequenceTrackerStatus>(databasePath, event.status);
 
-  return event.status;
-};
+  return event.status
+}
 
 export interface ISequenceTrackerRequest {
-  status: ISequenceTrackerStatus;
-  firebaseSecretLocation?: string;
+  status: ISequenceTrackerStatus
+  firebaseSecretLocation?: string
 }
 
 export interface ISequenceTrackerStatusBase {
   /**
    * The `correlationId` of the sequence executing
    */
-  correlationId: string;
+  correlationId: string
   /**
    * The total number of steps in the sequence
    */
-  total: number;
+  total: number
   /**
    * The current step in the sequence
    */
-  current: number;
+  current: number
   /**
    * The AWS `arn` of the currently executing function
    */
-  currentFn: string;
+  currentFn: string
   /**
    * The AWS `arn` of the function which originated
    * the sequence.
    */
-  originFn?: string;
+  originFn?: string
   /**
    * The current status of the sequence
    */
-  status: string;
+  status: string
 }
 
 export interface ISequenceTrackerStatusSuccess extends ISequenceTrackerStatusBase {
-  status: "success";
-  data: string;
+  status: 'success'
+  data: string
 }
 export interface ISequenceTrackerStatusError extends ISequenceTrackerStatusBase {
-  status: "error";
-  error: IErrorClass;
+  status: 'error'
+  error: IErrorClass
 }
 export interface ISequenceTrackerStatusRunning extends ISequenceTrackerStatusBase {
-  status: "running";
+  status: 'running'
 }
 export type ISequenceTrackerStatus =
   | ISequenceTrackerStatusSuccess
   | ISequenceTrackerStatusError
-  | ISequenceTrackerStatusRunning;
+  | ISequenceTrackerStatusRunning
 
 /**
  * This function is provided as an _export_ for consumers to use
@@ -94,4 +91,4 @@ export type ISequenceTrackerStatus =
  * For more information see the docs at:
  * [SequenceTracker](aws-orchestrate.netlify.com/transaction#SequenceTracker)
  */
-export const SequenceTracker = wrapper(fn);
+export const SequenceTracker = wrapper(fn)
