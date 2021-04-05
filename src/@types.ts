@@ -1,4 +1,3 @@
-import { ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders, getSecrets } from './private'
 import {
   IAWSLambaContext,
   IAWSLambdaProxyIntegrationRequest,
@@ -10,31 +9,32 @@ import {
   arn,
   IAwsLambdaProxyRequestContextV2,
   IAWSLambdaProxyIntegrationRequestV2,
-} from 'common-types'
-import { setContentType, setFnHeaders } from './wrapper-fn/headers'
+} from "common-types";
+import { ILoggerApi, IAwsLogConfig } from "aws-log";
+import { ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders, getSecrets } from "./private";
+import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
 
-import { ILoggerApi, IAwsLogConfig } from 'aws-log'
-
-type InvocationResponse = import('aws-sdk').Lambda.InvocationResponse
-/**
- * The meta-data for a handler function; this symbol is now deprecated
- * in favor of `IHandlerMeta`.
- *
- * @deprecated
- */
-export type IWrapperFunction = IHandlerConfig
+type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 
 /**
  * The _meta-data_ for a handler function. This can include a description
  * (strongly suggested), events, timeouts, etc.
  */
-export type IHandlerConfig = Omit<IServerlessFunction & { handler: string }, 'handler'>
+export type IHandlerConfig = Omit<IServerlessFunction & { handler: string }, "handler">;
+
+/**
+ * The meta-data for a handler function; this symbol is now deprecated
+ * in favor of `IHandlerConfig`.
+ *
+ * @deprecated
+ */
+export type IWrapperFunction = IHandlerConfig;
 
 /**
  * The API Gateway's _proxy integration request_ structure with the
  * `body` and `headers` removed
  */
-export type IApiGateway = Omit<IAWSLambdaProxyIntegrationRequest, 'body' | 'headers'>
+export type IApiGateway = Omit<IAWSLambdaProxyIntegrationRequest, "body" | "headers">;
 
 export interface IWrapperOptions {
   /**
@@ -49,12 +49,12 @@ export interface IWrapperOptions {
    * > from that point the instruction to use this tracking will be carried forward in
    * > the `o-sequence-tracker` _header_ variable.
    */
-  sequenceTracker?: arn
+  sequenceTracker?: arn;
 
-  loggerConfig?: Partial<IAwsLogConfig>
+  loggerConfig?: Partial<IAwsLogConfig>;
 }
 
-export type IExpectedHeaders = IHttpRequestHeaders & IDictionary
+export type IExpectedHeaders = IHttpRequestHeaders & IDictionary;
 
 /**
  * Highlights the most likely props coming in from a request but allows
@@ -63,10 +63,10 @@ export type IExpectedHeaders = IHttpRequestHeaders & IDictionary
 export type IWrapperRequestHeaders =
   | IExpectedHeaders
   | IOrchestratedHeaders
-  | IAWSLambdaProxyIntegrationRequest['headers']
+  | IAWSLambdaProxyIntegrationRequest["headers"];
 
 export interface IOrchestratedHeaders extends IHttpResponseHeaders, IDictionary {
-  ['X-Correlation-Id']: string
+  ["X-Correlation-Id"]: string;
   /**
    * The transport for firemodel's **service account** when
    * operating within a `LambdaSequence`.
@@ -74,17 +74,17 @@ export interface IOrchestratedHeaders extends IHttpResponseHeaders, IDictionary 
    * > **Note:** the naming convention after the `O-` is meant
    * > to mimic the name of the SSM `module/name`
    */
-  ['O-firemodel/SERVICE_ACCOUNT']?: string
+  ["O-firemodel/SERVICE_ACCOUNT"]?: string;
   /**
    * If you are using firebase and a prior function asked SSM for secrets
    * for the Admin SDK this will likely exist.
    */
-  ['O-firemodel/BASE_URL']?: string
+  ["O-firemodel/BASE_URL"]?: string;
   /**
    * The status of the _sequence_ when being passed from function
    * to function.
    */
-  ['O-Sequence-Status']?: string
+  ["O-Sequence-Status"]?: string;
 }
 
 /**
@@ -92,35 +92,35 @@ export interface IOrchestratedHeaders extends IHttpResponseHeaders, IDictionary 
  * can be either a static value or a function
  */
 export interface IServerlessFunctionSignature {
-  arn: string
+  arn: string;
   /** either a static param or a dynamic "lookup" property */
-  params: IDictionary<any | IOrchestratedDynamicProperty>
+  params: IDictionary<any | IOrchestratedDynamicProperty>;
 }
 
-export type ISerializedSequence = ISerializedSequenceFalse | ISerializedSequenceTrue
+export type ISerializedSequence = ISerializedSequenceFalse | ISerializedSequenceTrue;
 
 export interface ISerializedSequenceFalse {
-  isSequence: false
+  isSequence: false;
 }
 
 export interface ISerializedSequenceTrue {
-  isSequence: true
-  totalSteps: number
-  completedSteps: number
+  isSequence: true;
+  totalSteps: number;
+  completedSteps: number;
   /**
    * the function in the sequence which is now _executing_; returns
    * not only function name but parameters passed
    */
-  activeFn?: arn
+  activeFn?: arn;
   /** the _functions_ (names only) in the sequence which have **completed** */
-  completed: arn[]
+  completed: arn[];
   /** the _functions_ (names only) in the sequence which have **remain** to be executed */
-  remaining: arn[]
+  remaining: arn[];
   /**
    * The **steps** defined in the sequence. This is an _ordered_ array of steps, including
    * their ARN, their input _params_,
    */
-  steps: ILambdaSequenceStep[]
+  steps: ILambdaSequenceStep[];
   /**
    * The **responses** from _all functions_ which have already executed.
    *
@@ -132,7 +132,7 @@ export interface ISerializedSequenceTrue {
    * }
    * ```
    */
-  responses: IDictionary<IDictionary>
+  responses: IDictionary<IDictionary>;
 }
 
 /**
@@ -140,13 +140,13 @@ export interface ISerializedSequenceTrue {
  * compressed when sent over the wire
  */
 export interface ICompressedSection {
-  compressed: true
-  data: string
+  compressed: true;
+  data: string;
 }
 /** @inheritdoc */
-export type IStepFunctionTaskRequest<T> = IStepFunctionTaskPayload<T>
+export type IStepFunctionTaskRequest<T> = IStepFunctionTaskPayload<T>;
 /** @inheritdoc */
-export type IStepFunctionTaskResponse<T> = IStepFunctionTaskPayload<T>
+export type IStepFunctionTaskResponse<T> = IStepFunctionTaskPayload<T>;
 
 /**
  *  **IStepFunctionTaskPayload**
@@ -158,9 +158,9 @@ export type IStepFunctionTaskResponse<T> = IStepFunctionTaskPayload<T>
  * make the user to have the same experience of `fn`-to-`fn` functionality. Ex: (Passing client context props as ssm secrets, correlationId, etc)
  */
 export interface IStepFunctionTaskPayload<T> {
-  type: 'step-fn-message-body'
-  body: T
-  headers: IOrchestratedHeaders | ICompressedSection
+  type: "step-fn-message-body";
+  body: T;
+  headers: IOrchestratedHeaders | ICompressedSection;
 }
 
 /**
@@ -176,32 +176,32 @@ export interface IStepFunctionTaskPayload<T> {
  * throughout.
  */
 export interface IOrchestratedRequest<T> {
-  type: 'orchestrated-message-body'
-  body: T | ICompressedSection
-  sequence: ISerializedSequence | ICompressedSection
-  headers: IOrchestratedHeaders | ICompressedSection
+  type: "orchestrated-message-body";
+  body: T | ICompressedSection;
+  sequence: ISerializedSequence | ICompressedSection;
+  headers: IOrchestratedHeaders | ICompressedSection;
 }
 
 export interface IOrchestratedResponse<T> {
-  type: 'orchestrated-message-body'
-  body: T | ICompressedSection
-  sequence: ISerializedSequence | ICompressedSection
-  headers: IOrchestratedHeaders | ICompressedSection
+  type: "orchestrated-message-body";
+  body: T | ICompressedSection;
+  sequence: ISerializedSequence | ICompressedSection;
+  headers: IOrchestratedHeaders | ICompressedSection;
 }
 
 /**
  * This is a antiquated request form which should not be used anymore
  */
 export type IBareRequest<T> = T & {
-  _sequence?: ILambdaSequenceStep[]
-}
+  _sequence?: ILambdaSequenceStep[];
+};
 
 export type IOrchestrationRequestTypes<T> =
   | IOrchestratedRequest<T>
   | IBareRequest<T>
   | IAWSLambdaProxyIntegrationRequest
   | IAwsLambdaProxyRequestContextV2
-  | IStepFunctionTaskRequest<T>
+  | IStepFunctionTaskRequest<T>;
 
 /**
  * **ILambdaSequenceStep**
@@ -211,37 +211,37 @@ export type IOrchestrationRequestTypes<T> =
  * execution if the status is in the `completed` status.
  */
 export interface ILambdaSequenceStep<T = IDictionary> {
-  arn: string
+  arn: string;
   /**
    * Dynamic or static value references to fill out the request object
    * for consuming **handler** functions
    */
-  params: IOrchestratedProperties<T>
-  type: ILambdaFunctionType
-  status: 'assigned' | 'active' | 'completed' | 'skipped'
+  params: IOrchestratedProperties<T>;
+  type: ILambdaFunctionType;
+  status: "assigned" | "active" | "completed" | "skipped";
   /**
    * if error handling is passed in as part of the sequence, the wrapper
    * function will ensure that these error handlers are applied before handing
    * execution control to the consuming **handler** function.
    */
-  onError?: OrchestratedErrorHandler | [arn, IDictionary & { error: Error }]
+  onError?: OrchestratedErrorHandler | [arn, IDictionary & { error: Error }];
   /**
    * Tasks can be assigned by the conductor to be _conditional_ and therefore
    * when the `LambdaSequence.next()` function is evaluated by the `wrapper`, it will
    * evaluate the next set of functions for conditions and skip over those that don't
    * evaluate to `true`.
    */
-  onCondition?: any
+  onCondition?: any;
 }
 
-export type ILambdaFunctionType = 'task' | 'fan-out' | 'fan-in' | 'other'
+export type ILambdaFunctionType = "task" | "fan-out" | "fan-in" | "other";
 
 export interface ILambaSequenceFromResponse<T> {
-  request: T
-  apiGateway?: IAWSLambdaProxyIntegrationRequest | IAWSLambdaProxyIntegrationRequestV2
-  sequence: LambdaSequence
-  headers: Omit<IOrchestratedHeaders, 'X-Correlation-Id'> | IHttpRequestHeaders
-  triggeredBy: AwsResource
+  request: T;
+  apiGateway?: IAWSLambdaProxyIntegrationRequest | IAWSLambdaProxyIntegrationRequestV2;
+  sequence: LambdaSequence;
+  headers: Omit<IOrchestratedHeaders, "X-Correlation-Id"> | IHttpRequestHeaders;
+  triggeredBy: AwsResource;
 }
 
 /**
@@ -252,7 +252,7 @@ export interface ILambaSequenceFromResponse<T> {
  * to it. Within these parameters it also includes the
  * `_sequence` property to pass along the sequence meta-data
  */
-export type ILambdaSequenceNextTuple<T> = [string, IOrchestratedRequest<T>]
+export type ILambdaSequenceNextTuple<T> = [string, IOrchestratedRequest<T>];
 
 /**
  * Configure how an error should be identified; typically you would only
@@ -260,10 +260,10 @@ export type ILambdaSequenceNextTuple<T> = [string, IOrchestratedRequest<T>]
  * logical condition
  */
 export interface IErrorIdentification {
-  errorClass?: new (...args: any) => Error
-  code?: string
-  name?: string
-  messageContains?: string
+  errorClass?: new (...args: any) => Error;
+  code?: string;
+  name?: string;
+  messageContains?: string;
 }
 
 /**
@@ -271,25 +271,25 @@ export interface IErrorIdentification {
  * It should be become bigger as we need more resources types
  */
 export enum AwsResource {
-  Lambda = 'Lambda',
-  StepFunction = 'StepFunction',
-  ApiGateway = 'ApiGateway',
+  Lambda = "Lambda",
+  StepFunction = "StepFunction",
+  ApiGateway = "ApiGateway",
 }
 
 export interface IErrorHandling {
   /** forward to another lambda function */
-  forwardTo?: arn
+  forwardTo?: arn;
   /**
    * send it to a callback function; if the callback
    * returns `true` then no error will be thrown with
    * the understanding that the error has been handled
    * in some way.
    */
-  callback?: (e: Error) => boolean
+  callback?: (e: Error) => boolean;
 }
 
 export interface IErrorHandlingDefault {
-  defaultHandling: true
+  defaultHandling: true;
 }
 
 /**
@@ -304,12 +304,12 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * The HTTP headers variables passed in via API Gateway or forwarded along
    * by `aws-orchestrate`.
    */
-  headers: IWrapperRequestHeaders
+  headers: IWrapperRequestHeaders;
   /**
    * A dictionary of name/value pairs based on the values passed in from the
    * query parameters coming in from API Gateway
    */
-  queryParameters: IDictionary
+  queryParameters: IDictionary;
   /**
    * The custom claims which this function received from API Gateway.
    *
@@ -319,24 +319,24 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * function (who is typically responsible for validating claims). Also note that if this variable is NOT
    * set then this is defaulted to an empty hash/dictionary.
    */
-  claims: IDictionary
+  claims: IDictionary;
   /**
    * The sequence which this execution is part of
    */
-  sequence: LambdaSequence
+  sequence: LambdaSequence;
   /**
    * The type of aws resource that triggered the current lambda fn
    */
-  triggeredBy: AwsResource
+  triggeredBy: AwsResource;
   /**
    * Check whether the given function execution is part of a
    * sequence
    */
-  isSequence: boolean
+  isSequence: boolean;
   /**
    * The unique `id` assigned to this _sequence_
    */
-  correlationId: string
+  correlationId: string;
   /**
    * Indicates whether the current sequence is "done" (aka, the current
    * function execution is the _last_ function in the sequence)
@@ -344,11 +344,11 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * Note: if the function is NOT running as part of a sequence this will
    * always be `false`
    */
-  isDone: boolean
+  isDone: boolean;
   /**
    * your pre-configured logging interface
    */
-  log: ILoggerApi
+  log: ILoggerApi;
   /**
    * **getSecrets**
    *
@@ -359,38 +359,38 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * const secrets = await context.getSecrets('firebase', 'netlify')
    * ```
    */
-  getSecrets: typeof getSecrets
+  getSecrets: typeof getSecrets;
   /**
    * Allows the status code of a _successful_ handler execution to be stated; if
    * left off then it will return `200` (or `204` if no content is returned)
    */
-  setSuccessCode: (code: number) => void
+  setSuccessCode: (code: number) => void;
   /**
    * The API Gateway "proxy integration" request data; this is left blank if the call was not
    * made from API Gateway (or the function is not using proxy integration)
    */
-  apiGateway: IAWSLambdaProxyIntegrationRequest | IAWSLambdaProxyIntegrationRequestV2
+  apiGateway: IAWSLambdaProxyIntegrationRequest | IAWSLambdaProxyIntegrationRequestV2;
   /**
    * A boolean flag which indicates whether the current execution was started by an API Gateway
    * event.
    */
-  isApiGatewayRequest: boolean
+  isApiGatewayRequest: boolean;
   /**
    * Allows you to manage how to handle errors which are encountered; both _expected_
    * and _unexpected_ are captured and each can be handled in whichever way you prefer.
    */
-  errorMgmt: ErrorMeta
+  errorMgmt: ErrorMeta;
   /**
    * The **header** for any API Gateway originated function is `appliacation/json` but this
    * can be changed to something else if needed.
    */
-  setContentType: typeof setContentType
+  setContentType: typeof setContentType;
   /**
    * Most of the required headers sent back to **API Gateway** or to other **Lambda functions**
    * in a _sequence_ will be provided automatically (e.g., CORS, correlationId, etc.) but if your
    * function needs to send additional headers then you can add them here.
    */
-  setHeaders: typeof setFnHeaders
+  setHeaders: typeof setFnHeaders;
   /**
    * Invokes another Lambda function.
    *
@@ -404,8 +404,8 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
   invoke: <T = IDictionary, H = UnconstrainedHttpHeaders>(
     fnArn: string,
     request: T,
-    additionalHeaders?: H,
-  ) => Promise<InvocationResponse>
+    additionalHeaders?: H
+  ) => Promise<InvocationResponse>;
   /**
    * Allows the handler author to _register_ a new `LambdaSequence` for execution.
    *
@@ -413,7 +413,7 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
    * function should always be called and the `wrapper` function will ensure that
    * the `LambdaSequence` is started before the handler function completes.
    */
-  registerSequence: (sequence: LambdaSequence) => void
+  registerSequence: (sequence: LambdaSequence) => void;
 }
 
 /**
@@ -425,50 +425,50 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
  * requires that you state explicitly the **Request**<`E`> and **Response**<`R`> types
  * as generics passed in.
  */
-export type IHandlerFunction<E, R> = (event: E, context: IHandlerContext<E>) => Promise<R>
+export type IHandlerFunction<E, R> = (event: E, context: IHandlerContext<E>) => Promise<R>;
 
 export interface IErrorWithExtraProperties extends Error {
-  [key: string]: any
+  [key: string]: any;
 }
 
-export type IErrorHandlerFunction = (err: Error) => Promise<boolean> | boolean
+export type IErrorHandlerFunction = (err: Error) => Promise<boolean> | boolean;
 export interface IErrorClass extends Error {
-  type?: string
-  code?: string
-  errorCode?: number
-  httpStatus?: number
+  type?: string;
+  code?: string;
+  errorCode?: number;
+  httpStatus?: number;
 }
 
 export interface IDefaultHandlingBase {
-  type: 'error-forwarding' | 'handler-fn' | 'default-error' | 'default'
-  code: number
-  prop: string
+  type: "error-forwarding" | "handler-fn" | "default-error" | "default";
+  code: number;
+  prop: string;
 }
 
 export interface IDefaultHandlingForwarding extends IDefaultHandlingBase {
-  type: 'error-forwarding'
-  arn: string
+  type: "error-forwarding";
+  arn: string;
 }
 
 export interface IDefaultHandlingError extends IDefaultHandlingBase {
-  type: 'default-error'
-  error: IErrorClass
+  type: "default-error";
+  error: IErrorClass;
 }
 
 export interface IDefaultHandlingCallback extends IDefaultHandlingBase {
-  type: 'handler-fn'
-  defaultHandlerFn: IErrorHandlerFunction
+  type: "handler-fn";
+  defaultHandlerFn: IErrorHandlerFunction;
 }
 
 export interface IDefaultHandlingDefault extends IDefaultHandlingBase {
-  type: 'default'
+  type: "default";
 }
 
 export type IDefaultHandling =
   | IDefaultHandlingForwarding
   | IDefaultHandlingError
   | IDefaultHandlingCallback
-  | IDefaultHandlingDefault
+  | IDefaultHandlingDefault;
 
 /**
  * Allows an Orchestrator to state a property that came from a previously
@@ -476,7 +476,7 @@ export type IDefaultHandling =
  */
 export type IOrchestratedDynamicProperty = {
   /** static identifier */
-  type: 'orchestrated-dynamic-property'
+  type: "orchestrated-dynamic-property";
   /**
    * a string that uses _dot notation_ to indicate both the function (aka, `arn`)
    * and _property_ from the given function which you want to poss in.
@@ -484,8 +484,8 @@ export type IOrchestratedDynamicProperty = {
    * For instance, `myFunction.data` would reference the `myFunction` responses and pull
    * off the value of the `data` from the responses.
    */
-  lookup: string
-}
+  lookup: string;
+};
 
 /**
  * Properties defined must be _static_ at the time of the
@@ -509,17 +509,17 @@ export type IOrchestratedDynamicProperty = {
  * ```
  */
 export type IOrchestratedProperties<T> = {
-  [P in keyof T]: T[P] | IOrchestratedDynamicProperty
-}
+  [P in keyof T]: T[P] | IOrchestratedDynamicProperty;
+};
 
-export type IFanOutTuple<T = IDictionary> = [string, T]
+export type IFanOutTuple<T = IDictionary> = [string, T];
 export interface IFanOutResponse<T> {
-  failures?: T[]
+  failures?: T[];
 }
 
-export type OrchestratedErrorHandler = <T extends Error = Error>(error: T) => Promise<boolean>
+export type OrchestratedErrorHandler = <T extends Error = Error>(error: T) => Promise<boolean>;
 /**
  * An ARN and function parameters to specify where errors should be forwarded to
  */
-export type OrchestratedErrorForwarder<T extends IDictionary = IDictionary> = [arn, T]
-export type OrchestratedCondition = <T>(params: T, seq: LambdaSequence) => Promise<boolean>
+export type OrchestratedErrorForwarder<T extends IDictionary = IDictionary> = [arn, T];
+export type OrchestratedCondition = <T>(params: T, seq: LambdaSequence) => Promise<boolean>;
