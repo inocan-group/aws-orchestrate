@@ -63,6 +63,71 @@ A state machine must have "states" but of course from a terminology standpoint w
 
 In the next section we'll review all of the "kinds" of states that you can use to compose a Step Function.
 
+## Getting Started
+
+### Basic Usage
+If you are using `aws-orchestrate` , you should have a `<root>/serverless-config/stepFunctions` directory in your project root. That is the place where we are going to declare all our state machines.
+
+#### Fluent API Syntax
+
+First, create a new file with the name you want (myAwesomeWorkflow.ts) and create a State Machine like the following example:
+
+```ts
+import { StateMachine, StepFunction } from "aws-orchestrate";
+
+export const myAwesomeWorkflow = StateMachine("myAwesomeWorkflow", {
+    stepFunction: StepFunction()
+        .task(HandlerFn.first)
+        .task(HandlerFn.next)
+        .map('$.users', mapOptions).use(s =>
+            s.task(HandlerFn.emailNotification')
+            .task(HandlerFn.persistNotificationResults)
+            .succeed()
+      ),
+})
+```
+
+This syntax would allow us to continue extending our step function by just calling methods like `task`, `map`, etc. We cover these in the [next section](#building-blocks).
+
+#### Composable API Syntax
+
+If our requirements of our step function grows, let's say that we want to add a couple of states in the previous step function. Declaring all in fluent api syntax would make harder to mantain. We might want to use this order syntax.
+
+_firstTask.ts_
+```ts
+import { State } from "aws-orchestrate";
+
+export const firstTask = State(s => s.task(HandlerFn.first));
+```
+
+_nextTask.ts_
+```ts
+import { State } from "aws-orchestrate";
+
+export const nextTask = State(s => s.task(HandlerFn.next));
+```
+
+_notifyAllUsers.ts_
+```ts
+import { State } from "aws-orchestrate";
+
+const emailNotification = State(s => s.task('emailNotification123'))
+const persistNotificationResults = State(s => s.task('persistNotificationResults123'))
+
+export const notifyAllUsers = State(s => s.map('$.users').use([emailNotification,  persistNotificationResults]));
+```
+
+_myAwesomeWorkflow.ts_
+```ts
+import { StateMachine, StepFunction } from "aws-orchestrate";
+import { firstTask, nextTask, notifyAllUsers } from ".";
+
+const myStepFunction = StepFunction(firstTask, nextTask, notifyAllUsers);
+
+export const myAwesomeWorkflow = StateMachine("myAwesomeWorkflow", {
+    stepFunction: myStepFunction
+})
+```
 ## Building Blocks
 
 In this section we'll review the most important _kinds_ of **state** you can include in a step function. While there are a few others you can use, they are edge cases and are easily found using the Typescript-powered intelisense (more on this in the [Examples](#examples) section).
@@ -302,13 +367,46 @@ State(s => s.wait(200))
 If you're using **aws-orchestrate** we assume you're also using the included `wrapper()` function to gain strong typing on your Lambda handler functions. As you'll likely know too, this wrapper provides some useful features which would be a shame to miss out on simply because your Lambda function was called by AWS's Step Functions.
 
 ### Calling into a Step Function
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+If you are using **aws-orchestrate** lambda fn wrapper, it might be easy to start an state Machine execution just calling `invokeStepFn`. This would pass the context (correlationId, secrets, etc) we have in the current execution lambda fn to the new step Function executed. This would also improve the step function execution performance because if would not require to fetch those secrets again. And having correlationId is a key that would help us in traceability.
 
 ### Error handling in Lambda's
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+We should really be cautious about aws-orchestrate wrapper error handling in step function execution, because if we handle errors by ourselves we might override or hide the native Step Function Error Handling with states like (Catch and Retry). Other option is use error handling along step function error handler.
 
+#### Catch
+This option state is available in most of our states. It enable us to determine what path to follow or if we want to terminate execution when an specific or all kind of error had thrown in one of our step function's state execution. If we have a state that contains other states like `map`, our scope would affect all children.
+
+* State Machine level:
+```ts
+const myStateMachine = StateMachine("myStateMachine", {
+    stepFunction: myStepFn,
+    defaultErrorHandler: errorHandler(e => e.default(s => s.task(NotifyError.handlerFn))),
+})
+```
+
+* Step function level:
+```ts
+const fooStepFn = StepFunction({
+    defaultErrorHandler: errorHandler(e => e.default(s => s.task(NotifyError.handlerFn))),
+}).task('task1')
+```
+
+* State level:
+```ts
+const notifyError = State(s => s.task(NotifyError.handlerFn))
+
+const fooTask = State(s => s.task('task1', {
+    catch: errorHandler(e => e.handle(h => h.all, StepFunction(notifyError)).withoutDefault()),
+}))
+```
+
+#### Retry
+This is also useful if we want to retry execution of error caught state. It is also important to keep in mind that execution the state again won't break our data flow.
+* example: 
+```ts
+const fooTask = State(s => s.task('fooTask', { retry: retryHandler(e => e.default(retryOptions)) }))
+```
 ### Secret Management
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+One of the benefits of using aws-orchestrate wrapper is that it detects secrets from input payload and include in our `request`, and if we fetched another ssm secret in the lambda fn handler, it would include along with the current one in the output/response, which is the input of the next state in our step function. All detection and includement in input/output is done under the hood.
 
 ## Utility Functions
 
