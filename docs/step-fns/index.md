@@ -65,6 +65,38 @@ In the next section we'll review all of the "kinds" of states that you can use t
 
 ## Getting Started
 
+
+### Options
+
+1. CLI based on directory and default export
+
+    - User creates StepFunction in `/src/state-machines` directory
+      - OPT1a: File has single _default_ export
+
+            `my-state-machine.ts`
+            ```ts
+            export default StateMachine("myAwesomeWorkflow", {
+                stepFunction: StepFunction()
+                    .task(HandlerFn.first)
+                    .task(HandlerFn.next)
+                    .map('$.users', mapOptions).use(s =>
+                        s.task(HandlerFn.emailNotification')
+                        .task(HandlerFn.persistNotificationResults)
+                        .succeed()
+                  ),
+            });
+            ```
+
+        - When step function CLI is executed, yaml config file will be named based on TS file
+2. CLI based on AST detection
+   - We will again suggest that people create a `/src/state-machines` directory
+   - But we will run an AST parser over all TS files in this directory and look for exports of type `IStateMachine`
+   - CLI: `build-sm -o state-machines` will produce `.yaml` files for each state machine into the root directory or any directory stated with `-o` modifier.
+   - 
+
+3. file services to YAML built into StateMachine API
+4. Other?
+
 ### Basic Usage
 If you are using `aws-orchestrate` , you should have a `<root>/serverless-config/stepFunctions` directory in your project root. That is the place where we are going to declare all our state machines.
 
@@ -86,6 +118,7 @@ export const myAwesomeWorkflow = StateMachine("myAwesomeWorkflow", {
       ),
 })
 ```
+
 
 This syntax would allow us to continue extending our step function by just calling methods like `task`, `map`, etc. We cover these in the [next section](#building-blocks).
 
