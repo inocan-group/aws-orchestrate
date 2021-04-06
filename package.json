@@ -19,9 +19,10 @@
     "build": "run-s clean autoindex build:bundle",
     "build:bundle": "rollup -c",
     "build:tsc": "run-p build:es build:cjs",
+    "build:experimental": "node build/build.js es cjs --min",
     "build:es": "tsc -P tsconfig.es.json",
     "build:cjs": "tsc -P tsconfig.cjs.json",
-    "lint": "eslint src/**/*.ts",
+    "lint": "eslint src/**/*.ts && tsc --noEmit",
     "watch": "yarn run-p watch:esnext watch:cjs",
     "watch:esnext": "yarn tsc -P tsconfig.esnext.json -w",
     "watch:cjs": "yarn tsc -P tsconfig.cjs.json -w",
@@ -40,7 +41,8 @@
   "homepage": "https://github.com/inocan-group/aws-orchestrate#readme",
   "dependencies": {
     "lzutf8": "^0.6.0",
-    "serialize-javascript": "^5.0.1"
+    "serialize-javascript": "^5.0.1",
+    "inferred-types": "^0.3.0"
   },
   "peerDependencies": {
     "aws-log": "^0.11.0",

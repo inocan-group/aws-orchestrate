@@ -37,8 +37,10 @@ module.exports = function(w) {
         console._restored = true;
       }
     },
-
-    testFramework: "mocha",
+    autoDetect: true,
+    testFramework: {
+      configFile: "./jest.config.js",
+    },
     debug: true
   };
 };
