@@ -18,46 +18,46 @@ import {
   parallel,
   pass,
   goTo,
-} from '../private'
+} from "../private";
 
-export const isFluentApi = (obj: IStepFnSelector): obj is IFluentApi => !isStepFunction(obj) && !Array.isArray(obj)
+export const isFluentApi = (obj: IStepFnSelector): obj is IFluentApi => !isStepFunction(obj) && !Array.isArray(obj);
 export function isStepFunction(obj: IStepFnSelector): obj is IStepFn {
-  return 'getState' in obj || 'finalize' in obj
+  return "getState" in obj || "finalize" in obj;
 }
-export const isFinalizedStepFn = (obj: IStepFn): obj is IFinalizedStepFn => 'getState' in obj
-export const isStateDefn = (obj: IState | IStepFnOptions): obj is IState => obj !== undefined && 'type' in obj
+export const isFinalizedStepFn = (obj: IStepFn): obj is IFinalizedStepFn => "getState" in obj;
+export const isStateDefn = (obj: IState | IStepFnOptions): obj is IState => obj !== undefined && "type" in obj;
 
 export function StepFunction(...params: (IState | Finalized<IState> | IStepFnOptions)[]) {
   const defaultOptions = {
     autoIndexNames: false,
-  }
+  };
 
-  let state: Array<IState | Finalized<IState>> = []
+  let state: Array<IState | Finalized<IState>> = [];
 
   const commit = <T extends IState>(payload: T) => {
-    const tail = state[state.length - 1]
+    const tail = state[state.length - 1];
     if (state.length > 0 && tail && tail.isTerminalState) {
-      throw new ServerlessError(400, 'Not allowed to extend already finalized step function', 'not-allowed')
+      throw new ServerlessError(400, "Not allowed to extend already finalized step function", "not-allowed");
     }
 
-    state = [...state, payload]
-  }
+    state = [...state, payload];
+  };
 
-  let options: IStepFnOptions = {}
+  let options: IStepFnOptions = {};
   params.forEach(param => {
     if (isStateDefn(param)) {
-      commit(param)
+      commit(param);
     } else {
-      options = param
+      options = param;
     }
-  })
+  });
 
   const getOptions = () => {
-    return options
-  }
+    return options;
+  };
 
   function configuring(options: IStepFnOptions): IConfigurableStepFn {
-    const callable = <T>(fn: CallableConfiguration<T>) => fn(() => configuring(options), commit)
+    const callable = <T>(fn: CallableConfiguration<T>) => fn(() => configuring(options), commit);
 
     return {
       state,
@@ -71,16 +71,16 @@ export function StepFunction(...params: (IState | Finalized<IState> | IStepFnOpt
       pass: callable(pass),
       goTo: callable(goTo),
       finalize() {
-        const lastIndex = state.length - 1
+        const lastIndex = state.length - 1;
         state = state.map((s, index) => {
-          return { ...s, isTerminalState: lastIndex === index }
-        }) as IState[]
-        return { getState: () => state, getOptions }
+          return { ...s, isTerminalState: lastIndex === index };
+        }) as IState[];
+        return { getState: () => state, getOptions };
       },
-    }
+    };
   }
 
-  return configuring({ ...defaultOptions, ...options })
+  return configuring({ ...defaultOptions, ...options });
 }
 
 // export function finalizeStates<T extends IState>(

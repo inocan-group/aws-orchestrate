@@ -1,7 +1,7 @@
-import { ILoggerApi, logger } from 'aws-log';
-import { IDictionary } from 'common-types';
-import { SSM } from 'aws-ssm';
-import { flatten } from 'native-dash';
+import { ILoggerApi, logger } from "aws-log";
+import { IDictionary } from "common-types";
+import { SSM } from "aws-ssm";
+import { flatten } from "native-dash";
 
 let localSecrets: IDictionary = {};
 
@@ -52,7 +52,7 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
   const localSecrets = getLocalSecrets();
   if (mods.every((i: string) => Object.keys(localSecrets).includes(i))) {
     // everything found in local secrets
-    log.debug(`Call to getSecrets() resulted in 100% hit rate for modules locally`, { modules: mods });
+    log.debug("Call to getSecrets() resulted in 100% hit rate for modules locally", { modules: mods });
     // segment.addAnnotation("getSecrets", "finished:onlyLocal");
     return mods.reduce((secrets: IDictionary, mod: string) => {
       secrets[mod] = localSecrets[mod];
@@ -62,7 +62,7 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
 
   // at least SOME modules are NOT stored locally, the latency of getting some
   // versus getting them all is negligible so we'll get them all from SSM
-  log.debug(`Some modules requested were not found locally, requesting from SSM.`, { modules: mods });
+  log.debug("Some modules requested were not found locally, requesting from SSM.", { modules: mods });
   const newSecrets = await SSM.modules(mods);
   mods.forEach((m: string) => {
     if (!newSecrets[m]) {
@@ -72,7 +72,7 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
       log.warn(`Attempt to retrieve module "${m}" returned but had no `);
     }
   });
-  log.debug(`new SSM modules retrieved`);
+  log.debug("new SSM modules retrieved");
   const secrets = {
     ...localSecrets,
     ...newSecrets,
@@ -84,7 +84,7 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
 }
 
 function escapeRegExp(s: string) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
 }
 
 /**
@@ -105,6 +105,6 @@ export function maskLoggingForSecrets(modules: IDictionary, log: ILoggerApi) {
       secretPaths,
     });
   } else {
-    log.debug(`No secrets where added in this function's call; no additional log masking needed.`);
+    log.debug("No secrets where added in this function's call; no additional log masking needed.");
   }
 }

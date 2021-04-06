@@ -1,4 +1,25 @@
 import {
+  HttpStatusCodes,
+  IAWSLambaContext,
+  IApiGatewayErrorResponse,
+  IApiGatewayResponse,
+  IDictionary,
+  isLambdaProxyRequest,
+} from "common-types";
+
+import { get } from "native-dash";
+import { logger } from "aws-log";
+import { buildStepFunctionTaskInput } from "./sequences";
+import { ErrorMeta } from "./errors/ErrorMeta";
+import { ServerlessError } from "./errors/ServerlessError";
+import { ErrorHandler } from "./errors/ErrorHandler";
+import { HandledError } from "./errors/HandledError";
+import { convertToApiGatewayError } from "./errors/convertToApiGatewayError";
+import { UnhandledError } from "./errors/UnhandledError";
+import { RethrowError } from "./errors/RethrowError";
+import { ErrorWithinError } from "./errors/ErrorWithinError";
+
+import {
   IHandlerContext,
   IOrchestrationRequestTypes,
   IWrapperOptions,
@@ -25,26 +46,6 @@ import {
   AwsResource,
   IStepFunctionTaskResponse,
 } from "./private";
-import {
-  HttpStatusCodes,
-  IAWSLambaContext,
-  IApiGatewayErrorResponse,
-  IApiGatewayResponse,
-  IDictionary,
-  isLambdaProxyRequest,
-} from "common-types";
-
-import { get } from "native-dash";
-import { logger } from "aws-log";
-import { buildStepFunctionTaskInput } from "./sequences";
-import { ErrorMeta } from "./errors/ErrorMeta";
-import { ServerlessError } from "./errors/ServerlessError";
-import { ErrorHandler } from "./errors/ErrorHandler";
-import { HandledError } from "./errors/HandledError";
-import { convertToApiGatewayError } from "./errors/convertToApiGatewayError";
-import { UnhandledError } from "./errors/UnhandledError";
-import { RethrowError } from "./errors/RethrowError";
-import { ErrorWithinError } from "./errors/ErrorWithinError";
 
 /**
  * **wrapper**
@@ -105,7 +106,7 @@ export const wrapper = function <I, O>(
       saveSecretHeaders(headers, log);
       maskLoggingForSecrets(getLocalSecrets(), log);
 
-      //#region PREP
+      // #region PREP
       workflowStatus = "prep-starting";
       const status = sequenceStatus(log.getCorrelationId());
       const registerSequence = register(log, context);
@@ -133,17 +134,17 @@ export const wrapper = function <I, O>(
         invoke,
         triggeredBy,
       };
-      //#endregion
+      // #endregion
 
-      //#region CALL the HANDLER FUNCTION
+      // #region CALL the HANDLER FUNCTION
       workflowStatus = "running-function";
       result = await fn(request, handlerContext);
 
       log.debug(`handler function returned to wrapper function`, { result });
       workflowStatus = "function-complete";
-      //#endregion
+      // #endregion
 
-      //#region SEQUENCE (next)
+      // #region SEQUENCE (next)
       if (sequence.isSequence && !sequence.isDone) {
         workflowStatus = "invoke-started";
         const [fn, requestBody] = sequence.next<O>(result);
@@ -154,9 +155,9 @@ export const wrapper = function <I, O>(
       } else {
         msg.notPartOfExistingSequence();
       }
-      //#endregion
+      // #endregion
 
-      //#region SEQUENCE (orchestration starting)
+      // #region SEQUENCE (orchestration starting)
       if (getNewSequence().isSequence) {
         workflowStatus = "sequence-starting";
         msg.sequenceStarting();
@@ -166,9 +167,9 @@ export const wrapper = function <I, O>(
       } else {
         msg.notPartOfNewSequence();
       }
-      //#endregion
+      // #endregion
 
-      //#region SEQUENCE (send to tracker)
+      // #region SEQUENCE (send to tracker)
       if (options.sequenceTracker && sequence.isSequence) {
         workflowStatus = "sequence-tracker-starting";
         msg.sequenceTracker(options.sequenceTracker, workflowStatus);
@@ -179,9 +180,9 @@ export const wrapper = function <I, O>(
           msg.sequenceTrackerComplete(false);
         }
       }
-      //#endregion
+      // #endregion
 
-      //#region RETURN-VALUES
+      // #region RETURN-VALUES
       workflowStatus = "returning-values";
       switch (handlerContext.triggeredBy) {
         case AwsResource.ApiGateway:
@@ -202,10 +203,10 @@ export const wrapper = function <I, O>(
           log.debug(`Returning results to non-API Gateway caller`, { result });
           return result;
       }
-      //#endregion
+      // #endregion
     } catch (e) {
       console.log(`Error encountered: ${e.message}`, { error: e });
-      //#region ERROR-HANDLING
+      // #region ERROR-HANDLING
       // wrap all error handling in it's own try-catch
       try {
         const isApiGatewayRequest: boolean = isLambdaProxyRequest(apiGateway);
@@ -258,18 +259,18 @@ export const wrapper = function <I, O>(
             await invokeLambda(found.handling.forwardTo, e);
           }
         } else {
-          //#region UNFOUND ERROR
+          // #region UNFOUND ERROR
           log.debug(`An error is being processed by the default handling mechanism`, {
             defaultHandling: errorMeta.defaultHandling,
             errorMessage: e.message ?? "no error messsage",
             stack: e.stack ?? "no stack available",
           });
-          //#endregion
+          // #endregion
           const errPayload = { ...e, name: e.name, message: e.message, stack: e.stack };
           const handling = errorMeta.defaultHandling;
           switch (handling.type) {
             case "handler-fn":
-              //#region handle-fn
+              // #region handle-fn
               /**
                * results are broadly three things:
                *
@@ -308,17 +309,17 @@ export const wrapper = function <I, O>(
                 }
               }
               break;
-            //#endregion
+            // #endregion
 
             case "error-forwarding":
-              //#region error-forwarding
+              // #region error-forwarding
               log.debug("The error will be forwarded to another function for handling", { arn: handling.arn });
               await invokeLambda(handling.arn, errPayload);
               break;
-            //#endregion
+            // #endregion
 
             case "default-error":
-              //#region default-error
+              // #region default-error
               /**
                * This handles situations where the user stated that if an
                * "unknown" error occurred that _this_ error should be thrown
@@ -333,10 +334,10 @@ export const wrapper = function <I, O>(
                 throw handling.error;
               }
               break;
-            //#endregion
+            // #endregion
 
             case "default":
-              //#region default
+              // #region default
               // log.debug(`Error handled by default policy`, {
               //   code: errorMeta.defaultErrorCode,
               //   message: e.message,
@@ -354,7 +355,7 @@ export const wrapper = function <I, O>(
                 throw new UnhandledError(errorMeta.defaultErrorCode, e);
               }
               break;
-            //#endregion
+            // #endregion
 
             default:
               log.debug("Unknown handling technique for unhandled error", {
@@ -401,5 +402,5 @@ export const wrapper = function <I, O>(
       }
     }
   };
-  //#endregion
+  // #endregion
 };

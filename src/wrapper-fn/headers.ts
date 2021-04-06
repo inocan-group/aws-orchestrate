@@ -49,7 +49,7 @@ export function getContentType() {
 export function saveSecretHeaders(headers: IDictionary, log: ILoggerApi) {
   const secrets: string[] = [];
   const localSecrets = Object.keys(headers).reduce((headerSecrets: IDictionary, key: keyof typeof headers & string) => {
-    if (key.slice(0, 4) === `O-S-`) {
+    if (key.slice(0, 4) === "O-S-") {
       const [module, name] = key.slice(4).split("/");
       const dotPath = `${module}.${name}`;
       set(headerSecrets, dotPath, headers[key]);

@@ -31,14 +31,14 @@ export const loggedMessages = (log: ILoggerApi) => ({
 
   sequenceStarting() {
     const s = getNewSequence();
-    log.debug(`The NEW sequence this function/conductor registered is about to be invoked`, {
+    log.debug("The NEW sequence this function/conductor registered is about to be invoked", {
       sequence: s.toObject(),
       headersForwarded: Object.keys(getRequestHeaders() || {}),
     });
   },
 
   sequenceStarted(seqResponse: any) {
-    log.debug(`The NEW sequence this function registered was successfully invoked`, { seqResponse });
+    log.debug("The NEW sequence this function registered was successfully invoked", { seqResponse });
   },
 
   startingInvocation(arn: string, params: IDictionary) {
@@ -52,11 +52,11 @@ export const loggedMessages = (log: ILoggerApi) => ({
   },
 
   notPartOfExistingSequence() {
-    log.debug(`This function is not part of a (continuing) sequence so skipping the next() invocation code path`);
+    log.debug("This function is not part of a (continuing) sequence so skipping the next() invocation code path");
   },
 
   notPartOfNewSequence() {
-    log.debug(`This function did not kick off a NEW sequence.`);
+    log.debug("This function did not kick off a NEW sequence.");
   },
 
   /**
@@ -70,13 +70,13 @@ export const loggedMessages = (log: ILoggerApi) => ({
   },
 
   sequenceTrackerComplete(isDone: boolean) {
-    log.debug(`The invocation to the sequence tracker has completed`, {
+    log.debug("The invocation to the sequence tracker has completed", {
       isDone,
     });
   },
 
   returnToApiGateway: (result: any, responseHeaders: IDictionary) => {
-    log.debug(`Returning results to API Gateway`, {
+    log.debug("Returning results to API Gateway", {
       statusCode: HttpStatusCodes.Success,
       result: JSON.stringify(result || ""),
       responseHeaders,

@@ -19,11 +19,24 @@ module.exports = {
   rules: {
     "prefer-const": "error",
     semi: ["error", "always"],
+    quotes: ["warn", "double"],
+    "no-unused-vars": "off",
+    // we need exceptions to be only "warn" because
+    // there are valid use cases for generic variables being
+    // used before being defined
+    "no-use-before-define": ["warn"],
     "@typescript-eslint/semi": ["error", "always"],
     "@typescript-eslint/no-unsafe-member-access": "off",
     "@typescript-eslint/no-unsafe-call": "off",
     "@typescript-eslint/no-unsafe-assignment": "off",
-    "no-unused-vars": "off",
-    "@typescript-eslint/no-unused-vars": ["error", { varsIgnorePattern: "^_" }],
+    // "cases" allows for graceful use of that variable
+    // name in Typescript test cases
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        varsIgnorePattern: "cases|^_",
+        argsIgnorePattern: "^_",
+      },
+    ],
   },
 };

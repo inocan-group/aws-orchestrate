@@ -6,13 +6,13 @@ import {
   IParallelOptions,
   IStore,
   parseAndFinalizeStepFn,
-} from '../private'
+} from "../private";
 
-export function parallel(api: () => IConfigurableStepFn, commit: IStore['commit']) {
+export function parallel(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (branches: IParallelBranchOptions[], options?: IParallelOptions) => {
-    commit(parallelConfiguration(branches, options))
-    return api()
-  }
+    commit(parallelConfiguration(branches, options));
+    return api();
+  };
 }
 
 export function parallelConfiguration(
@@ -20,17 +20,17 @@ export function parallelConfiguration(
   options?: IParallelOptions,
 ): IParallel | Finalized<IParallel> {
   const branches = params.map(param => {
-    const finalizedStepFn = parseAndFinalizeStepFn(param)
+    const finalizedStepFn = parseAndFinalizeStepFn(param);
     return {
       deployable: finalizedStepFn,
-    }
-  })
+    };
+  });
 
   return {
-    type: 'Parallel',
+    type: "Parallel",
     branches,
     ...options,
     isTerminalState: false,
     ...(options?.name !== undefined ? { name: options.name, isFinalized: true } : { isFinalized: false }),
-  }
+  };
 }

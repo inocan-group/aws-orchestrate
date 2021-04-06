@@ -1,22 +1,36 @@
 {
   "compilerOptions": {
-    "declaration": true,
     "module": "commonjs",
-    "lib": ["es2015", "es2016", "es2017", "esnext.asynciterable", "DOM"],
-    "target": "es2017",
+    "target": "ES2018",
     "moduleResolution": "node",
-    "sourceMap": true,
-    "noImplicitAny": true,
-    "outDir": "./dist",
+
+    "sourceMap": false,
     "noEmit": true,
-    "removeComments": false,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "typeRoots": ["./node_modules/@types"],
-    "esModuleInterop": true,
+    "incremental": true,
+    "resolveJsonModule": true,
+
+    "strict": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
     "allowSyntheticDefaultImports": true,
-    "strictNullChecks": false
+
+    "baseUrl": ".",
+    "declaration": true,
+    "outDir": "dist",
+
+    "paths": {
+      "~/*": ["src/*"],
+      "/~/*": ["src/*"]
+    },
+    "plugins": [
+      // Transform paths in output .js files
+      { "transform": "typescript-transform-paths" },
+
+      // Transform paths in output .d.ts files (Include this line if you output declarations files)
+      { "transform": "typescript-transform-paths", "afterDeclarations": true }
+    ]
   },
-  "files": ["global.d.ts"],
-  "include": ["src", "global.d.ts", "test"]
+  "include": ["src", "tests"]
 }

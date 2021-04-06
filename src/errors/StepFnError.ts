@@ -1,3 +1,3 @@
-import { createLibraryError } from "brilliant-errors" 
+import { createLibraryError } from "brilliant-errors"; 
 
-export const StepFnError = createLibraryError("aws-orchestrate")
+export const StepFnError = createLibraryError("aws-orchestrate");
