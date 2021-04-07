@@ -14,10 +14,10 @@ export class RethrowError extends Error {
   constructor(err: IErrorClass) {
     super(err.message);
 
-    this.code = err.code;
+    this.code = err.code || process.env.DEFAULT_ERROR_CODE || "unknown";
     this.name = err.name;
     this.stack = err.stack;
-    this.type = err.type;
+    this.type = err.type || process.env.DEFAULT_ERROR_TYPE || "unknown";
     this.httpStatus = err.httpStatus ?? HttpStatusCodes.InternalServerError;
   }
 }

@@ -44,7 +44,7 @@ export class HandledError extends Error {
   /** the HTTP errorCode */
   httpStatus: number;
   /** the AWS requestId */
-  requestId: string;
+  requestId?: string;
 
   /**
    * **Constructor**
@@ -58,13 +58,14 @@ export class HandledError extends Error {
     super(e.message);
     this.stack = e.stack;
 
-    const type: string = e.name && e.name !== "Error" ? e.name : context.functionName;
+    const type: string = e.name && e.name !== "Error" ? e.name : context.functionName || "unknown-type";
     const subType: string = e.code ? String(e.code) : "handled-error";
     this.classification = `${type}/${subType}`;
-    this.functionName = context.functionName;
+    this.functionName = context.functionName || "unknown-function";
     this.name = type;
     this.code = subType;
 
     this.httpStatus = errorCode;
+    this.requestId = context.awsRequestId;
   }
 }

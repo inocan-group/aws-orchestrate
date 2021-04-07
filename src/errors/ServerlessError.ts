@@ -24,19 +24,19 @@ export class ServerlessError extends Error {
   /**
    * The handler function' name
    */
-  functionName: string;
+  functionName!: string;
 
   /** the AWS requestId */
-  requestId: string;
+  requestId!: string;
 
   /**
    * the sequence's correlation ID
    */
-  correlationId: string;
+  correlationId!: string;
   /**
    * The specific AWS request ID used for this function's execution
    */
-  awsRequestId: string;
+  awsRequestId!: string;
 
   /**
    * **Constructor**

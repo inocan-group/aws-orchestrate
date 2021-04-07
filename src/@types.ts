@@ -30,6 +30,8 @@ export type IHandlerConfig = Omit<IServerlessFunction & { handler: string }, "ha
  */
 export type IWrapperFunction = IHandlerConfig;
 
+export type ILambdaFunctionType = "task" | "fan-out" | "fan-in" | "other";
+
 /**
  * The API Gateway's _proxy integration request_ structure with the
  * `body` and `headers` removed
@@ -56,15 +58,6 @@ export interface IWrapperOptions {
 
 export type IExpectedHeaders = IHttpRequestHeaders & IDictionary;
 
-/**
- * Highlights the most likely props coming in from a request but allows
- * additional properties to be defined too.
- */
-export type IWrapperRequestHeaders =
-  | IExpectedHeaders
-  | IOrchestratedHeaders
-  | IAWSLambdaProxyIntegrationRequest["headers"];
-
 export interface IOrchestratedHeaders extends IHttpResponseHeaders, IDictionary {
   ["X-Correlation-Id"]: string;
   /**
@@ -86,6 +79,15 @@ export interface IOrchestratedHeaders extends IHttpResponseHeaders, IDictionary 
    */
   ["O-Sequence-Status"]?: string;
 }
+
+/**
+ * Highlights the most likely props coming in from a request but allows
+ * additional properties to be defined too.
+ */
+export type IWrapperRequestHeaders =
+  | IExpectedHeaders
+  | IOrchestratedHeaders
+  | IAWSLambdaProxyIntegrationRequest["headers"];
 
 /**
  * the `arn` and `params` to pass in. The _parameters_
@@ -143,10 +145,6 @@ export interface ICompressedSection {
   compressed: true;
   data: string;
 }
-/** @inheritdoc */
-export type IStepFunctionTaskRequest<T> = IStepFunctionTaskPayload<T>;
-/** @inheritdoc */
-export type IStepFunctionTaskResponse<T> = IStepFunctionTaskPayload<T>;
 
 /**
  *  **IStepFunctionTaskPayload**
@@ -162,6 +160,11 @@ export interface IStepFunctionTaskPayload<T> {
   body: T;
   headers: IOrchestratedHeaders | ICompressedSection;
 }
+
+/** @inheritdoc */
+export type IStepFunctionTaskRequest<T> = IStepFunctionTaskPayload<T>;
+/** @inheritdoc */
+export type IStepFunctionTaskResponse<T> = IStepFunctionTaskPayload<T>;
 
 /**
  * **IOrchestratedMessageBody**
@@ -188,13 +191,6 @@ export interface IOrchestratedResponse<T> {
   sequence: ISerializedSequence | ICompressedSection;
   headers: IOrchestratedHeaders | ICompressedSection;
 }
-
-/**
- * This is a antiquated request form which should not be used anymore
- */
-export type IBareRequest<T> = T & {
-  _sequence?: ILambdaSequenceStep[];
-};
 
 export type IOrchestrationRequestTypes<T> =
   | IOrchestratedRequest<T>
@@ -234,7 +230,12 @@ export interface ILambdaSequenceStep<T = IDictionary> {
   onCondition?: any;
 }
 
-export type ILambdaFunctionType = "task" | "fan-out" | "fan-in" | "other";
+/**
+ * This is a antiquated request form which should not be used anymore
+ */
+export type IBareRequest<T> = T & {
+  _sequence?: ILambdaSequenceStep[];
+};
 
 export interface ILambaSequenceFromResponse<T> {
   request: T;
@@ -295,11 +296,8 @@ export interface IErrorHandlingDefault {
 /**
  * The AWS `context` plus additional properties/functions that the `wrapper`
  * function provides.
- *
- * Optionally you can also pass in a generic to state the type of the the
- * "secrets" returned.
  */
-export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
+export interface IHandlerContext extends IAWSLambaContext {
   /**
    * The HTTP headers variables passed in via API Gateway or forwarded along
    * by `aws-orchestrate`.
@@ -425,7 +423,7 @@ export interface IHandlerContext<T = IDictionary> extends IAWSLambaContext {
  * requires that you state explicitly the **Request**<`E`> and **Response**<`R`> types
  * as generics passed in.
  */
-export type IHandlerFunction<E, R> = (event: E, context: IHandlerContext<E>) => Promise<R>;
+export type IHandlerFunction<E, R> = (event: E, context: IHandlerContext) => Promise<R>;
 
 export interface IErrorWithExtraProperties extends Error {
   [key: string]: any;

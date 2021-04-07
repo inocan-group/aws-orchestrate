@@ -24,9 +24,9 @@ export class ErrorWithinError extends Error {
   /** the HTTP errorCode */
   httpStatus: number;
   /** the AWS requestId */
-  requestId: string;
+  requestId?: string;
 
-  originalStack: string;
+  originalStack?: string;
 
   constructor(
     /** the original error */
@@ -46,5 +46,6 @@ export class ErrorWithinError extends Error {
 
     this.stack = secondaryErr.stack;
     this.originalStack = originalError.stack;
+    this.requestId = (originalError as {requestId?: string}).requestId;
   }
 }

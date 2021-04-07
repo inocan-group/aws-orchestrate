@@ -1,3 +1,4 @@
+/* eslint-disable no-case-declarations */
 import {
   HttpStatusCodes,
   IAWSLambaContext,
@@ -57,7 +58,7 @@ import {
  * @param context the contextual props and functions which AWS provides plus additional
  * features brought in by the wrapper function
  */
-export const wrapper = function <I, O>(
+export const wrapper = function <I, O extends any>(
   fn: (req: I, context: IHandlerContext) => Promise<O>,
   options: IWrapperOptions = {}
 ) {
@@ -68,7 +69,7 @@ export const wrapper = function <I, O>(
   ): Promise<
     O | IApiGatewayResponse | IOrchestratedResponse<O> | IStepFunctionTaskResponse<O> | IApiGatewayErrorResponse
   > {
-    let result: O;
+    let result: O = Symbol("Not Yet Defined") as O;
     let workflowStatus:
       | "initializing"
       | "unboxing-from-prior-function"
@@ -92,11 +93,11 @@ export const wrapper = function <I, O>(
     const errorMeta: ErrorMeta = new ErrorMeta();
 
     /** the code to use for successful requests */
-    let statusCode: number;
+    let statusCode = 0;
     workflowStatus = "unboxing-from-prior-function";
     const { request, sequence, apiGateway, headers, triggeredBy } = LambdaSequence.from<I>(event);
 
-    let handlerContext: IHandlerContext<I>;
+    let handlerContext: IHandlerContext = {} as IHandlerContext;
 
     try {
       workflowStatus = "starting-try-catch";
@@ -140,7 +141,7 @@ export const wrapper = function <I, O>(
       workflowStatus = "running-function";
       result = await fn(request, handlerContext);
 
-      log.debug(`handler function returned to wrapper function`, { result });
+      log.debug("handler function returned to wrapper function", { result });
       workflowStatus = "function-complete";
       // #endregion
 
@@ -173,7 +174,7 @@ export const wrapper = function <I, O>(
       if (options.sequenceTracker && sequence.isSequence) {
         workflowStatus = "sequence-tracker-starting";
         msg.sequenceTracker(options.sequenceTracker, workflowStatus);
-        await invokeLambda(options.sequenceTracker, buildOrchestratedRequest<ISequenceTrackerStatus>(status(sequence)));
+        await invokeLambda(options.sequenceTracker, buildOrchestratedRequest(status(sequence)));
         if (sequence.isDone) {
           msg.sequenceTrackerComplete(true);
         } else {
@@ -187,6 +188,7 @@ export const wrapper = function <I, O>(
       switch (handlerContext.triggeredBy) {
         case AwsResource.ApiGateway:
           const response: IApiGatewayResponse = {
+            // eslint-disable-next-line no-unneeded-ternary
             statusCode: statusCode ? statusCode : result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
             headers: getResponseHeaders() as IDictionary,
             body: result ? (typeof result === "string" ? result : JSON.stringify(result)) : "",
@@ -197,10 +199,10 @@ export const wrapper = function <I, O>(
         case AwsResource.StepFunction:
           workflowStatus = "returning-values";
           const nextStepTaskInput = buildStepFunctionTaskInput<O>(result);
-          log.debug(`Wrap result and pass to the next state machine's task step`, { nextStepTaskInput });
+          log.debug("Wrap result and pass to the next state machine's task step", { nextStepTaskInput });
           return nextStepTaskInput;
         default:
-          log.debug(`Returning results to non-API Gateway caller`, { result });
+          log.debug("Returning results to non-API Gateway caller", { result });
           return result;
       }
       // #endregion
@@ -247,7 +249,7 @@ export const wrapper = function <I, O>(
               }
             } else {
               // Known Error was resolved
-              log.info(`There was an error which was resolved by a locally defined error handler`, { error: e });
+              log.info("There was an error which was resolved by a locally defined error handler", { error: e });
             }
           }
 
@@ -260,7 +262,7 @@ export const wrapper = function <I, O>(
           }
         } else {
           // #region UNFOUND ERROR
-          log.debug(`An error is being processed by the default handling mechanism`, {
+          log.debug("An error is being processed by the default handling mechanism", {
             defaultHandling: errorMeta.defaultHandling,
             errorMessage: e.message ?? "no error messsage",
             stack: e.stack ?? "no stack available",
@@ -297,7 +299,7 @@ export const wrapper = function <I, O>(
                   }
                 } else {
                   log.debug(
-                    `The error was passed to the callback/handler function but it did NOT resolve the error condition.`
+                    "The error was passed to the callback/handler function but it did NOT resolve the error condition."
                   );
                 }
               } catch (e2) {
@@ -345,7 +347,7 @@ export const wrapper = function <I, O>(
               // });
               log.info(`the default error code is ${errorMeta.defaultErrorCode}`);
               log.warn(
-                `the error response will look like:`,
+                "the error response will look like:",
                 convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e))
               );
 
@@ -379,7 +381,8 @@ export const wrapper = function <I, O>(
           sequence.activeFn && sequence.activeFn.onError && typeof sequence.activeFn.onError === "function"
             ? (sequence.activeFn.onError as OrchestratedErrorHandler)
             : false;
-        const resolvedByConductor = async () => (conductorErrorHandler ? conductorErrorHandler(e) : false);
+        // TODO: why is this variable not being used?
+        const _resolvedByConductor = async () => (conductorErrorHandler ? conductorErrorHandler(e) : false);
 
         const forwardedByConductor: OrchestratedErrorForwarder | false =
           sequence.activeFn && sequence.activeFn.onError && Array.isArray(sequence.activeFn.onError)
