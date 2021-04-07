@@ -1,4 +1,4 @@
-import { IErrorIdentification, IErrorHandling, IErrorHandlerFunction, IErrorClass, IDefaultHandling } from "../@types";
+import { IErrorIdentification, IErrorHandling, IErrorHandlerFunction, IErrorClass, IDefaultHandling } from "~/types";
 import { ErrorHandler } from "./ErrorHandler";
 export const DEFAULT_ERROR_CODE = 500;
 
@@ -43,9 +43,9 @@ export interface IExpectedErrorOptions<T extends IError = Error> {
 export class ErrorMeta {
   private _errors: ErrorHandler[] = [];
   private _defaultErrorCode: number = DEFAULT_ERROR_CODE;
-  private _arn: string;
-  private _defaultHandlerFn: IErrorHandlerFunction;
-  private _defaultError: IErrorClass;
+  private _arn?: string;
+  private _defaultHandlerFn?: IErrorHandlerFunction;
+  private _defaultError?: IErrorClass;
 
   /**
    * Add an error handler for a known/expected error
@@ -59,7 +59,7 @@ export class ErrorMeta {
      * how will an error be handled; it doesn't NEED to be handled and its a reasonable
      * goal/outcome just to set the appropriate http error code
      */
-    handling?: IErrorHandling
+    handling: IErrorHandling
   ) {
     this._errors.push(new ErrorHandler(code, identifiedBy, handling));
   }

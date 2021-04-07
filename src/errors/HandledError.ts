@@ -1,5 +1,5 @@
 import { IAwsLogContext } from "aws-log";
-import { IErrorWithExtraProperties } from "../@types";
+import { IErrorWithExtraProperties } from "~/types";
 
 export class HandledError extends Error {
   public kind = "HandledError";

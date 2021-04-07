@@ -1,17 +1,20 @@
-// #autoindex:named
+// #autoindex
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 05:56 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 07:05 PM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: findError, headers, loggedMessages, secrets, sequences.
+// files: choice, fail, map, parallel, pass, succeed, task, wait.
 
 // local file exports
-export * from "./findError";
-export * from "./headers";
-export * from "./loggedMessages";
-export * from "./secrets";
-export * from "./sequences";
+export * from "./choice";
+export * from "./fail";
+export * from "./map";
+export * from "./parallel";
+export * from "./pass";
+export * from "./succeed";
+export * from "./task";
+export * from "./wait";
 
 // Note:
 // -----

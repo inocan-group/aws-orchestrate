@@ -10,27 +10,7 @@ import { logger } from "aws-log";
 import { get } from "native-dash";
 
 import { buildOrchestratedRequest, isStepFunctionTaskRequest } from "./sequences/index";
-import {
-  IFanOutResponse,
-  IFanOutTuple,
-  ILambaSequenceFromResponse,
-  ILambdaFunctionType,
-  ILambdaSequenceNextTuple,
-  ILambdaSequenceStep,
-  IOrchestratedDynamicProperty,
-  IOrchestratedProperties,
-  IOrchestrationRequestTypes,
-  ISerializedSequence,
-  IWrapperRequestHeaders,
-  OrchestratedCondition,
-  OrchestratedErrorHandler,
-  decompress,
-  isBareRequest,
-  isDynamic,
-  isOrchestratedRequest,
-  AwsResource,
-  invoke as invokeLambda,
-} from "./private";
+import { ILambdaFunctionType, IOrchestratedProperties, IOrchestrationRequestTypes, ISerializedSequence } from "~/types";
 
 export class LambdaSequence {
   /**

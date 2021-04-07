@@ -1,3 +1,4 @@
+import { ServerlessError } from "~/errors";
 import {
   Finalized,
   IChoice,
@@ -22,9 +23,8 @@ import {
   IStepFnConditionApi,
   IStepFnShorthand,
   IStore,
-  parseAndFinalizeStepFn,
-  ServerlessError,
-} from "../private";
+} from "~/types";
+import { parseAndFinalizeStepFn } from "../..";
 
 const stringEquals = (value: string): Partial<IOperand_StringEquals> => {
   return {
@@ -101,7 +101,7 @@ const numericLessThanEquals = (value: number): Partial<IOperand_NumericLessThanE
 export const condition = (
   cb: (api: IStepFnConditionApi) => Partial<IOperand> | Partial<IDefaultChoiceOptions>,
   stepFn: IFluentApi | IStepFnShorthand,
-  variable?: string | undefined,
+  variable?: string | undefined
 ) => {
   const api: IStepFnConditionApi = {
     stringEquals,
@@ -146,17 +146,17 @@ function getDefaultChoiceStates(options: IDefaultChoiceOptions) {
 
 export function choiceConfiguration(
   choices: (IDefaultChoiceOptions | IChoiceConditionOptions)[],
-  choiceOptions: IChoiceOptions,
+  choiceOptions: IChoiceOptions
 ): IChoice | Finalized<IChoice> {
-  const defaultChoiceIndex = choices.findIndex(c => "kind" in c && c.kind === "defaultChoice");
+  const defaultChoiceIndex = choices.findIndex((c) => "kind" in c && c.kind === "defaultChoice");
   const defaultDfn =
     defaultChoiceIndex in choices
       ? getDefaultChoiceStates(choices[defaultChoiceIndex] as IDefaultChoiceOptions)
       : undefined;
 
-  const conditionChoices = choices.filter(c => !("kind" in c)) as IChoiceConditionOptions[];
+  const conditionChoices = choices.filter((c) => !("kind" in c)) as IChoiceConditionOptions[];
 
-  const choicesDefn = conditionChoices.map(c => {
+  const choicesDefn = conditionChoices.map((c) => {
     const { stepFn, ...rest } = c;
 
     const finalizedStepFn = parseAndFinalizeStepFn(stepFn);

@@ -1,4 +1,4 @@
-import { Finalized, IConfigurableStepFn, IStore, IWait, IWaitOptions } from "../private";
+import { Finalized, IConfigurableStepFn, IStore, IWait, IWaitOptions } from "~/types";
 
 export function wait(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (options?: IWaitOptions) => {

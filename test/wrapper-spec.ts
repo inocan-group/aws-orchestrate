@@ -1,4 +1,4 @@
-import { IHandlerContext, IHandlerFunction } from "../src/@types";
+import { IHandlerContext, IHandlerFunction } from "~/types";
 import { wrapper, IOrchestratedRequest } from "../src/index";
 import { LambdaSequence } from "../src/LambdaSequence";
 import { HandledError } from "../src/errors/HandledError";
@@ -56,9 +56,7 @@ const simpleEvent: IRequest = {
 
 const orchestrateEvent: IOrchestratedRequest<IRequest> = {
   type: "orchestrated-message-body",
-  sequence: LambdaSequence.add("fn1")
-    .add("fn2", { foo: 1, bar: 2 })
-    .toObject(),
+  sequence: LambdaSequence.add("fn1").add("fn2", { foo: 1, bar: 2 }).toObject(),
   headers: {
     "Content-Type": "application/json",
     "X-Correlation-Id": "12345",

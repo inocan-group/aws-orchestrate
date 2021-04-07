@@ -1,24 +1,15 @@
+import { ServerlessError } from "~/errors";
 import {
-  IState,
-  IStepFnOptions,
-  IConfigurableStepFn,
-  task,
-  succeed,
-  map,
-  choice,
-  fail,
-  IFluentApi,
-  IStepFnSelector,
-  IStepFn,
   CallableConfiguration,
-  wait,
   Finalized,
+  IConfigurableStepFn,
   IFinalizedStepFn,
-  ServerlessError,
-  parallel,
-  pass,
-  goTo,
-} from "../private";
+  IFluentApi,
+  IState,
+  IStepFn,
+  IStepFnOptions,
+  IStepFnSelector,
+} from "~/types";
 
 export const isFluentApi = (obj: IStepFnSelector): obj is IFluentApi => !isStepFunction(obj) && !Array.isArray(obj);
 export function isStepFunction(obj: IStepFnSelector): obj is IStepFn {
@@ -44,7 +35,7 @@ export function StepFunction(...params: (IState | Finalized<IState> | IStepFnOpt
   };
 
   let options: IStepFnOptions = {};
-  params.forEach(param => {
+  params.forEach((param) => {
     if (isStateDefn(param)) {
       commit(param);
     } else {

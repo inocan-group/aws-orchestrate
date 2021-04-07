@@ -1,4 +1,4 @@
-import { Finalized, IConfigurableStepFn, IPass, IPassOptions, IStore } from "../private";
+import { Finalized, IConfigurableStepFn, IPass, IPassOptions, IStore } from "~/types";
 
 export function pass(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (options?: IPassOptions) => {

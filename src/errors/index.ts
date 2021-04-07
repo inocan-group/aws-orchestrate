@@ -2,7 +2,7 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 03:58 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 05:56 PM ( GMT-7 )
 // export: named; exclusions: index, private.
 // files: ErrorHandler, ErrorMeta, ErrorWithinError, HandledError, LambdaError, RethrowError, ServerlessError, StepFnError, UnhandledError, convertToApiGatewayError.
 

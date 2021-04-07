@@ -1,5 +1,5 @@
 import { HttpStatusCodes } from "common-types";
-import { IErrorClass } from "../@types";
+import { IErrorClass } from "~/types";
 
 /**
  * Rethrows an error which has a `code` property set

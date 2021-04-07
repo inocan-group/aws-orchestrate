@@ -1,6 +1,6 @@
 import { IDictionary } from "common-types";
 import { getRequestHeaders } from "../wrapper-fn";
-import { IOrchestratedHeaders } from "../@types";
+import { IOrchestratedHeaders } from "~/types";
 import { IStepFunctionTaskPayload } from "../private";
 import { compress } from "./compress";
 

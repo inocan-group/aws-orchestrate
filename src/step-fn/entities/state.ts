@@ -1,18 +1,13 @@
 import { ServerlessError } from "../errors";
+import { Finalized, IFinalizedStepFn, IState, IStateConfiguring, IStepFnOptions, IStepFnSelector } from "~/types";
 import {
   choiceConfiguration,
   failConfiguration,
-  Finalized,
   goToConfiguration,
-  IFinalizedStepFn,
   isFinalizedStepFn,
   isFluentApi,
   isStateDefn,
   isStepFunction,
-  IState,
-  IStateConfiguring,
-  IStepFnOptions,
-  IStepFnSelector,
   mapConfiguration,
   parallelConfiguration,
   passConfiguration,
@@ -20,7 +15,7 @@ import {
   succeedConfiguration,
   taskConfiguration,
   waitConfiguration,
-} from "../private";
+} from "..";
 
 /**
  * It returns the desired state based on `cb`

@@ -46,7 +46,8 @@
   "peerDependencies": {
     "aws-log": "^0.11.0",
     "aws-ssm": "^0.3.13",
-    "native-dash": "^1.11.0"
+    "native-dash": "^1.11.0",
+    "aws-sdk": "2"
   },
   "devDependencies": {
     "@antfu/eslint-config-ts": "^0.6.2",
@@ -57,14 +58,14 @@
     "@types/mermaid": "8",
     "@types/rimraf": "^3.0.0",
     "@types/serialize-javascript": "^5.0.0",
-    "@typescript-eslint/parser": "^4.20.0",
+    "@typescript-eslint/parser": "^4.21.0",
     "@vuepress/plugin-back-to-top": "^1.8.2",
     "@vuepress/plugin-last-updated": "^1.8.2",
     "@vuepress/plugin-medium-zoom": "^1.8.2",
     "@vuepress/plugin-pwa": "^1.8.2",
     "async-shelljs": "^0.1.4",
     "aws-log": "^0.11.0",
-    "aws-sdk": "^2.877.0",
+    "aws-sdk": "2",
     "aws-ssm": "^0.3.13",
     "common-types": "^1.20.4",
     "do-devops": "^0.6.1",

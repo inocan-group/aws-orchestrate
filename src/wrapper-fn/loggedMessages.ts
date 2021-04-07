@@ -2,7 +2,9 @@ import { HttpStatusCodes, IDictionary } from "common-types";
 
 import { ILoggerApi } from "aws-log";
 import { get } from "native-dash";
-import { IApiGateway, IErrorClass, LambdaSequence, getNewSequence, getRequestHeaders } from "../private";
+import { IApiGateway, IErrorClass } from "~/types";
+import { LambdaSequence } from "~/LambdaSequence";
+import { getRequestHeaders, getNewSequence } from ".";
 
 /**
  * A collection of log messages that the wrapper function will emit
@@ -18,7 +20,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
   ) {
     log.info(
       `The handler function ${get(context, "functionName")} has started.  ${
-      get(sequence, "isSequence", false) ? ` [ ${log.getCorrelationId()} ].` : " [ not part of sequence ]."
+        get(sequence, "isSequence", false) ? ` [ ${log.getCorrelationId()} ].` : " [ not part of sequence ]."
       }`,
       {
         request,
@@ -91,7 +93,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
     const errorMessage = e.message ?? "no-message";
     log.info(
       `Processing error in handler function; error occurred sometime after the "${workflowStatus}" workflow status: [ ${errorMessage}${
-      isApiGateway ? ", ApiGateway" : ""
+        isApiGateway ? ", ApiGateway" : ""
       } ]`,
       {
         errorMessage,

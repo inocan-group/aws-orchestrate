@@ -1,5 +1,5 @@
 import { IDictionary } from "common-types";
-import { IOrchestratedDynamicProperty } from "../@types";
+import { IOrchestratedDynamicProperty } from "~/types";
 
 /**
  * A helper function for Orchestrators which produces a
@@ -15,13 +15,10 @@ import { IOrchestratedDynamicProperty } from "../@types";
  * as the property `foo`. If you pass in a generic type to `dynamic` it will enforce
  * the property name is indeed a response property for the given function.
  */
-export function dynamic<T = any>(
-  fn: string,
-  prop?: keyof T
-): IOrchestratedDynamicProperty {
+export function dynamic<T = any>(fn: string, prop?: keyof T): IOrchestratedDynamicProperty {
   return {
     type: "orchestrated-dynamic-property",
-    lookup: `${fn}${prop ? `.${prop}` : ""}`
+    lookup: `${fn}${prop ? `.${prop}` : ""}`,
   };
 }
 

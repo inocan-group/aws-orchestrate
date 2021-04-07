@@ -1,4 +1,4 @@
-import { Finalized, IFinalizedStepFn, IFail, IFailOptions, IStore, IConfigurableStepFn } from "../private";
+import { Finalized, IFinalizedStepFn, IFail, IFailOptions, IStore, IConfigurableStepFn } from "~/types";
 
 export function fail(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (cause: string, options?: IFailOptions): IFinalizedStepFn => {

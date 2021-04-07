@@ -1,4 +1,5 @@
-import { Finalized, IConfigurableStepFn, IStore, ITask, ITaskOptions, parseArn } from "../private";
+import { parseArn } from "~/invoke/parseArn";
+import { Finalized, IConfigurableStepFn, IStore, ITask, ITaskOptions } from "~/types";
 
 // TODO: You had a generic type defined here but it was unused. It was: <T extends ITask | Finalized<ITask>>
 export function task(api: () => IConfigurableStepFn, commit: IStore["commit"]) {

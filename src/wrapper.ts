@@ -24,29 +24,15 @@ import {
   IHandlerContext,
   IOrchestrationRequestTypes,
   IWrapperOptions,
-  LambdaSequence,
   OrchestratedErrorForwarder,
   OrchestratedErrorHandler,
-  buildOrchestratedRequest,
-  findError,
-  getLocalSecrets,
-  getNewSequence,
-  getResponseHeaders,
-  getSecrets,
-  invokeSequence,
-  invokeNewSequence,
-  loggedMessages,
-  maskLoggingForSecrets,
   registerSequence as register,
-  saveSecretHeaders,
-  sequenceStatus,
-  setContentType,
-  setFnHeaders,
-  invoke as invokeLambda,
   IOrchestratedResponse,
   AwsResource,
   IStepFunctionTaskResponse,
-} from "./private";
+} from "~/types";
+
+import { invoke as invokeLambda } from "~/invoke";
 
 /**
  * **wrapper**

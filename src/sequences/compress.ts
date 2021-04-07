@@ -1,6 +1,6 @@
 import { compress as c, decompress as d } from "lzutf8";
 import { HttpStatusCodes } from "common-types";
-import { ICompressedSection } from "../@types";
+import { ICompressedSection } from "~/types";
 import { UnhandledError } from "../errors/UnhandledError";
 
 /**

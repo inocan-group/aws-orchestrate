@@ -1,4 +1,4 @@
-import { Finalized, IConfigurableStepFn, IStore, ISucceed } from "../private";
+import { Finalized, IConfigurableStepFn, IStore, ISucceed } from "~/types";
 
 export function succeed(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (name?: string | undefined) => {

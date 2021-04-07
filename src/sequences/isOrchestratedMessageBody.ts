@@ -1,4 +1,4 @@
-import { IOrchestratedRequest, IOrchestrationRequestTypes } from "../@types";
+import { IOrchestratedRequest, IOrchestrationRequestTypes } from "~/types";
 
 /**
  * detects if the given structure is of type <T> or

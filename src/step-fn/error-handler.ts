@@ -1,7 +1,10 @@
 import { hash } from "native-dash";
-import { ServerlessError } from "../errors";
-import { ErrDefn, IErrHandlerApi, IErrorHandlerPointer, IErrorTypeSelector } from "../private";
+import { ServerlessError } from "~/errors";
 import {
+  ErrDefn,
+  IErrHandlerApi,
+  IErrorHandlerPointer,
+  IErrorTypeSelector,
   Finalized,
   IConfigurableStepFn,
   IErrorType,
@@ -11,7 +14,7 @@ import {
   IState,
   IStore,
   RetryOptions,
-} from "./types";
+} from "~/types";
 
 /**
  * Step Function Errors
@@ -32,7 +35,7 @@ export const errorTypes: IErrorType = {
 
 const conditionalRetryHandler = (state: Record<string, RetryOptions>) => (
   errorType: IErrorTypeSelector,
-  options: RetryOptions,
+  options: RetryOptions
 ) => {
   const newState = { ...state, [errorType(errorTypes)]: { ...options } };
   return {
@@ -86,7 +89,7 @@ export function errorHandler(handlerFn: (e: IErrHandlerApi) => Record<string, Er
 const conditionalHandler = (state: Record<string, ErrDefn>) => (
   errorType: IErrorTypeSelector,
   selector: IErrorHandlerPointer,
-  resultPath = "$.error",
+  resultPath = "$.error"
 ) => {
   const newState = { ...state, [errorType(errorTypes)]: { selector, resultPath } };
   return {
@@ -98,10 +101,7 @@ const conditionalHandler = (state: Record<string, ErrDefn>) => (
   };
 };
 
-const defaultHandler = (state: Record<string, ErrDefn>) => (
-  selector: IErrorHandlerPointer,
-  resultPath = "$.error",
-) => {
+const defaultHandler = (state: Record<string, ErrDefn>) => (selector: IErrorHandlerPointer, resultPath = "$.error") => {
   return {
     ...state,
     [errorTypes.all]: { selector, resultPath },
