@@ -18,7 +18,7 @@ export async function invokeStepFn(stepArn: string, request: IDictionary) {
           reject(e);
         }
         resolve(data);
-      }
+      },
     );
   });
 }

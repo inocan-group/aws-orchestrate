@@ -5,7 +5,7 @@ import { IStepFunctionTaskRequest, IOrchestrationRequestTypes } from "~/types";
  * has been boxed into an `IStepFunctionTaskRequest`
  */
 export function isStepFunctionTaskRequest<T>(
-  msg: T | IOrchestrationRequestTypes<T>
+  msg: T | IOrchestrationRequestTypes<T>,
 ): msg is IStepFunctionTaskRequest<T> {
   return !!(typeof msg === "object" && (msg as IStepFunctionTaskRequest<T>).type === "step-fn-message-body");
 }

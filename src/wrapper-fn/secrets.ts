@@ -65,12 +65,9 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
   log.debug("Some modules requested were not found locally, requesting from SSM.", { modules: mods });
   const newSecrets = await SSM.modules(mods);
   mods.forEach((m: string) => {
-    if (!newSecrets[m]) {
-      throw new Error(`Failure to retrieve the SSM module "${m}"`);
-    }
-    if (Object.keys(newSecrets[m]).length === 0) {
-      log.warn(`Attempt to retrieve module "${m}" returned but had no `);
-    }
+    if (!newSecrets[m]) {throw new Error(`Failure to retrieve the SSM module "${m}"`);}
+
+    if (Object.keys(newSecrets[m]).length === 0) {log.warn(`Attempt to retrieve module "${m}" returned but had no `);}
   });
   log.debug("new SSM modules retrieved");
   const secrets = {
@@ -93,18 +90,17 @@ function escapeRegExp(s: string) {
  */
 export function maskLoggingForSecrets(modules: IDictionary, log: ILoggerApi) {
   const secretPaths: string[] = [];
-  Object.keys(modules).forEach(mod => {
-    Object.keys(modules[mod]).forEach(s => {
+  Object.keys(modules).forEach((mod) => {
+    Object.keys(modules[mod]).forEach((s) => {
       const escapedStr = escapeRegExp(modules[mod][s]);
       log.addToMaskedValues(escapedStr);
       secretPaths.push(`${mod}/${s}`);
     });
   });
   if (secretPaths.length > 0) {
-    log.debug(`All secret values [ ${secretPaths.length} ] have been masked in logging`, {
+log.debug(`All secret values [ ${secretPaths.length} ] have been masked in logging`, {
       secretPaths,
     });
-  } else {
-    log.debug("No secrets where added in this function's call; no additional log masking needed.");
-  }
+} else {log.debug("No secrets where added in this function's call; no additional log masking needed.");}
+
 }

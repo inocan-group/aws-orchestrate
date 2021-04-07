@@ -2,11 +2,12 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 05:56 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 07:26 PM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: buildOrchestratedRequest, buildStepFunctionTaskInput, compress, dynamic, isBareRequest, isOrchestratedMessageBody, isStepFunctionTaskRequest, sequenceStatus.
+// files: LambdaSequence, buildOrchestratedRequest, buildStepFunctionTaskInput, compress, dynamic, isBareRequest, isOrchestratedMessageBody, isStepFunctionTaskRequest, sequenceStatus.
 
 // local file exports
+export * from "./LambdaSequence";
 export * from "./buildOrchestratedRequest";
 export * from "./buildStepFunctionTaskInput";
 export * from "./compress";

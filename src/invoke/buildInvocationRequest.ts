@@ -15,7 +15,7 @@ import { IParsedArn } from "../private";
  */
 export function buildInvocationRequest<
   T extends IDictionary & {
-    headers?: IDictionary<string>
+    headers?: IDictionary<string>;
   }
 >(arn: IParsedArn, request: T): import("aws-sdk").Lambda.InvocationRequest {
   const FunctionName = `arn:aws:lambda:${arn.region}:${arn.account}:function:${arn.appName}-${arn.stage}-${arn.fn}`;

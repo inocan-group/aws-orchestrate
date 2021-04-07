@@ -2,14 +2,15 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 05:56 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 07:26 PM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: decrypt, encrypt, ensureFunctionName.
+// files: decrypt, encrypt, ensureFunctionName, headers.
 
 // local file exports
 export * from "./decrypt";
 export * from "./encrypt";
 export * from "./ensureFunctionName";
+export * from "./headers";
 
 // Note:
 // -----

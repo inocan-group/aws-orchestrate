@@ -2,9 +2,9 @@ import { HttpStatusCodes, IDictionary } from "common-types";
 
 import { ILoggerApi } from "aws-log";
 import { get } from "native-dash";
+import { getRequestHeaders, getNewSequence } from ".";
 import { IApiGateway, IErrorClass } from "~/types";
 import { LambdaSequence } from "~/LambdaSequence";
-import { getRequestHeaders, getNewSequence } from ".";
 
 /**
  * A collection of log messages that the wrapper function will emit
@@ -16,7 +16,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
     headers: IDictionary,
     context: IDictionary,
     sequence: LambdaSequence,
-    apiGateway: IApiGateway
+    apiGateway: IApiGateway,
   ) {
     log.info(
       `The handler function ${get(context, "functionName")} has started.  ${
@@ -27,7 +27,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
         sequence: sequence ? sequence.toObject() : LambdaSequence.notASequence(),
         headers,
         apiGateway,
-      }
+      },
     );
   },
 
@@ -99,7 +99,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
         errorMessage,
         stack,
         workflowStatus,
-      }
+      },
     );
   },
 });

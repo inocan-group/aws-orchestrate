@@ -35,7 +35,7 @@ export const errorTypes: IErrorType = {
 
 const conditionalRetryHandler = (state: Record<string, RetryOptions>) => (
   errorType: IErrorTypeSelector,
-  options: RetryOptions
+  options: RetryOptions,
 ) => {
   const newState = { ...state, [errorType(errorTypes)]: { ...options } };
   return {
@@ -89,7 +89,7 @@ export function errorHandler(handlerFn: (e: IErrHandlerApi) => Record<string, Er
 const conditionalHandler = (state: Record<string, ErrDefn>) => (
   errorType: IErrorTypeSelector,
   selector: IErrorHandlerPointer,
-  resultPath = "$.error"
+  resultPath = "$.error",
 ) => {
   const newState = { ...state, [errorType(errorTypes)]: { selector, resultPath } };
   return {
@@ -115,21 +115,21 @@ function isState(obj: Finalized<IState> | IFinalizedStepFn): obj is Finalized<IS
 function getFirstState(finalizedStepFn: IFinalizedStepFn) {
   const [firstState] = [...finalizedStepFn.getState()];
 
-  if (!("name" in firstState)) {
+  if (!("name" in firstState))
     // TODO
-    throw new ServerlessError(500, "as", "");
-  }
+    {throw new ServerlessError(500, "as", "");}
+
   return firstState.name;
 }
 export function goToConfiguration(finalizedState: Finalized<IState> | IFinalizedStepFn | string): Finalized<IGoTo> {
   const hashState = hash(JSON.stringify(finalizedState));
 
-  const next =
-    typeof finalizedState === "string" // is next state name
+  const next
+    = typeof finalizedState === "string" // is next state name
       ? finalizedState
       : isState(finalizedState) // is next state object
-      ? finalizedState.name
-      : getFirstState(finalizedState); // is finalized StepFn which has first state finalized
+        ? finalizedState.name
+        : getFirstState(finalizedState); // is finalized StepFn which has first state finalized
 
   return {
     type: "GoTo",

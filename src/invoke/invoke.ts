@@ -38,7 +38,7 @@ export async function invoke<T = IDictionary>(
    */
   fnArn: string,
   /** the request object to be passed to the calling function */
-  request: T
+  request: T,
   /**
    * The request headers to send along with the request
    */

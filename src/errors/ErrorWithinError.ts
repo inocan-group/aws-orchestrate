@@ -32,7 +32,7 @@ export class ErrorWithinError extends Error {
     /** the original error */
     originalError: Error,
     /** the error encountered within the error handling section */
-    secondaryErr: Error
+    secondaryErr: Error,
   ) {
     super(originalError.message);
     this.name = "aws-orchestrate/error-handling";
@@ -41,7 +41,7 @@ export class ErrorWithinError extends Error {
     this.message = `There was an error in the wrapper function while TRYING to handle another error. The original error had a message of: \n"${get(
       originalError,
       "message",
-      "no message"
+      "no message",
     )}".\n\nSubsequently the error within the wrapper function was: "${get(secondaryErr, "message", "no message")}"`;
 
     this.stack = secondaryErr.stack;

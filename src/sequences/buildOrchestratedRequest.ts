@@ -1,8 +1,8 @@
 import { IDictionary } from "common-types";
-import { IOrchestratedRequest, ISerializedSequence, IOrchestratedHeaders } from "~/types";
-import { getRequestHeaders } from "~/wrapper-fn/headers";
 import { LambdaSequence } from "../LambdaSequence";
 import { compress } from "./compress";
+import { IOrchestratedRequest, ISerializedSequence, IOrchestratedHeaders } from "~/types";
+import { getRequestHeaders } from "~/wrapper-fn/headers";
 
 export function buildOrchestratedRequest<T>(
   body: T,
@@ -12,11 +12,9 @@ export function buildOrchestratedRequest<T>(
    * such as the forwarding of _secrets_ but if you want to include
    * additional ones they can be added with this parameter.
    */
-  additionalHeaders?: IDictionary
+  additionalHeaders?: IDictionary,
 ): IOrchestratedRequest<T> {
-  if (!sequence) {
-    sequence = LambdaSequence.notASequence();
-  }
+  if (!sequence) {sequence = LambdaSequence.notASequence();}
 
   const headers = additionalHeaders ? { ...getRequestHeaders(), ...additionalHeaders } : getRequestHeaders();
 
