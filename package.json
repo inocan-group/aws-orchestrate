@@ -45,9 +45,9 @@
   },
   "peerDependencies": {
     "aws-log": "^0.11.0",
+    "aws-sdk": "2",
     "aws-ssm": "^0.3.13",
-    "native-dash": "^1.11.0",
-    "aws-sdk": "2"
+    "native-dash": "^1.11.0"
   },
   "devDependencies": {
     "@antfu/eslint-config-ts": "^0.6.2",
@@ -74,6 +74,7 @@
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-prettier": "^3.3.1",
     "eslint-plugin-promise": "^4.3.1",
+    "eslint-plugin-unicorn": "^29.0.0",
     "jest": "26",
     "jest-extended": "^0.11.5",
     "madge": "^4.0.2",

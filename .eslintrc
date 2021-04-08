@@ -3,7 +3,7 @@
     "es2021": true
   },
   "extends": ["plugin:import/warnings", "plugin:import/typescript"],
-  "plugins": ["@typescript-eslint", "import", "promise"],
+  "plugins": ["@typescript-eslint", "import", "promise", "unicorn"],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "parser": "@typescript-eslint/parser",

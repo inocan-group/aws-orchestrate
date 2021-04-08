@@ -9,8 +9,29 @@ import {
 import { logger } from "aws-log";
 import { get } from "native-dash";
 
-import { ILambdaFunctionType, IOrchestratedProperties, IOrchestrationRequestTypes, ISerializedSequence } from "~/types";
-import { buildOrchestratedRequest, isStepFunctionTaskRequest } from "~/sequences";
+import {
+  AwsResource,
+  IFanOutResponse,
+  IFanOutTuple,
+  ILambaSequenceFromResponse,
+  ILambdaFunctionType,
+  ILambdaSequenceNextTuple,
+  ILambdaSequenceStep,
+  IOrchestratedProperties,
+  IOrchestrationRequestTypes,
+  ISerializedSequence,
+  IWrapperRequestHeaders,
+  OrchestratedCondition,
+  OrchestratedErrorHandler,
+} from "~/types";
+import {
+  buildOrchestratedRequest,
+  decompress,
+  isBareRequest,
+  isOrchestratedRequest,
+  isStepFunctionTaskRequest,
+} from "~/sequences";
+import { invoke as invokeLambda } from "~/invoke";
 
 export class LambdaSequence {
   /**
@@ -21,7 +42,7 @@ export class LambdaSequence {
   public static add<T extends IDictionary = IDictionary>(
     arn: string,
     params: Partial<IOrchestratedProperties<T>> = {},
-    type: ILambdaFunctionType = "task",
+    type: ILambdaFunctionType = "task"
   ) {
     const obj = new LambdaSequence();
     obj.add(arn, params, type);
@@ -57,7 +78,7 @@ export function handler(event, context, callback) {
    */
   public static from<T extends IDictionary = IDictionary>(
     event: IOrchestrationRequestTypes<T>,
-    logger?: import("aws-log").ILoggerApi,
+    logger?: import("aws-log").ILoggerApi
   ) {
     const obj = new LambdaSequence();
 
@@ -67,7 +88,7 @@ export function handler(event, context, callback) {
   /**
    * Takes a serialized sequence and brings it back to a `LambdaSequence` class.
    */
-  public static deserialize<T>(s: ISerializedSequence): LambdaSequence {
+  public static deserialize(s: ISerializedSequence): LambdaSequence {
     const obj = new LambdaSequence();
     obj.deserialize(s);
 
@@ -129,7 +150,7 @@ export function handler(event, context, callback) {
   public add<T extends IDictionary = IDictionary>(
     arn: string,
     params: Partial<IOrchestratedProperties<T>> = {},
-    type: ILambdaFunctionType = "task",
+    type: ILambdaFunctionType = "task"
   ) {
     this._steps.push({ arn, params, type, status: "assigned" });
     return this;
@@ -158,13 +179,12 @@ export function handler(event, context, callback) {
    *
    * @param handler the handler function
    */
-  public onError<T extends Error = Error>(handler: OrchestratedErrorHandler): Promise<boolean>;
+  public onError(handler: OrchestratedErrorHandler): Promise<boolean>;
   /**
    * Assigns error handling to last added **Task** in the sequence
    */
-  public onError<T>(...args: any[]): Promise<boolean> {
-    //
-
+  public async onError(..._args: any[]): Promise<boolean> {
+    return true;
   }
 
   /**
@@ -180,7 +200,7 @@ export function handler(event, context, callback) {
   public onCondition<T extends IDictionary = IDictionary>(
     fn: OrchestratedCondition,
     arn: arn,
-    params: Partial<IOrchestratedProperties<T>>,
+    params: Partial<IOrchestratedProperties<T>>
   ) {
     this._steps.push({
       arn,
@@ -220,7 +240,7 @@ export function handler(event, context, callback) {
    * propagated forward if that function is part of a sequence.
    */
   public fanOut<T = IDictionary>(arn: string, instanceParams: T[]): IFanOutResponse<T>;
-  public fanOut<T>(...args: any[]): IFanOutResponse<T> {
+  public fanOut<T>(..._args: any[]): IFanOutResponse<T> {
     throw new Error("the fanOut functionality is not yet available");
   }
 
@@ -242,7 +262,7 @@ export function handler(event, context, callback) {
    */
   public next<T extends IDictionary>(
     /** the _current_ function's response */
-    currentFnResponse: Partial<T> = {},
+    currentFnResponse: Partial<T> = {}
   ): ILambdaSequenceNextTuple<T> {
     this.finishStep(currentFnResponse);
 
@@ -285,7 +305,7 @@ export function handler(event, context, callback) {
   public from<T>(
     event: IOrchestrationRequestTypes<T>,
     // TODO: remove this from API in future
-    _logger?: import("aws-log").ILoggerApi,
+    _logger?: import("aws-log").ILoggerApi
   ): ILambaSequenceFromResponse<T> {
     let apiGateway: IAWSLambdaProxyIntegrationRequest | IAWSLambdaProxyIntegrationRequestV2 | undefined;
     let headers: IWrapperRequestHeaders = {};
@@ -309,33 +329,35 @@ export function handler(event, context, callback) {
       sequence = LambdaSequence.notASequence();
     } else if (isBareRequest(event)) {
       headers = {};
-      sequence
-        = typeof event === "object" && event._sequence
+      sequence =
+        typeof event === "object" && event._sequence
           ? this.ingestSteps(event, event._sequence)
           : LambdaSequence.notASequence();
-      request
-        = typeof event === "object" && event._sequence
+      request =
+        typeof event === "object" && event._sequence
           ? (Object.keys(event).reduce((props: T, prop: keyof T & string) => {
-            if (prop !== "_sequence") {props[prop] = event[prop];}
+              if (prop !== "_sequence") {
+                props[prop] = event[prop];
+              }
 
-            return props;
-          }, {}) as T)
+              return props;
+            }, {}) as T)
           : event;
     }
 
     // The active function's output is sent into the params
     const activeFn = this.activeFn && this.activeFn.params ? this.activeFn.params : {};
-    request
-      = typeof request === "object"
+    request =
+      typeof request === "object"
         ? ({ ...activeFn, ...request } as T)
         : // TODO: This may have to deal with the case where request type is a non-object but there ARE props from `activeFn` which are needed
-        request;
+          request;
 
     const triggeredBy = isLambdaProxyRequest(event)
       ? AwsResource.ApiGateway
       : isStepFunctionTaskRequest(event)
-        ? AwsResource.StepFunction
-        : AwsResource.Lambda;
+      ? AwsResource.StepFunction
+      : AwsResource.Lambda;
 
     return {
       request: request as T,
@@ -364,12 +386,12 @@ export function handler(event, context, callback) {
    * completed _and_ any which are _active_.
    */
   public get remaining() {
-    return this._steps ? this._steps.filter(s => s.status === "assigned") : [];
+    return this._steps ? this._steps.filter((s) => s.status === "assigned") : [];
   }
 
   /** the tasks which have been completed */
   public get completed() {
-    return this._steps ? this._steps.filter(s => s.status === "completed") : [];
+    return this._steps ? this._steps.filter((s) => s.status === "completed") : [];
   }
 
   /** the total number of _steps_ in the sequence */
@@ -402,20 +424,22 @@ export function handler(event, context, callback) {
     this.activeFn.status = "completed";
   }
 
-  public get activeFn(): ILambdaSequenceStep {
+  public get activeFn(): ILambdaSequenceStep | false {
     if (this._steps.length > 0) {
       const log = logger().reloadContext();
-      const active = this._steps ? this._steps.filter(s => s.status === "active") : [];
+      const active = this._steps ? this._steps.filter((s) => s.status === "active") : [];
 
-      if (active.length > 1) {log.warn("There appears to be more than 1 STEP in the sequence marked as active!", { steps: this._steps });}
+      if (active.length > 1) {
+        log.warn("There appears to be more than 1 STEP in the sequence marked as active!", { steps: this._steps });
+      }
 
       if (active.length === 0) {
-        const step = this._steps.find(i => i.status === "assigned");
+        const step = this._steps.find((i) => i.status === "assigned");
         if (!step) {
-throw new Error(
-            `Problem resolving activeFn: no step with status "assigned" found. \n\n ${JSON.stringify(this._steps)}`,
+          throw new Error(
+            `Problem resolving activeFn: no step with status "assigned" found. \n\n ${JSON.stringify(this._steps)}`
           );
-}
+        }
 
         step.status = "active";
         return this.activeFn as ILambdaSequenceStep;
@@ -423,7 +447,7 @@ throw new Error(
 
       return active[0] as ILambdaSequenceStep;
     } else {
-
+      return false;
     }
   }
 
@@ -438,14 +462,18 @@ throw new Error(
    * array of steps.
    */
   public ingestSteps(request: any, steps: string | ILambdaSequenceStep[]) {
-    if (typeof steps === "string") {steps = JSON.parse(steps) as ILambdaSequenceStep[];}
+    if (typeof steps === "string") {
+      steps = JSON.parse(steps) as ILambdaSequenceStep[];
+    }
 
-    if (this._steps.length > 0) {throw new Error("Attempt to ingest steps into a LambdaSequence that already has steps!");}
+    if (this._steps.length > 0) {
+      throw new Error("Attempt to ingest steps into a LambdaSequence that already has steps!");
+    }
 
     this._steps = steps;
     const activeFnParams = this.activeFn && this.activeFn.params ? this.activeFn.params : {};
-    const transformedRequest
-      = typeof request === "object" ? { ...activeFnParams, ...request } : { ...activeFnParams, request };
+    const transformedRequest =
+      typeof request === "object" ? { ...activeFnParams, ...request } : { ...activeFnParams, request };
 
     /**
      * Inject the prior function's request params into
@@ -479,7 +507,9 @@ throw new Error(
    * a `LambdaSequence` which represents this state.
    */
   public deserialize(s: ISerializedSequence) {
-    if (!s.isSequence) {return LambdaSequence.notASequence();}
+    if (!s.isSequence) {
+      return LambdaSequence.notASequence();
+    }
 
     this._steps = s.steps;
     this._responses = s.responses;
@@ -499,11 +529,17 @@ throw new Error(
       obj.totalSteps = this.steps.length;
       obj.completedSteps = this.completed.length;
 
-      if (this.activeFn) {obj.activeFn = this.activeFn.arn;}
+      if (this.activeFn) {
+        obj.activeFn = this.activeFn.arn;
+      }
 
-      if (this.completed) {obj.completed = this.completed.map(i => i.arn);}
+      if (this.completed) {
+        obj.completed = this.completed.map((i) => i.arn);
+      }
 
-      if (this.remaining) {obj.remaining = this.remaining.map(i => i.arn);}
+      if (this.remaining) {
+        obj.remaining = this.remaining.map((i) => i.arn);
+      }
 
       obj.steps = this._steps;
       obj.responses = this._responses || {};
@@ -527,16 +563,13 @@ throw new Error(
       if (isDynamic(value)) {
         value = get(this._responses, (value as IOrchestratedDynamicProperty).lookup, undefined);
 
-        if (typeof value === undefined)
-          // eslint-disable-next-line unicorn/prefer-type-error
-          {
-throw new Error(
+        if (typeof value === undefined) {
+          throw new TypeError(
             `The property "${key}" was set as a dynamic property by the Orchestrator but it was dependant on getting a value from ${
               (fn.params as IOrchestratedProperties<T>)[key]
-            } which could not be found.`,
+            } which could not be found.`
           );
-}
-
+        }
       }
       const valueNow = (key: keyof T & string, value: any) => value as T[typeof key];
       (props as T)[key] = valueNow(key, value);

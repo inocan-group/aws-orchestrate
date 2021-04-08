@@ -46,31 +46,31 @@ import { invoke as invokeLambda } from "~/invoke";
  */
 export const wrapper = function <I, O extends any>(
   fn: (req: I, context: IHandlerContext) => Promise<O>,
-  options: IWrapperOptions = {},
+  options: IWrapperOptions = {}
 ) {
   /** this is the core Lambda event which the wrapper takes as an input */
-  return async function(
+  return async function (
     event: IOrchestrationRequestTypes<I>,
-    context: IAWSLambaContext,
+    context: IAWSLambaContext
   ): Promise<
     O | IApiGatewayResponse | IOrchestratedResponse<O> | IStepFunctionTaskResponse<O> | IApiGatewayErrorResponse
-    > {
+  > {
     let result: O = Symbol("Not Yet Defined") as O;
     let workflowStatus:
-    | "initializing"
-    | "unboxing-from-prior-function"
-    | "starting-try-catch"
-    | "prep-starting"
-    | "running-function"
-    | "function-complete"
-    | "invoke-complete"
-    | "invoke-started"
-    | "sequence-defined"
-    | "sequence-starting"
-    | "sequence-started"
-    | "sequence-tracker-starting"
-    | "completing"
-    | "returning-values";
+      | "initializing"
+      | "unboxing-from-prior-function"
+      | "starting-try-catch"
+      | "prep-starting"
+      | "running-function"
+      | "function-complete"
+      | "invoke-complete"
+      | "invoke-started"
+      | "sequence-defined"
+      | "sequence-starting"
+      | "sequence-started"
+      | "sequence-tracker-starting"
+      | "completing"
+      | "returning-values";
     workflowStatus = "initializing";
     context.callbackWaitsForEmptyEventLoop = false;
     const log = logger(options.loggerConfig).lambda(event, context);
@@ -139,7 +139,9 @@ export const wrapper = function <I, O extends any>(
         const invokeParams = await invoke(fn, requestBody);
         msg.completingInvocation(fn, invokeParams);
         workflowStatus = "invoke-complete";
-      } else {msg.notPartOfExistingSequence();}
+      } else {
+        msg.notPartOfExistingSequence();
+      }
 
       // #endregion
 
@@ -150,7 +152,9 @@ export const wrapper = function <I, O extends any>(
         const seqResponse = await invokeNewSequence();
         msg.sequenceStarted(seqResponse);
         workflowStatus = "sequence-started";
-      } else {msg.notPartOfNewSequence();}
+      } else {
+        msg.notPartOfNewSequence();
+      }
 
       // #endregion
 
@@ -159,7 +163,11 @@ export const wrapper = function <I, O extends any>(
         workflowStatus = "sequence-tracker-starting";
         msg.sequenceTracker(options.sequenceTracker, workflowStatus);
         await invokeLambda(options.sequenceTracker, buildOrchestratedRequest(status(sequence)));
-        if (sequence.isDone) {msg.sequenceTrackerComplete(true);} else {msg.sequenceTrackerComplete(false);}
+        if (sequence.isDone) {
+          msg.sequenceTrackerComplete(true);
+        } else {
+          msg.sequenceTrackerComplete(false);
+        }
       }
       // #endregion
 
@@ -198,8 +206,8 @@ export const wrapper = function <I, O extends any>(
          * "found" is either handler author using the `HandledError` class themselves
          * or using the API exposed at `context.errorMgmt`
          **/
-        const found: ServerlessError | ErrorHandler | false
-          = e instanceof ServerlessError ? e : findError(e, errorMeta);
+        const found: ServerlessError | ErrorHandler | false =
+          e instanceof ServerlessError ? e : findError(e, errorMeta);
         if (found instanceof ServerlessError) {
           found.functionName = context.functionName;
           found.classification = found.classification.replace("aws-orchestrate/", `${found.functionName}/`);
@@ -212,18 +220,26 @@ export const wrapper = function <I, O extends any>(
         if (found) {
           if (!found.handling) {
             const err = new HandledError(found.code, e, log.getContext());
-            if (isApiGatewayRequest) {return convertToApiGatewayError(err);} else {throw err;}
+            if (isApiGatewayRequest) {
+              return convertToApiGatewayError(err);
+            } else {
+              throw err;
+            }
           }
           if (found.handling && found.handling.callback) {
             const resolvedLocally = found.handling.callback(e);
-            if (!resolvedLocally)
+            if (!resolvedLocally) {
               // Unresolved Known Error!
-              {
-if (isApiGatewayRequest) {return convertToApiGatewayError(new HandledError(found.code, e, log.getContext()));} else {throw new HandledError(found.code, e, log.getContext());}
-} else
-              // Known Error was resolved
-              {log.info("There was an error which was resolved by a locally defined error handler", { error: e });}
 
+              if (isApiGatewayRequest) {
+                return convertToApiGatewayError(new HandledError(found.code, e, log.getContext()));
+              } else {
+                throw new HandledError(found.code, e, log.getContext());
+              }
+            } else {
+              // Known Error was resolved
+              log.info("There was an error which was resolved by a locally defined error handler", { error: e });
+            }
           }
 
           if (found.handling && found.handling.forwardTo) {
@@ -259,35 +275,39 @@ if (isApiGatewayRequest) {return convertToApiGatewayError(new HandledError(found
                   log.debug(
                     `The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${
                       result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
-                    } ].`,
+                    } ].`
                   );
                   if (isApiGatewayRequest) {
-return {
+                    return {
                       statusCode: result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent,
                       headers: getResponseHeaders() as IDictionary,
                       body: result ? JSON.stringify(result) : "",
                     };
-} else {return result;}
-
+                  } else {
+                    return result;
+                  }
                 } else {
-log.debug(
-                    "The error was passed to the callback/handler function but it did NOT resolve the error condition.",
+                  log.debug(
+                    "The error was passed to the callback/handler function but it did NOT resolve the error condition."
                   );
-}
-
+                }
               } catch (e2) {
                 // handler threw an error
-                if (isApiGatewayRequest) {return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));} else {throw new UnhandledError(errorMeta.defaultErrorCode, e);}
+                if (isApiGatewayRequest) {
+                  return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
+                } else {
+                  throw new UnhandledError(errorMeta.defaultErrorCode, e);
+                }
               }
               break;
-              // #endregion
+            // #endregion
 
             case "error-forwarding":
               // #region error-forwarding
               log.debug("The error will be forwarded to another function for handling", { arn: handling.arn });
               await invokeLambda(handling.arn, errPayload);
               break;
-              // #endregion
+            // #endregion
 
             case "default-error":
               // #region default-error
@@ -299,10 +319,14 @@ log.debug(
               handling.error.message = handling.error.message || e.message;
               handling.error.stack = e.stack;
               handling.error.type = "default-error";
-              if (isApiGatewayRequest) {return convertToApiGatewayError(handling.error);} else {throw handling.error;}
+              if (isApiGatewayRequest) {
+                return convertToApiGatewayError(handling.error);
+              } else {
+                throw handling.error;
+              }
 
               break;
-              // #endregion
+            // #endregion
 
             case "default":
               // #region default
@@ -314,13 +338,17 @@ log.debug(
               log.info(`the default error code is ${errorMeta.defaultErrorCode}`);
               log.warn(
                 "the error response will look like:",
-                convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e)),
+                convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e))
               );
 
-              if (isApiGatewayRequest) {return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));} else {throw new UnhandledError(errorMeta.defaultErrorCode, e);}
+              if (isApiGatewayRequest) {
+                return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, e));
+              } else {
+                throw new UnhandledError(errorMeta.defaultErrorCode, e);
+              }
 
               break;
-              // #endregion
+            // #endregion
 
             default:
               log.debug("Unknown handling technique for unhandled error", {
@@ -336,27 +364,33 @@ log.debug(
          * error handling can get involved in the error processing flow
          */
 
-        if (errorOfError instanceof ServerlessError) {throw errorOfError;}
+        if (errorOfError instanceof ServerlessError) {
+          throw errorOfError;
+        }
 
-        const conductorErrorHandler: OrchestratedErrorHandler | false
-          = sequence.activeFn && sequence.activeFn.onError && typeof sequence.activeFn.onError === "function"
+        const conductorErrorHandler: OrchestratedErrorHandler | false =
+          sequence.activeFn && sequence.activeFn.onError && typeof sequence.activeFn.onError === "function"
             ? (sequence.activeFn.onError as OrchestratedErrorHandler)
             : false;
         // TODO: why is this variable not being used?
-        const _resolvedByConductor = async() => (conductorErrorHandler ? conductorErrorHandler(e) : false);
+        const _resolvedByConductor = async () => (conductorErrorHandler ? conductorErrorHandler(e) : false);
 
-        const forwardedByConductor: OrchestratedErrorForwarder | false
-          = sequence.activeFn && sequence.activeFn.onError && Array.isArray(sequence.activeFn.onError)
+        const forwardedByConductor: OrchestratedErrorForwarder | false =
+          sequence.activeFn && sequence.activeFn.onError && Array.isArray(sequence.activeFn.onError)
             ? (sequence.activeFn.onError as OrchestratedErrorForwarder)
             : false;
 
-        if (forwardedByConductor) {await invokeLambda(...forwardedByConductor);} else {
+        if (forwardedByConductor) {
+          await invokeLambda(...forwardedByConductor);
+        } else {
           // Catch errors in error handlers
           if (
-            errorOfError.type === "unhandled-error"
-            || errorOfError.type === "handled-error"
-            || errorOfError.type === "default-error"
-          ) {throw new RethrowError(errorOfError);}
+            errorOfError.type === "unhandled-error" ||
+            errorOfError.type === "handled-error" ||
+            errorOfError.type === "default-error"
+          ) {
+            throw new RethrowError(errorOfError);
+          }
 
           throw new ErrorWithinError(e, errorOfError);
         }
