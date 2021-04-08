@@ -11,8 +11,10 @@ import { parseArn } from "~/invoke";
 import {
   ErrDefn,
   Finalized,
+  IChoice,
   IFail,
   IGoTo,
+  IMap,
   IParallel,
   IPass,
   IState,
@@ -84,7 +86,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
     const { catch: stateErrorHandler, retry, ...rest } = finalizedState;
 
     const errorHandler = stateErrorHandler || options.defaultErrorHandler;
-    let errorHandlerResult: IStepFunctionCatcher[];
+    let errorHandlerResult: IStepFunctionCatcher[] | undefined = undefined;
 
     if (errorHandler !== undefined) {
       const aggregate = Object.keys(errorHandler).map((k) => parseErrorHandler(ctx)(k, errorHandler[k]));
@@ -94,7 +96,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
         return acc;
       }, [] as [string, IStepFunctionStep][]);
       ctx.errorHandlerStates.push(...errorStatesTuple);
-      errorHandlerResult = aggregate.reduce((acc, curr) => {
+      errorHandlerResult = aggregate.reduce((acc: IStepFunctionCatcher[], curr) => {
         acc = [...acc, ...curr[0]];
         return acc;
       }, []);
@@ -106,7 +108,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
         ...toCamelCase(rest),
         Catch: errorHandlerResult,
         Retry: retry
-          ? Object.keys(retry).reduce((acc, curr) => {
+          ? Object.keys(retry).reduce((acc: IStepFunctionStep[], curr) => {
               acc = [...acc, { ErrorEquals: [curr], ...toCamelCase(retry[curr]) }];
               return acc;
             }, [])
@@ -243,7 +245,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
     });
 
     const errorHandler = stateErrorHandler || options.defaultErrorHandler;
-    let errorHandlerResult: IStepFunctionCatcher[];
+    let errorHandlerResult: IStepFunctionCatcher[] | undefined = undefined;
 
     if (errorHandler !== undefined) {
       const aggregate = Object.keys(errorHandler).map((k) => parseErrorHandler(ctx)(k, errorHandler[k]));
@@ -253,7 +255,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
         return acc;
       }, [] as [string, IStepFunctionStep][]);
       ctx.errorHandlerStates.push(...errorStatesTuple);
-      errorHandlerResult = aggregate.reduce((acc, curr) => {
+      errorHandlerResult = aggregate.reduce((acc: IStepFunctionCatcher[], curr) => {
         acc = [...acc, ...curr[0]];
         console.log(acc);
         return acc;
@@ -266,7 +268,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
         ...toCamelCase(rest),
         Branches,
         Retry: retry
-          ? Object.keys(retry).reduce((acc, curr) => {
+          ? Object.keys(retry).reduce((acc: IStepFunctionStep[], curr) => {
               acc = [...acc, { ErrorEquals: [curr], ...toCamelCase(retry[curr]) }];
               return acc;
             }, [])
@@ -298,7 +300,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       `map-${ctx.hashState}`
     );
     const errorHandler = stateErrorHandler || options.defaultErrorHandler;
-    let errorHandlerResult: IStepFunctionCatcher[];
+    let errorHandlerResult: IStepFunctionCatcher[] | undefined = undefined;
 
     if (errorHandler !== undefined) {
       const aggregate = Object.keys(errorHandler).map((k) => parseErrorHandler(ctx)(k, errorHandler[k]));
@@ -308,7 +310,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
         return acc;
       }, [] as [string, IStepFunctionStep][]);
       ctx.errorHandlerStates.push(...errorStatesTuple);
-      errorHandlerResult = aggregate.reduce((acc, curr) => {
+      errorHandlerResult = aggregate.reduce((acc: IStepFunctionCatcher[], curr) => {
         acc = [...acc, ...curr[0]];
         console.log(acc);
         return acc;
@@ -321,7 +323,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
         ...toCamelCase(rest),
         Iterator,
         Retry: retry
-          ? Object.keys(retry).reduce((acc, curr) => {
+          ? Object.keys(retry).reduce((acc: IStepFunctionStep[], curr) => {
               acc = [...acc, { ErrorEquals: [curr], ...toCamelCase(retry[curr]) }];
               return acc;
             }, [])
