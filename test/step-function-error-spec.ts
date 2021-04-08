@@ -114,3 +114,14 @@ describe('Step Function Builder Error Handler', () => {
     )
   })
 })
+
+// TODO: implement this syntax instead of the existing one
+// catch: e => e.permissions(fn1, fn2).custom(cond, fn5).allOthers(fn3,fn4)
+
+// export interface IErrHandlerBuilder<T> {
+//   all: (...rest: any[]) => IErrHandlerBuilder<T | 'all'>;
+//   custom: (cond: string, ...rest: any[]) => IErrHandlerBuilder;
+//   allOthers: (...rest: any[]) => IErrHandlerBuilder; 
+// }
+
+// const foo: Exclude<IErrHandlerBuilder, 'allOthers'>;

@@ -70,3 +70,15 @@ describe('Choice State', () => {
     expect(action).toThrowError({ name: "ServerlessError", message: 'variable score is not allowed. It must start with "$."'})
   })
 })
+
+// TODO: new conditional fn implementation api
+export interface IConditionalStatement {
+  kind: 'conditional-statement';
+  operation: 'stringEquals' | 'numberEquals';
+  path?: `\$.${string}`;
+  value: unknown;
+}
+
+export function isConditionalStatement(obj: unknown): obj is IConditionalStatement {
+  return typeof obj === 'object' && (obj as IConditionalStatement).kind === 'conditional-statement' ? true : false;
+}
