@@ -1,20 +1,19 @@
 import { IDictionary } from "common-types";
 import { getStage } from "aws-log";
 import { ensureFunctionName } from "~/shared/ensureFunctionName";
-import { AwsResource } from "~/types";
+import { AwsResource, IParsedArn } from "~/types";
 
-export interface IParsedArn {
-  region: string;
-  account: string;
-  stage: string;
-  appName: string;
-  fn: string;
-}
+/**
+ * Looks for aspects of the ARN in environment variables
+ */
+export function getEnvironmentVars() {
+  const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
+  const account = process.env.AWS_ACCOUNT || process.env.AWS_ACCOUNT_ID;
+  const stage =
+    process.env.AWS_STAGE || process.env.ENVIRONMENT || process.env.STAGE || process.env.NODE_ENV || getStage();
+  const appName = process.env.SERVICE_NAME || process.env.APP_NAME;
 
-export function parseArn(arn: string, target: AwsResource = AwsResource.Lambda): IParsedArn {
-  const isFullyQualified = arn.slice(0, 3) === "arn";
-
-  return isFullyQualified ? parseFullyQualifiedString(arn, target) : parsePartiallyQualifiedString(arn);
+  return { region, account, stage, appName };
 }
 
 const ResourceArnFormatRegex: IDictionary<RegExp | undefined> = {
@@ -22,8 +21,15 @@ const ResourceArnFormatRegex: IDictionary<RegExp | undefined> = {
   [AwsResource.StepFunction]: /arn:aws:states:([\w-].*):(\d.*):stateMachine:(.*)/,
 };
 
+const patterns: IDictionary<RegExp> = {
+  account: /^\d+$/,
+  region: /\s+-\s+-\d/,
+  stage: /(prod|stage|test|dev)/,
+  appName: /\s+[\s-]*/,
+};
+
 function parseFullyQualifiedString(arn: string, target: AwsResource): IParsedArn {
-  if (!(target in ResourceArnFormatRegex)) {
+  if (!ResourceArnFormatRegex || target in ResourceArnFormatRegex) {
     throw new Error("ApiGateway not supported. Apigateway should be called by http request");
   }
 
@@ -41,48 +47,6 @@ function parseFullyQualifiedString(arn: string, target: AwsResource): IParsedArn
     appName,
   };
 }
-
-/**
- * assumes the input parameter is just the function name
- * and the rest of the ARN can be deduced by environment
- * variables.
- */
-function parsePartiallyQualifiedString(function_: string): IParsedArn {
-  const output: IParsedArn = {
-    ...getEnvironmentVars(),
-    ...{ fn: ensureFunctionName(function_.split(":").pop()) },
-  };
-  for (const section: keyof IParsedArn of ["region", "account", "stage", "appName"]) {
-    if (!output[section]) {
-      output[section] = seek(section, function_);
-      if (!output[section]) {
-        parsingError(section);
-      }
-    }
-  }
-
-  return output;
-}
-
-/**
- * Looks for aspects of the ARN in environment variables
- */
-export function getEnvironmentVars() {
-  const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
-  const account = process.env.AWS_ACCOUNT || process.env.AWS_ACCOUNT_ID;
-  const stage =
-    process.env.AWS_STAGE || process.env.ENVIRONMENT || process.env.STAGE || process.env.NODE_ENV || getStage();
-  const appName = process.env.SERVICE_NAME || process.env.APP_NAME;
-
-  return { region, account, stage, appName };
-}
-
-const patterns: IDictionary<RegExp> = {
-  account: /^\d+$/,
-  region: /\s+-\s+-\d/,
-  stage: /(prod|stage|test|dev)/,
-  appName: /\s+[\s-]*/,
-};
 
 function seek(pattern: keyof typeof patterns, partialArn: string) {
   const parts = partialArn.split(":");
@@ -104,4 +68,32 @@ function parsingError(section: keyof typeof patterns) {
   );
   e.name = "ArnParsingError";
   throw e;
+}
+
+/**
+ * assumes the input parameter is just the function name
+ * and the rest of the ARN can be deduced by environment
+ * variables.
+ */
+function parsePartiallyQualifiedString(fnName: string): IParsedArn {
+  const output: IParsedArn = {
+    ...getEnvironmentVars(),
+    ...{ fn: ensureFunctionName(fnName.split(":").pop()) },
+  };
+  for (const section of ["region", "account", "stage", "appName"]) {
+    if (!output[section]) {
+      output[section] = seek(section, fnName);
+      if (!output[section]) {
+        parsingError(section);
+      }
+    }
+  }
+
+  return output;
+}
+
+export function parseArn(arn: string, target: AwsResource = AwsResource.Lambda): IParsedArn {
+  const isFullyQualified = arn.slice(0, 3) === "arn";
+
+  return isFullyQualified ? parseFullyQualifiedString(arn, target) : parsePartiallyQualifiedString(arn);
 }

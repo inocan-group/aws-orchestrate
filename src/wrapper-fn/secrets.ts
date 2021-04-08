@@ -5,6 +5,32 @@ import { flatten } from "native-dash";
 
 let localSecrets: IDictionary = {};
 
+function escapeRegExp(s: string) {
+  return s.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&"); // $& means the whole matched string
+}
+
+/**
+ * Goes through a set of secrets -- organized by `[module].[name] = secret` --
+ * and masks the values so that they don't leak into the log files.
+ */
+export function maskLoggingForSecrets(modules: IDictionary, log: ILoggerApi) {
+  const secretPaths: string[] = [];
+  for (const module of Object.keys(modules)) {
+    for (const s of Object.keys(modules[module])) {
+      const escapedString = escapeRegExp(modules[module][s]);
+      log.addToMaskedValues(escapedString);
+      secretPaths.push(`${module}/${s}`);
+    }
+  }
+  if (secretPaths.length > 0) {
+    log.debug(`All secret values [ ${secretPaths.length} ] have been masked in logging`, {
+      secretPaths,
+    });
+  } else {
+    log.debug("No secrets where added in this function's call; no additional log masking needed.");
+  }
+}
+
 /**
  * Saves secrets locally so they can be used rather than
  * going out to SSM. These secrets will then also be "passed
@@ -82,30 +108,4 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
   maskLoggingForSecrets(newSecrets, log);
   // segment.addAnnotation("getSecrets", "finished:awsRequest");
   return secrets;
-}
-
-function escapeRegExp(s: string) {
-  return s.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&"); // $& means the whole matched string
-}
-
-/**
- * Goes through a set of secrets -- organized by `[module].[name] = secret` --
- * and masks the values so that they don't leak into the log files.
- */
-export function maskLoggingForSecrets(modules: IDictionary, log: ILoggerApi) {
-  const secretPaths: string[] = [];
-  for (const module of Object.keys(modules)) {
-    for (const s of Object.keys(modules[module])) {
-      const escapedString = escapeRegExp(modules[module][s]);
-      log.addToMaskedValues(escapedString);
-      secretPaths.push(`${module}/${s}`);
-    }
-  }
-  if (secretPaths.length > 0) {
-    log.debug(`All secret values [ ${secretPaths.length} ] have been masked in logging`, {
-      secretPaths,
-    });
-  } else {
-    log.debug("No secrets where added in this function's call; no additional log masking needed.");
-  }
 }

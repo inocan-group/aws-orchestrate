@@ -3,12 +3,10 @@
 This library exports a function `wrapper` which is intended to wrap all
 serverless functions. What it provides are the following:
 
-- better "type safety" for your handler functions
-- out-of-the-box support for Lambda Sequences in a transparent manner
-- automatically configured logging (using `aws-log`)
-- better error handling
-- convenient access to connecting to a Firebase database (no code baggage though
-  if you don't use this)
+- strong **type safety** for your handler functions
+- a **consistency** abstraction to ensure your request parameters are always typed and where you expect them to be regardless of the caller
+- opinionated **logging** framework that ensures context while helping to block secrets slipping in
+- opinionated **error handling** which ensures that all errors are caught and appropriate handling can be put in place.
 
 ## Usage
 

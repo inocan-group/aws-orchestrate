@@ -1,11 +1,6 @@
-import * as chai from "chai";
-// import * as helpers from "./testing/helpers";
-import { parseArn } from "../src/invoke/parseArn";
-import { invoke } from "../src/invoke";
-import { ensureFunctionName, buildInvocationRequest } from "../src/private";
+import { parseArn, buildInvocationRequest } from "~/invoke";
+import { ensureFunctionName } from "~/shared";
 import { logger, getStage } from "aws-log";
-
-const expect = chai.expect;
 
 describe("ensureFunctionName() →", () => {
   it("name starting with invalid character fails", () => {
