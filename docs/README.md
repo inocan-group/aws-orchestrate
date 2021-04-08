@@ -8,12 +8,17 @@ actionLink: /getting-started
 
 features:
 - title: Handler Wrapper
-  details: we provide a way to wrap your handler functions which not only provides strong and consistent typing but also adds a much more capable context object to work your magic off of
+  details: Wrap your handler functions to get strong and consistent typing (regardless of the caller), logging, and error handling.
   link: /wrapper
 - title: Orchestration
-  details: organize your functional goals into orchestrated sequences of function executions and ensure that there is a consistent way to gain visibility across the full functional graph in your logging solution
-- title: HTTP Transactions
-  details: Web clients expect an HTTP response to be functional but when start chaining together micro-services there's a tendency to move to a purely technical response that your client's can't use; this library will help you get back to functional API's
+  details: A strongly typed builder pattern for structuring a state machine. Developer DX is improved by providing clear guard rails through strong typing that describes what you can do and stops you from what you can't. It is built in a manner that promotes reuse through composable primitives. 
+- title: Build System
+  details: Configure your serverless config with strongly typed Typescript instead of the squishy YAML that the Serverless Framework provides. Not already onboard? What if we automatigically used AST to find and configure your functions (and step functions if you use them)? 
 
 footer: MIT Licensed | Copyright © Inocan Group
 ---
+
+<p style="text-align: center">
+  All features are mutually exclusive. Use what you like, ignore what you don't. 
+</p>
+<br/>
