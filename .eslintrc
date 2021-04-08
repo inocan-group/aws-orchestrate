@@ -17,7 +17,11 @@
     "no-unused-vars": "off",
     "curly": "error",
     "brace-style": ["error", "1tbs", { "allowSingleLine": true }],
+    // our use of `-spec` files for testing prevents us using this
     "unicorn/filename-case": "off",
+    // reduce has been getting a bad rap lately; its true that often
+    // a filter or map would be clearer and equally as effective but
+    // there are still some legit cases to use reduce
     "unicorn/no-array-reduce": "off",
     "unicorn/prevent-abbreviations": "off",
     "unicorn/no-null": "off",

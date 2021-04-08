@@ -1,4 +1,4 @@
-import { expect } from 'chai'
+
 import { deserialize, serialize } from '../src/shared/index'
 
 describe('Check ability to serialize/deserialize functions', () => {
