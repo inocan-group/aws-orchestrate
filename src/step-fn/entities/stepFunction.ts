@@ -10,6 +10,8 @@ import {
   IStepFnOptions,
   IStepFnSelector,
 } from "~/types";
+import { goTo } from "..";
+import { choice, fail, map, parallel, pass, succeed, task, wait } from "../states";
 
 export const isFluentApi = (obj: IStepFnSelector): obj is IFluentApi => !isStepFunction(obj) && !Array.isArray(obj);
 export function isStepFunction(obj: IStepFnSelector): obj is IStepFn {

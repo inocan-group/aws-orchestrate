@@ -1,9 +1,4 @@
-import {
-  IDictionary,
-  IAWSLambdaProxyIntegrationRequest,
-  isLambdaProxyRequest,
-  Omit,
-} from "common-types";
+import { IDictionary, IAWSLambdaProxyIntegrationRequest, isLambdaProxyRequest, Omit } from "common-types";
 
 /**
  * **LambdaEventParser**
@@ -30,20 +25,21 @@ export class LambdaEventParser {
    * `IAWSLambdaProxyIntegrationRequest` object with the "body" removed _if_
    * the event came from **API Gateway** otherwise it will be undefined.
    */
-  public static parse<T extends IDictionary = IDictionary>(
-    event: T | IAWSLambdaProxyIntegrationRequest,
-  ) {
-    const request = isLambdaProxyRequest(event)
-      ? (JSON.parse(event.body) as T)
-      : event;
-
-    if (isLambdaProxyRequest(event)) {delete event.body;} else {event = undefined;}
+  public static parse<T extends IDictionary = IDictionary>(event: T | IAWSLambdaProxyIntegrationRequest) {
+    let request: T;
+    let apiGateway: Omit<IAWSLambdaProxyIntegrationRequest, "body"> | undefined;
+    if (isLambdaProxyRequest(event)) {
+      const { body, ...rest } = event;
+      request = JSON.parse(body);
+      apiGateway = rest;
+    } else {
+      request = event;
+      apiGateway = undefined;
+    }
 
     return {
       request,
-      apiGateway: event as
-        | Omit<IAWSLambdaProxyIntegrationRequest, "body">
-        | undefined,
+      apiGateway,
     };
   }
 }

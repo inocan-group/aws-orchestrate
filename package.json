@@ -22,7 +22,7 @@
     "build:experimental": "node build/build.js es cjs --min",
     "build:es": "tsc -P tsconfig.es.json",
     "build:cjs": "tsc -P tsconfig.cjs.json",
-    "lint": "eslint src/**/*.ts --fix && tsc --noEmit",
+    "lint": "eslint src/**/*.ts --fix && eslint test/**/*.ts --fix && tsc --noEmit",
     "watch": "yarn run-p watch:esnext watch:cjs",
     "watch:esnext": "yarn tsc -P tsconfig.esnext.json -w",
     "watch:cjs": "yarn tsc -P tsconfig.cjs.json -w",
@@ -50,7 +50,6 @@
     "native-dash": "^1.11.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config-ts": "^0.6.2",
     "@rollup/plugin-commonjs": "^18.0.0",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.2.1",

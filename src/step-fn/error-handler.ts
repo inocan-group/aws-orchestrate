@@ -60,14 +60,14 @@ const defaultRetryHandler = (state: Record<string, RetryOptions>) => (options: R
  *
  * @param handlerFn a callback that exposes methods to be used to defined an error retry handler.
  */
-export function retryHandler(handlerFn: (r: IRetryHandlerApi) => Record<string, RetryOptions>) {
+export function retryHandler(handlerFunction: (r: IRetryHandlerApi) => Record<string, RetryOptions>) {
   const state: Record<string, RetryOptions> = {};
   const api: IRetryHandlerApi = {
     default: defaultRetryHandler(state),
     handle: conditionalRetryHandler(state),
   };
 
-  return handlerFn(api);
+  return handlerFunction(api);
 }
 
 /**
@@ -76,14 +76,14 @@ export function retryHandler(handlerFn: (r: IRetryHandlerApi) => Record<string, 
  *
  * @param handlerFn a callback that exposes methods to be used to defined an error handler.
  */
-export function errorHandler(handlerFn: (e: IErrHandlerApi) => Record<string, ErrDefn>) {
+export function errorHandler(handlerFunction: (e: IErrHandlerApi) => Record<string, ErrDefn>) {
   const state: Record<string, ErrDefn> = {};
   const api: IErrHandlerApi = {
     default: defaultHandler(state),
     handle: conditionalHandler(state),
   };
 
-  return handlerFn(api);
+  return handlerFunction(api);
 }
 
 const conditionalHandler = (state: Record<string, ErrDefn>) => (
@@ -108,12 +108,12 @@ const defaultHandler = (state: Record<string, ErrDefn>) => (selector: IErrorHand
   };
 };
 
-function isState(obj: Finalized<IState> | IFinalizedStepFn): obj is Finalized<IState> {
-  return "type" in obj;
+function isState(object: Finalized<IState> | IFinalizedStepFn): object is Finalized<IState> {
+  return "type" in object;
 }
 
-function getFirstState(finalizedStepFn: IFinalizedStepFn) {
-  const [firstState] = [...finalizedStepFn.getState()];
+function getFirstState(finalizedStepFunction: IFinalizedStepFn) {
+  const [firstState] = [...finalizedStepFunction.getState()];
 
   if (!("name" in firstState)) {
     // TODO
@@ -128,9 +128,9 @@ export function goToConfiguration(finalizedState: Finalized<IState> | IFinalized
   const next =
     typeof finalizedState === "string" // is next state name
       ? finalizedState
-      : isState(finalizedState) // is next state object
+      : (isState(finalizedState) // is next state object
       ? finalizedState.name
-      : getFirstState(finalizedState); // is finalized StepFn which has first state finalized
+      : getFirstState(finalizedState)); // is finalized StepFn which has first state finalized
 
   return {
     type: "GoTo",

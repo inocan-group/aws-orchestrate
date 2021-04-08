@@ -1,5 +1,5 @@
-import { datetime } from 'common-types'
-import { IBaseOptions, IBaseState, IConfigurableStepFn } from '../../private';
+import { datetime } from "common-types";
+import { IBaseOptions, IBaseState, IConfigurableStepFn } from "~/types";
 
 export interface IWaitOptions extends IBaseOptions {
   /** A time, in seconds, to wait before beginning the state specified in the Next field. */
@@ -12,14 +12,15 @@ export interface IWaitOptions extends IBaseOptions {
   timestampPath?: string;
 }
 
-export interface IWaitCallable<T = string> {
-  (options?: IWaitOptions): IConfigurableStepFn
+export interface IWaitCallable {
+  (options?: IWaitOptions): IConfigurableStepFn;
 }
-export interface IWaitConfiguration<T = string> {
-  (options?: IWaitOptions): IWait
+export interface IWaitConfiguration {
+  (options?: IWaitOptions): IWait;
 }
 
-export type IWait = Omit<IWaitOptions, "name"> & IBaseState & {
-  readonly type: "Wait"
-  isTerminalState: false
-}
+export type IWait = Omit<IWaitOptions, "name"> &
+  IBaseState & {
+    readonly type: "Wait";
+    isTerminalState: false;
+  };

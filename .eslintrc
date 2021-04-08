@@ -2,7 +2,7 @@
   "env": {
     "es2021": true
   },
-  "extends": ["plugin:import/warnings", "plugin:import/typescript"],
+  "extends": ["plugin:import/warnings", "plugin:import/typescript", "plugin:unicorn/recommended"],
   "plugins": ["@typescript-eslint", "import", "promise", "unicorn"],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
@@ -17,6 +17,10 @@
     "no-unused-vars": "off",
     "curly": "error",
     "brace-style": ["error", "1tbs", { "allowSingleLine": true }],
+    "unicorn/filename-case": "off",
+    "unicorn/no-array-reduce": "off",
+    "unicorn/prevent-abbreviations": "off",
+    "unicorn/no-null": "off",
     // we need exceptions to be only "warn" because
     // there are valid use cases for generic variables being
     // used before being defined

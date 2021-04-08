@@ -9,7 +9,7 @@ import {
   IStepFnShorthand,
   IStore,
 } from "~/types";
-import { parseAndFinalizeStepFn } from "../..";
+import { parseAndFinalizeStepFn } from "../entities/state";
 
 export function map(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (itemsPath: string, options?: IMapOptions) => {

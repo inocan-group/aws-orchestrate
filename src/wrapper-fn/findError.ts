@@ -8,14 +8,14 @@ import { ErrorMeta, ErrorHandler } from "~/errors";
  */
 export function findError(e: Error & { code?: string }, expectedErrors: ErrorMeta): false | ErrorHandler {
   let found: false | ErrorHandler = false;
-  expectedErrors.list.forEach((i) => {
+  for (const index of expectedErrors.list) {
     if (
-      (e.code && e.code === i.identifiedBy.code)
-      || (e.name && e.name === i.identifiedBy.name)
-      || (e.message && e.message.includes(i.identifiedBy.messageContains))
-      || (i.identifiedBy.errorClass && e instanceof i.identifiedBy.errorClass)
-    ) {found = i;}
-  });
+      (e.code && e.code === index.identifiedBy.code)
+      || (e.name && e.name === index.identifiedBy.name)
+      || (e.message && e.message.includes(index.identifiedBy.messageContains))
+      || (index.identifiedBy.errorClass && e instanceof index.identifiedBy.errorClass)
+    ) {found = index;}
+  }
 
   return found;
 }

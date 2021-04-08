@@ -1,18 +1,14 @@
 import { IDictionary } from "common-types";
 import { logger } from "aws-log";
-import {
-  IOrchestratedRequest,
-  LambdaSequence,
-  buildOrchestratedRequest,
-  parseArn,
-  buildInvocationRequest,
-} from "../private";
+import { IOrchestratedRequest } from "~/types";
+import { buildInvocationRequest, buildOrchestratedRequest, parseArn } from "..";
+import { LambdaSequence } from "~/sequences";
 
 export type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 
 export type UnconstrainedHttpHeaders = IDictionary<string | number | boolean>;
 export type LambdaInvocation<T = IDictionary, H = UnconstrainedHttpHeaders> = (
-  fnArn: string,
+  functionArn: string,
   request: T,
   additionalHeaders?: H
 ) => Promise<InvocationResponse>;
@@ -36,9 +32,9 @@ export async function invoke<T = IDictionary>(
    * - AWS_STAGE (*or alternatively NODE_ENV, ENVIRONMENT*)
    * - SERVICE_NAME (*or alternatively APP_NAME*)
    */
-  fnArn: string,
+  functionArn: string,
   /** the request object to be passed to the calling function */
-  request: T,
+  request: T
   /**
    * The request headers to send along with the request
    */
@@ -47,13 +43,13 @@ export async function invoke<T = IDictionary>(
   // TODO: come back to this idea of "headers" here
   const lambda = new (await import("aws-sdk")).Lambda();
   return new Promise((resolve) => {
-    lambda.invoke(buildInvocationRequest(parseArn(fnArn), request), (err, data) => {
-      if (err) {
+    lambda.invoke(buildInvocationRequest(parseArn(functionArn), request), (error_, data) => {
+      if (error_) {
         const { error } = logger().reloadContext();
-        const e = new Error(err.message);
-        e.stack = err.stack;
+        const e = new Error(error_.message);
+        e.stack = error_.stack;
         e.name = "InvocationError";
-        error(e, err);
+        error(e, error_);
         throw e;
       }
       resolve(data);
@@ -73,9 +69,9 @@ export async function invoke<T = IDictionary>(
  * _headers_ too).
  */
 export function invokeSequence(sequence: LambdaSequence) {
-  return <T = IDictionary, H = UnconstrainedHttpHeaders>(fnArn: string, request: T, additionalHeaders?: H) => {
+  return <T = IDictionary, H = UnconstrainedHttpHeaders>(functionArn: string, request: T, additionalHeaders?: H) => {
     const boxedRequest = buildOrchestratedRequest<T>(request, sequence, additionalHeaders);
 
-    return invoke<IOrchestratedRequest<T>>(fnArn, boxedRequest);
+    return invoke<IOrchestratedRequest<T>>(functionArn, boxedRequest);
   };
 }

@@ -1,5 +1,6 @@
 import { IDictionary } from "common-types";
-import { buildStepFunctionTaskInput, IParsedArn } from "../private";
+import { buildStepFunctionTaskInput } from "~/sequences";
+import { IParsedArn } from "./parseArn";
 
 /**
  * buildRequest
@@ -15,7 +16,9 @@ export function buildStepFunctionRequest(arn: IParsedArn, request: IDictionary, 
   const stateMachineArn = `arn:aws:states:${arn.region}:${arn.account}:stateMachine:${arn.appName}-${arn.stage}-${arn.fn}`;
 
   const payload = buildStepFunctionTaskInput(request);
-  if (request.headers) {payload.headers = { ...payload.headers, ...request.headers };}
+  if (request.headers) {
+    payload.headers = { ...payload.headers, ...request.headers };
+  }
 
   return {
     stateMachineArn,

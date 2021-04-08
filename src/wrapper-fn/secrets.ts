@@ -50,12 +50,12 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
   const mods: string[] = flatten<any>(modules);
   const log = logger().reloadContext();
   const localSecrets = getLocalSecrets();
-  if (mods.every((i: string) => Object.keys(localSecrets).includes(i))) {
+  if (mods.every((index: string) => Object.keys(localSecrets).includes(index))) {
     // everything found in local secrets
     log.debug("Call to getSecrets() resulted in 100% hit rate for modules locally", { modules: mods });
     // segment.addAnnotation("getSecrets", "finished:onlyLocal");
-    return mods.reduce((secrets: IDictionary, mod: string) => {
-      secrets[mod] = localSecrets[mod];
+    return mods.reduce((secrets: IDictionary, module: string) => {
+      secrets[module] = localSecrets[module];
       return secrets;
     }, {});
   }
@@ -64,11 +64,15 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
   // versus getting them all is negligible so we'll get them all from SSM
   log.debug("Some modules requested were not found locally, requesting from SSM.", { modules: mods });
   const newSecrets = await SSM.modules(mods);
-  mods.forEach((m: string) => {
-    if (!newSecrets[m]) {throw new Error(`Failure to retrieve the SSM module "${m}"`);}
+  for (const m of mods) {
+    if (!newSecrets[m]) {
+      throw new Error(`Failure to retrieve the SSM module "${m}"`);
+    }
 
-    if (Object.keys(newSecrets[m]).length === 0) {log.warn(`Attempt to retrieve module "${m}" returned but had no `);}
-  });
+    if (Object.keys(newSecrets[m]).length === 0) {
+      log.warn(`Attempt to retrieve module "${m}" returned but had no `);
+    }
+  }
   log.debug("new SSM modules retrieved");
   const secrets = {
     ...localSecrets,
@@ -81,7 +85,7 @@ export async function getSecrets(...modules: string[] | string[][]): Promise<IDi
 }
 
 function escapeRegExp(s: string) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+  return s.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&"); // $& means the whole matched string
 }
 
 /**
@@ -90,17 +94,18 @@ function escapeRegExp(s: string) {
  */
 export function maskLoggingForSecrets(modules: IDictionary, log: ILoggerApi) {
   const secretPaths: string[] = [];
-  Object.keys(modules).forEach((mod) => {
-    Object.keys(modules[mod]).forEach((s) => {
-      const escapedStr = escapeRegExp(modules[mod][s]);
-      log.addToMaskedValues(escapedStr);
-      secretPaths.push(`${mod}/${s}`);
-    });
-  });
+  for (const module of Object.keys(modules)) {
+    for (const s of Object.keys(modules[module])) {
+      const escapedString = escapeRegExp(modules[module][s]);
+      log.addToMaskedValues(escapedString);
+      secretPaths.push(`${module}/${s}`);
+    }
+  }
   if (secretPaths.length > 0) {
-log.debug(`All secret values [ ${secretPaths.length} ] have been masked in logging`, {
+    log.debug(`All secret values [ ${secretPaths.length} ] have been masked in logging`, {
       secretPaths,
     });
-} else {log.debug("No secrets where added in this function's call; no additional log masking needed.");}
-
+  } else {
+    log.debug("No secrets where added in this function's call; no additional log masking needed.");
+  }
 }

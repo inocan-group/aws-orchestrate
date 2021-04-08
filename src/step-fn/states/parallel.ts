@@ -1,12 +1,5 @@
 import { Finalized, IConfigurableStepFn, IParallel, IParallelBranchOptions, IParallelOptions, IStore } from "~/types";
-import { parseAndFinalizeStepFn } from "../..";
-
-export function parallel(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
-  return (branches: IParallelBranchOptions[], options?: IParallelOptions) => {
-    commit(parallelConfiguration(branches, options));
-    return api();
-  };
-}
+import { parseAndFinalizeStepFn } from "../entities/state";
 
 export function parallelConfiguration(
   params: IParallelBranchOptions[],
@@ -25,5 +18,12 @@ export function parallelConfiguration(
     ...options,
     isTerminalState: false,
     ...(options?.name !== undefined ? { name: options.name, isFinalized: true } : { isFinalized: false }),
+  };
+}
+
+export function parallel(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
+  return (branches: IParallelBranchOptions[], options?: IParallelOptions) => {
+    commit(parallelConfiguration(branches, options));
+    return api();
   };
 }

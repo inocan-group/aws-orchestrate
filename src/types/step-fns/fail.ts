@@ -1,7 +1,7 @@
-import { IBaseOptions, IBaseState, IFinalizedStepFn, IState, TerminalState } from '../../private'
+import { IBaseOptions, IBaseState, TerminalState } from "~/types";
 
 export interface IFailConfiguration {
-  (cause: string, options?: IFailOptions): IFail
+  (cause: string, options?: IFailOptions): IFail;
 }
 
 export interface IFailOptions extends IBaseOptions {
@@ -9,8 +9,9 @@ export interface IFailOptions extends IBaseOptions {
   error?: string;
 }
 
-export type IFail = Omit<IFailOptions, "name"> & IBaseState & {
-  readonly type: 'Fail'
-  /** Provides a custom failure string that can be used for operational or diagnostic purposes. */
-  cause: string
-} & TerminalState
+export type IFail = Omit<IFailOptions, "name"> &
+  IBaseState & {
+    readonly type: "Fail";
+    /** Provides a custom failure string that can be used for operational or diagnostic purposes. */
+    cause: string;
+  } & TerminalState;

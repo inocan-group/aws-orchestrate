@@ -1,4 +1,4 @@
-import { IFinalizedStepFn, IFluentApi, IStepFnShorthand } from '../../private'
+import { IFinalizedStepFn, IFluentApi, IStepFnShorthand } from "~/types";
 
 /**
  * Step Function Common Errors
@@ -9,7 +9,7 @@ export interface IErrorType {
   /**
    * A wildcard that matches any known error name.
    */
-  all: 'States.ALL'
+  all: "States.ALL";
   /**
    * An execution failed due to some exception that could not be processed.
    *
@@ -17,11 +17,11 @@ export interface IErrorType {
    * Runtime error is not retriable, and will always cause the execution to fail.
    * A retry or catch on States.ALL will not catch States.Runtime errors.
    */
-  runtime: 'States.Runtime'
+  runtime: "States.Runtime";
   /**
    * A Task state either ran longer than the TimeoutSeconds value, or failed to send a heartbeat for a period longer than the HeartbeatSeconds value.
    */
-  timeout: 'States.Timeout'
+  timeout: "States.Timeout";
   /**
  * A States.DataLimitExceeded exception will be thrown for the following:
 
@@ -30,15 +30,15 @@ export interface IErrorType {
   When, after Parameters processing, the input of a state is larger than the payload size quota.
   For more information on quotas, see Quotas for Standard Workflows and Quotas for Express Workflows.
  */
-  dataLimitExceeded: 'States.DataLimitExceeded'
+  dataLimitExceeded: "States.DataLimitExceeded";
   /**
    * A Task state failed during the execution.
    */
-  taskFailed: 'States.TaskFailed'
+  taskFailed: "States.TaskFailed";
   /**
    * A Task state failed because it had insufficient privileges to execute the specified code.
    */
-  permissions: 'States.Permissions'
+  permissions: "States.Permissions";
 
   /**
    *
@@ -46,47 +46,47 @@ export interface IErrorType {
    *  it will be used as the payload object key called `Error` that is the one which is evaluated with `Equals` operator
    * on `Catch` feature of step function
    */
-  custom(error: string): string
+  custom(error: string): string;
 }
 
 export interface IErrorTypeSelector {
-  (e: IErrorType): string
+  (e: IErrorType): string;
 }
 
+export type IErrorHandlerPointer = IFluentApi | IStepFnShorthand | IFinalizedStepFn;
+
 export interface ErrDefn {
-  selector: IErrorHandlerPointer
-  resultPath?: string
+  selector: IErrorHandlerPointer;
+  resultPath?: string;
 }
 
 export interface IErrHandlerApi {
-  default(selector: IErrorHandlerPointer, resultPath?: string): Record<string, ErrDefn>
-  handle(errorType: IErrorTypeSelector, selector: IErrorHandlerPointer, resultPath?: string): IErrHandlerApiExtension
+  default(selector: IErrorHandlerPointer, resultPath?: string): Record<string, ErrDefn>;
+  handle(errorType: IErrorTypeSelector, selector: IErrorHandlerPointer, resultPath?: string): IErrHandlerApiExtension;
 }
 
 export interface IErrHandlerApiExtension {
-  default(selector: IErrorHandlerPointer, resultPath?: string): Record<string, ErrDefn>
-  handle(errorType: IErrorTypeSelector, selector: IErrorHandlerPointer, resultPath?: string): IErrHandlerApiExtension
-  withoutDefault(): Record<string, ErrDefn>
-}
-
-export type IErrorHandlerPointer = IFluentApi | IStepFnShorthand | IFinalizedStepFn
-
-export interface IRetryHandlerApi {
-  default(options: RetryOptions): Record<string, RetryOptions>
-  handle(errorType: IErrorTypeSelector, options: RetryOptions): IRetryHandlerApiExtension
+  default(selector: IErrorHandlerPointer, resultPath?: string): Record<string, ErrDefn>;
+  handle(errorType: IErrorTypeSelector, selector: IErrorHandlerPointer, resultPath?: string): IErrHandlerApiExtension;
+  withoutDefault(): Record<string, ErrDefn>;
 }
 
 export interface RetryOptions {
   /** An integer that represents the number of seconds before the first retry attempt (default 1). */
-  intervalSeconds?: number
+  intervalSeconds?: number;
   /** A number that is the multiplier by which the retry interval increases on each attempt (default 2.0). */
-  backoffRate?: number
+  backoffRate?: number;
   /** A positive integer, representing the maximum number of retry attempts (default 3). If the error recurs more times than specified, retries cease and normal error handling resumes. A value of 0 is permitted and indicates that the error or errors should never be retried. */
-  maxAttempts?: number
+  maxAttempts?: number;
 }
 
 export interface IRetryHandlerApiExtension {
-  default(options: RetryOptions): Record<string, RetryOptions>
-  handle(errorType: IErrorTypeSelector, options: RetryOptions): IRetryHandlerApiExtension
-  withoutDefault(): Record<string, RetryOptions>
+  default(options: RetryOptions): Record<string, RetryOptions>;
+  handle(errorType: IErrorTypeSelector, options: RetryOptions): IRetryHandlerApiExtension;
+  withoutDefault(): Record<string, RetryOptions>;
+}
+
+export interface IRetryHandlerApi {
+  default(options: RetryOptions): Record<string, RetryOptions>;
+  handle(errorType: IErrorTypeSelector, options: RetryOptions): IRetryHandlerApiExtension;
 }

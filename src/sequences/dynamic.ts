@@ -15,13 +15,13 @@ import { IOrchestratedDynamicProperty } from "~/types";
  * as the property `foo`. If you pass in a generic type to `dynamic` it will enforce
  * the property name is indeed a response property for the given function.
  */
-export function dynamic<T = any>(fn: string, prop?: keyof T): IOrchestratedDynamicProperty {
+export function dynamic<T = any>(function_: string, property?: keyof T): IOrchestratedDynamicProperty {
   return {
     type: "orchestrated-dynamic-property",
-    lookup: `${fn}${prop ? `.${prop}` : ""}`,
+    lookup: `${function_}${property ? `.${property}` : ""}`,
   };
 }
 
-export function isDynamic(obj: IDictionary) {
-  return !!(obj?.type === "orchestrated-dynamic-property" && obj.lookup);
+export function isDynamic(object: IDictionary) {
+  return !!(object?.type === "orchestrated-dynamic-property" && object.lookup);
 }

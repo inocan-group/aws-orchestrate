@@ -11,13 +11,13 @@ export class RethrowError extends Error {
   public httpStatus: number;
   public type: string;
 
-  constructor(err: IErrorClass) {
-    super(err.message);
+  constructor(error: IErrorClass) {
+    super(error.message);
 
-    this.code = err.code || process.env.DEFAULT_ERROR_CODE || "unknown";
-    this.name = err.name;
-    this.stack = err.stack;
-    this.type = err.type || process.env.DEFAULT_ERROR_TYPE || "unknown";
-    this.httpStatus = err.httpStatus ?? HttpStatusCodes.InternalServerError;
+    this.code = error.code || process.env.DEFAULT_ERROR_CODE || "unknown";
+    this.name = error.name;
+    this.stack = error.stack;
+    this.type = error.type || process.env.DEFAULT_ERROR_TYPE || "unknown";
+    this.httpStatus = error.httpStatus ?? HttpStatusCodes.InternalServerError;
   }
 }

@@ -1,15 +1,14 @@
-import { IBaseOptions, IBaseState, IFinalizedStepFn, IState, TerminalState } from '../../private'
+import { IBaseOptions, IBaseState, IFinalizedStepFn, TerminalState } from "~/types";
 
 export interface ISucceedCallable {
-  (): IFinalizedStepFn
+  (): IFinalizedStepFn;
 }
+
+export type ISucceed = Omit<IBaseOptions, "name"> &
+  IBaseState & {
+    readonly type: "Succeed";
+  } & TerminalState;
 
 export interface ISucceedConfiguration {
-  (): ISucceed
+  (): ISucceed;
 }
-
-export type ISucceed = Omit<IBaseOptions, 'name'> &
-  IBaseState & {
-    readonly type: 'Succeed'
-  }
-  & TerminalState

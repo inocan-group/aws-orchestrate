@@ -11,8 +11,10 @@ import {
   IAWSLambdaProxyIntegrationRequestV2,
 } from "common-types";
 import { ILoggerApi, IAwsLogConfig } from "aws-log";
-import { ErrorMeta, LambdaSequence, UnconstrainedHttpHeaders, getSecrets } from "./private";
-import { setContentType, setFnHeaders } from "./wrapper-fn/headers";
+import { getSecrets, setContentType, setFnHeaders as setFunctionHeaders } from "~/wrapper-fn";
+import { LambdaSequence } from "~/sequences";
+import { ErrorMeta } from "~/errors";
+import { UnconstrainedHttpHeaders } from "~/invoke";
 
 type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 
@@ -261,7 +263,7 @@ export type ILambdaSequenceNextTuple<T> = [string, IOrchestratedRequest<T>];
  * logical condition
  */
 export interface IErrorIdentification {
-  errorClass?: new (...args: any) => Error;
+  errorClass?: new (...arguments_: any) => Error;
   code?: string;
   name?: string;
   messageContains?: string;
@@ -367,7 +369,7 @@ export interface IHandlerContext extends IAWSLambaContext {
    * The API Gateway "proxy integration" request data; this is left blank if the call was not
    * made from API Gateway (or the function is not using proxy integration)
    */
-  apiGateway: IAWSLambdaProxyIntegrationRequest | IAWSLambdaProxyIntegrationRequestV2;
+  apiGateway?: IAWSLambdaProxyIntegrationRequest | IAWSLambdaProxyIntegrationRequestV2;
   /**
    * A boolean flag which indicates whether the current execution was started by an API Gateway
    * event.
@@ -388,7 +390,7 @@ export interface IHandlerContext extends IAWSLambaContext {
    * in a _sequence_ will be provided automatically (e.g., CORS, correlationId, etc.) but if your
    * function needs to send additional headers then you can add them here.
    */
-  setHeaders: typeof setFnHeaders;
+  setHeaders: typeof setFunctionHeaders;
   /**
    * Invokes another Lambda function.
    *
@@ -400,7 +402,7 @@ export interface IHandlerContext extends IAWSLambaContext {
    * and any secrets that the execution function has gotten
    */
   invoke: <T = IDictionary, H = UnconstrainedHttpHeaders>(
-    fnArn: string,
+    functionArn: string,
     request: T,
     additionalHeaders?: H
   ) => Promise<InvocationResponse>;
@@ -429,7 +431,7 @@ export interface IErrorWithExtraProperties extends Error {
   [key: string]: any;
 }
 
-export type IErrorHandlerFunction = (err: Error) => Promise<boolean> | boolean;
+export type IErrorHandlerFunction = (error: Error) => Promise<boolean> | boolean;
 export interface IErrorClass extends Error {
   type?: string;
   code?: string;
@@ -520,4 +522,4 @@ export type OrchestratedErrorHandler = <T extends Error = Error>(error: T) => Pr
  * An ARN and function parameters to specify where errors should be forwarded to
  */
 export type OrchestratedErrorForwarder<T extends IDictionary = IDictionary> = [arn, T];
-export type OrchestratedCondition = <T>(params: T, seq: LambdaSequence) => Promise<boolean>;
+export type OrchestratedCondition = <T>(parameters: T, seq: LambdaSequence) => Promise<boolean>;

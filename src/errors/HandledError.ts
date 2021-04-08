@@ -8,12 +8,12 @@ export class HandledError extends Error {
    * for returning to **API Gateway**
    */
   public static apiGatewayError(errorCode: number, e: Error, context: IAwsLogContext) {
-    const obj = new HandledError(errorCode, e, context);
+    const object = new HandledError(errorCode, e, context);
     return JSON.stringify({
-      errorType: obj.name,
-      httpStatus: obj.httpStatus,
-      requestId: obj.requestId,
-      message: obj.message,
+      errorType: object.name,
+      httpStatus: object.httpStatus,
+      requestId: object.requestId,
+      message: object.message,
     });
   }
 

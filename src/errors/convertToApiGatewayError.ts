@@ -1,6 +1,6 @@
-import { getResponseHeaders } from "../shared/headers";
 import { DEFAULT_ERROR_CODE } from "./ErrorMeta";
 import { IErrorClass } from "~/types";
+import { getResponseHeaders } from "~/wrapper-fn";
 /**
  * converts an `Error` (or subclass) into a error hash
  * which **API Gateway** can process.

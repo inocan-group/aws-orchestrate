@@ -1,5 +1,5 @@
 import { LambdaSequence } from "~/LambdaSequence";
-import { IErrorClass } from "~/types";
+import { IErrorClass, ISequenceTrackerStatus } from "~/types";
 
 /**
  * A higher order function which first takes a `correlationId` and returns a function which provides

@@ -1,26 +1,25 @@
-import { IBaseState, IConfigurableStepFn, IFinalizedStepFn, IOptionsWithInput, IState } from '../../private'
-
-export interface IPassCallable {
-  (options?: IPassOptions): IConfigurableStepFn
-}
-
-export interface IPassConfiguration {
-  (options?: IPassOptions): IPass
-}
+import { IBaseState, IConfigurableStepFn, IOptionsWithInput } from "~/types";
 
 export interface IPassOptions extends IOptionsWithInput {
   /** Treated as the output of a virtual task to be passed on to the next state, and filtered as prescribed by the ResultPath field (if present). */
-  result?: any
+  result?: any;
 }
 
-export type IPass = Omit<IPassOptions, "name"> & IBaseState & {
-  readonly type: 'Pass'
-  isTerminalState: false
+export type IPass = Omit<IPassOptions, "name"> &
+  IBaseState & {
+    readonly type: "Pass";
+    isTerminalState: false;
+  };
+
+export interface IPassCallable {
+  (options?: IPassOptions): IConfigurableStepFn;
 }
 
-/**
- * TODO:
- */
+export interface IPassConfiguration {
+  (options?: IPassOptions): IPass;
+}
+
+// TODO: Come back to this
 /**
 type ITErminalState = { isTerminalState: true }
 

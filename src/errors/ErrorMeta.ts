@@ -10,7 +10,7 @@ export interface IError {
 }
 
 export interface IErrorMessageControl<T extends IError = Error> {
-  (err: T): string | string;
+  (error: T): string | string;
 }
 
 export interface IExpectedErrorOptions<T extends IError = Error> {
@@ -84,8 +84,8 @@ export class ErrorMeta {
     return this;
   }
 
-  setDefaultHandler(fn: IErrorHandlerFunction): ErrorMeta;
-  setDefaultHandler(err: Error): ErrorMeta;
+  setDefaultHandler(function_: IErrorHandlerFunction): ErrorMeta;
+  setDefaultHandler(error: Error): ErrorMeta;
   /**
    * **setDefaultHandler**
    *
@@ -102,7 +102,7 @@ export class ErrorMeta {
    *
    * In all cases, it will replace the runtime error's stack with what was passed in.
    */
-  setDefaultHandler(fn: (err: Error) => Promise<boolean> | boolean): ErrorMeta;
+  setDefaultHandler(function_: (error: Error) => Promise<boolean> | boolean): ErrorMeta;
   /**
    * **setDefaultHandler**
    *
@@ -110,26 +110,26 @@ export class ErrorMeta {
    * proper ENV variables are set)
    */
   setDefaultHandler(arn: string): ErrorMeta;
-  setDefaultHandler(param: string | Error | IErrorHandlerFunction): ErrorMeta {
-    switch (typeof param) {
+  setDefaultHandler(parameter: string | Error | IErrorHandlerFunction): ErrorMeta {
+    switch (typeof parameter) {
       case "string":
-        this._arn = param;
+        this._arn = parameter;
         this._defaultHandlerFn = undefined;
         this._defaultError = undefined;
         break;
       case "function":
-        this._defaultHandlerFn = param;
+        this._defaultHandlerFn = parameter;
         this._arn = undefined;
         this._defaultError = undefined;
         break;
       default:
-        if (param instanceof Error) {
-          this._defaultError = param;
+        if (parameter instanceof Error) {
+          this._defaultError = parameter;
           this._arn = undefined;
           this._defaultHandlerFn = undefined;
         } else {
 console.log({
-            message: `The passed in setDefaultHandler param was of an unknown type ${typeof param}; the action has been ignored`,
+            message: `The passed in setDefaultHandler param was of an unknown type ${typeof parameter}; the action has been ignored`,
           });
 }
 

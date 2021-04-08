@@ -12,6 +12,7 @@ import {
   ErrDefn,
   Finalized,
   IFail,
+  IGoTo,
   IParallel,
   IPass,
   IState,
@@ -24,6 +25,7 @@ import {
   Result,
 } from "~/types";
 import { isFinalizedStepFn, parseStepFnSelector } from "~/step-fn";
+import { ServerlessError } from "~/errors";
 
 export const isFinalizedState = <T extends IState>(obj: T | Finalized<T>): obj is Finalized<T> =>
   "name" in obj && obj.name !== undefined;

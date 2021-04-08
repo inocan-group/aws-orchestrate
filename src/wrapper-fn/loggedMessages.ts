@@ -16,7 +16,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
     headers: IDictionary,
     context: IDictionary,
     sequence: LambdaSequence,
-    apiGateway: IApiGateway,
+    apiGateway?: IApiGateway
   ) {
     log.info(
       `The handler function ${get(context, "functionName")} has started.  ${
@@ -27,7 +27,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
         sequence: sequence ? sequence.toObject() : LambdaSequence.notASequence(),
         headers,
         apiGateway,
-      },
+      }
     );
   },
 
@@ -43,8 +43,8 @@ export const loggedMessages = (log: ILoggerApi) => ({
     log.debug("The NEW sequence this function registered was successfully invoked", { seqResponse });
   },
 
-  startingInvocation(arn: string, params: IDictionary) {
-    log.debug(`sequence: starting invocation of fn: ${arn}`, { arn, params });
+  startingInvocation(arn: string, parameters: IDictionary) {
+    log.debug(`sequence: starting invocation of fn: ${arn}`, { arn, params: parameters });
   },
 
   completingInvocation(arn: string, inovacationResponse: IDictionary) {
@@ -99,7 +99,7 @@ export const loggedMessages = (log: ILoggerApi) => ({
         errorMessage,
         stack,
         workflowStatus,
-      },
+      }
     );
   },
 });

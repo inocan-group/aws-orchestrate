@@ -1,24 +1,26 @@
 import { IDictionary } from "common-types";
 import { logger } from "aws-log";
 import { StartExecutionOutput } from "aws-sdk/clients/stepfunctions";
-import { AwsResource, buildStepFunctionRequest, parseArn } from "../private";
+import { AwsResource } from "~/types";
+import { parseArn } from "./parseArn";
+import { buildStepFunctionRequest } from "./buildStepFunctionRequest";
 
 export async function invokeStepFn(stepArn: string, request: IDictionary) {
-  const stepFn = new (await import("aws-sdk")).StepFunctions({ params: { foo: "bar" } });
+  const stepFunction = new (await import("aws-sdk")).StepFunctions({ params: { foo: "bar" } });
   return new Promise<StartExecutionOutput>((resolve, reject) => {
-    stepFn.startExecution(
+    stepFunction.startExecution(
       buildStepFunctionRequest(parseArn(stepArn, AwsResource.StepFunction), request),
-      (err, data) => {
-        if (err) {
+      (error, data) => {
+        if (error) {
           const log = logger().reloadContext().addToLocalContext({ workflow: "aws-log/stepFunction" });
-          const e = new Error(err.message);
-          e.stack = err.stack;
+          const e = new Error(error.message);
+          e.stack = error.stack;
           e.name = "InvocationError";
           log.error(`Problem starting the step function '${stepArn}'`, e);
           reject(e);
         }
         resolve(data);
-      },
+      }
     );
   });
 }

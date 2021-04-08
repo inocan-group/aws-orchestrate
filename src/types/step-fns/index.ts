@@ -2,13 +2,13 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 06:43 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 11:51 AM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: choice, error-handler, fail, map, parallel, pass, shared, state, stateMachine, stepFunction, succeed, task, wait.
+// files: choice, errorHandler, fail, map, parallel, pass, shared, state, stateMachine, stepFunction, succeed, task, wait.
 
 // local file exports
 export * from "./choice";
-export * from "./error-handler";
+export * from "./errorHandler";
 export * from "./fail";
 export * from "./map";
 export * from "./parallel";

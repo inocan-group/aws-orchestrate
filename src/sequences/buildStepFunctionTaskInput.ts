@@ -1,8 +1,7 @@
 import { IDictionary } from "common-types";
 import { getRequestHeaders } from "../wrapper-fn";
-import { IStepFunctionTaskPayload } from "../private";
 import { compress } from "./compress";
-import { IOrchestratedHeaders } from "~/types";
+import { IOrchestratedHeaders, IStepFunctionTaskPayload } from "~/types";
 
 export function buildStepFunctionTaskInput<T>(
   body: T,
@@ -11,7 +10,7 @@ export function buildStepFunctionTaskInput<T>(
    * such as the forwarding of _secrets_ but if you want to include
    * additional ones they can be added with this parameter.
    */
-  additionalHeaders?: IDictionary,
+  additionalHeaders?: IDictionary
 ): IStepFunctionTaskPayload<T> {
   const headers = additionalHeaders ? { ...getRequestHeaders(), ...additionalHeaders } : getRequestHeaders();
 

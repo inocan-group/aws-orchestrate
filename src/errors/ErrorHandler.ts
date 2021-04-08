@@ -1,4 +1,4 @@
-import { IErrorIdentification, IErrorHandling } from "../private";
+import { IErrorIdentification, IErrorHandling } from "~/types";
 
 /**
  * Allows the definition of a serverless function's

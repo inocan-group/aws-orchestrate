@@ -15,7 +15,7 @@ export const CORS_HEADERS = {
 };
 
 let contentType = "application/json";
-let fnHeaders: IDictionary<string> = {};
+let functionHeaders: IDictionary<string> = {};
 
 export function getContentType() {
   return contentType;
@@ -59,10 +59,10 @@ export function saveSecretHeaders(headers: IDictionary, log: ILoggerApi) {
     return headerSecrets;
   }, {});
   if (secrets.length > 0) {
-log.debug(`Secrets [ ${secrets.length} ] from headers were identified`, {
+    log.debug(`Secrets [ ${secrets.length} ] from headers were identified`, {
       secrets,
     });
-}
+  }
 
   saveSecretsLocally(localSecrets);
   return localSecrets;
@@ -75,29 +75,31 @@ log.debug(`Secrets [ ${secrets.length} ] from headers were identified`, {
 export function getHeaderSecrets() {
   const log = logger().reloadContext();
   const modules = getLocalSecrets();
-  return Object.keys(modules).reduce((headerSecrets: IDictionary, mod: keyof typeof modules & string) => {
-    const secrets = modules[mod];
+  return Object.keys(modules).reduce((headerSecrets: IDictionary, module: keyof typeof modules & string) => {
+    const secrets = modules[module];
     if (typeof secrets === "object") {
-Object.keys(secrets).forEach((secret) => {
-        headerSecrets[`O-S-${mod}/${secret}`] = modules[mod][secret];
-      });
-} else {
-log.warn(
-        `Attempt to generate header secrets but module "${mod}" is not a hash of name/values. Ignoring this module but continuing.`,
+      for (const secret of Object.keys(secrets)) {
+        headerSecrets[`O-S-${module}/${secret}`] = modules[module][secret];
+      }
+    } else {
+      log.warn(
+        `Attempt to generate header secrets but module "${module}" is not a hash of name/values. Ignoring this module but continuing.`,
         {
-          module: mod,
+          module: module,
           type: typeof secrets,
           localModules: Object.keys(modules),
-        },
+        }
       );
-}
+    }
 
     return headerSecrets;
   }, {});
 }
 
 export function setContentType(type: string) {
-  if (!type.includes("/")) {throw new Error(`The value sent to setContentType ("${type}") is not valid; it must be a valid MIME type.`);}
+  if (!type.includes("/")) {
+    throw new Error(`The value sent to setContentType ("${type}") is not valid; it must be a valid MIME type.`);
+  }
 
   contentType = type;
 }
@@ -106,25 +108,25 @@ export function setContentType(type: string) {
  * Get the user/developer defined headers for this function
  */
 export function getFnHeaders() {
-  return fnHeaders;
+  return functionHeaders;
 }
 
 export function setFnHeaders(headers: IDictionary<string>) {
   if (typeof headers !== "object") {
-throw new TypeError(
-      `The value sent to setHeaders is not the required type. Was "${typeof headers}"; expected "object".`,
+    throw new TypeError(
+      `The value sent to setHeaders is not the required type. Was "${typeof headers}"; expected "object".`
     );
+  }
+
+  functionHeaders = headers;
 }
 
-  fnHeaders = headers;
-}
-
-function getBaseHeaders(opts: IHttpResponseHeaders & IDictionary) {
+function getBaseHeaders(options: IHttpResponseHeaders & IDictionary) {
   const correlationId = getCorrelationId();
-  const sequenceInfo = opts.sequence
+  const sequenceInfo = options.sequence
     ? {
-      "O-Sequence-Status": JSON.stringify(sequenceStatus(correlationId)(opts.sequence)),
-    }
+        "O-Sequence-Status": JSON.stringify(sequenceStatus(correlationId)(options.sequence)),
+      }
     : {};
 
   return {
@@ -137,9 +139,9 @@ function getBaseHeaders(opts: IHttpResponseHeaders & IDictionary) {
 /**
  * All the HTTP _Response_ headers to send when returning to API Gateway
  */
-export function getResponseHeaders(opts: IHttpResponseHeaders = {}): IOrchestratedHeaders {
+export function getResponseHeaders(options: IHttpResponseHeaders = {}): IOrchestratedHeaders {
   return {
-    ...getBaseHeaders(opts),
+    ...getBaseHeaders(options),
     ...CORS_HEADERS,
     "Content-Type": getContentType(),
   };
@@ -149,9 +151,9 @@ export function getResponseHeaders(opts: IHttpResponseHeaders = {}): IOrchestrat
  * All the HTTP _Request_ headers to send when calling
  * another function
  */
-export function getRequestHeaders(opts: IHttpResponseHeaders = {}): IOrchestratedHeaders {
+export function getRequestHeaders(options: IHttpResponseHeaders = {}): IOrchestratedHeaders {
   return {
     ...getHeaderSecrets(),
-    ...getBaseHeaders(opts),
+    ...getBaseHeaders(options),
   };
 }
