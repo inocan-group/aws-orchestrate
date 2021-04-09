@@ -1,4 +1,4 @@
-import { ServerlessError } from "../errors";
+import { ServerlessError } from "~/errors";
 import { Finalized, IFinalizedStepFn, IState, IStateConfiguring, IStepFnOptions, IStepFnSelector } from "~/types";
 import {
   choiceConfiguration,
@@ -38,6 +38,10 @@ export function State<T extends Finalized<IState> | IState>(cb: (api: IStateConf
   return cb(configuring);
 }
 
+function isState(obj: IState | Finalized<IState> | IStepFnOptions): obj is IState | Finalized<IState> {
+  return "type" in obj
+}
+
 export function isFinalizedStepFnSelector(selector: IStepFnSelector): boolean {
   if (isStepFunction(selector)) {
     return isFinalizedStepFn(selector);
@@ -46,7 +50,7 @@ export function isFinalizedStepFnSelector(selector: IStepFnSelector): boolean {
     const sf = selector(configurationApi);
     return isFinalizedStepFn(sf);
   } else {
-    return selector.every((s: IState) => s.isTerminalState);
+    return selector.filter(s => isState(s)).every((s) => isState(s) && s.isTerminalState);
   }
 }
 

@@ -24,7 +24,7 @@ import {
   IStepFnShorthand,
   IStore,
 } from "~/types";
-import { parseAndFinalizeStepFn } from "../..";
+import { parseAndFinalizeStepFn } from "../";
 
 const stringEquals = (value: string): Partial<IOperand_StringEquals> => {
   return {

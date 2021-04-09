@@ -16,7 +16,7 @@ describe('Check ability to serialize/deserialize functions', () => {
     const deserialized = deserialize(serialized);
     expect(deserialized).to.be.an('object')
     expect(deserialized.plusOne).to.be.a('function')
-    expect(deserialized.plusOne(5)).to.equal(6);
+    expect(deserialized.plusOne(5)).toEqual(6);
   })
 
   it('a JS object serialized with isJSON set can be deserialized with eval and JSON.parse', () => {

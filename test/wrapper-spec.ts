@@ -1,10 +1,8 @@
 import { IHandlerContext, IHandlerFunction } from "~/types";
-import { wrapper, IOrchestratedRequest } from "../src/index";
-import { LambdaSequence } from "../src/LambdaSequence";
+import { wrapper, IOrchestratedRequest, LambdaSequence } from "../src/index";
 import { HandledError } from "../src/errors/HandledError";
 import { UnhandledError } from "../src/errors/UnhandledError";
 import { DEFAULT_ERROR_CODE } from "../src/errors/ErrorMeta";
-import { HttpStatusCodes } from "common-types";
 
 interface IRequest {
   foo: string;
@@ -22,11 +20,11 @@ const handlerFn: IHandlerFunction<IRequest, IResponse> = async (request, context
   return { testing: true, request, context };
 };
 
-const handlerErrorFn: IHandlerFunction<IRequest, IResponse> = async (event, context) => {
+const handlerErrorFn: IHandlerFunction<IRequest, IResponse> = async (_event, _context) => {
   throw new Error("this is an error god dammit");
 };
 
-const handlerErrorFnWithDefaultChanged: IHandlerFunction<IRequest, IResponse> = async (event, context) => {
+const handlerErrorFnWithDefaultChanged: IHandlerFunction<IRequest, IResponse> = async (_event, context) => {
   context.errorMgmt.setDefaultErrorCode(400);
   throw new Error("this is an error god dammit");
 };
@@ -34,8 +32,8 @@ const handlerErrorFnWithDefaultChanged: IHandlerFunction<IRequest, IResponse> = 
 const handlerErrorFnWithKnownErrors: (
   cbResult: boolean,
   isHandled: boolean
-) => IHandlerFunction<IRequest, IResponse> = (cbResult, isHandled = false) => async (event, context) => {
-  context.errorMgmt.addHandler(404, { errorClass: HandledError }, { callback: (e) => cbResult });
+) => IHandlerFunction<IRequest, IResponse> = (cbResult, isHandled = false) => async (_event, context) => {
+  context.errorMgmt.addHandler(404, { errorClass: HandledError }, { callback: (_e) => cbResult });
   const BOGUS_ERROR_CODE = 399;
 
   if (isHandled) {
@@ -62,6 +60,14 @@ const orchestrateEvent: IOrchestratedRequest<IRequest> = {
     "X-Correlation-Id": "12345",
   },
   body: simpleEvent,
+};
+
+const handleErrorFnWithErrorInMessage: IHandlerFunction<IRequest, IResponse> = (_event, context) => {
+  context.errorMgmt.addHandler(401, { messageContains: "help me" }, { callback: () => false });
+  const e = new Error("help me") as Error & { code: string };
+  e.code = "secret-code";
+  e.name = "named and shamed";
+  throw e;
 };
 
 describe("Handler Wrapper => ", () => {
@@ -141,11 +147,11 @@ describe("Handler Wrapper => ", () => {
     const wrapped = wrapper(handlerErrorFn);
 
     try {
-      const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
-    } catch (e) {
-      expect(e.code).toBe("Error");
-      expect(e.name).toBe("unhandled-error");
-      expect(e.httpStatus).toBe(DEFAULT_ERROR_CODE);
+      await wrapped({ foo: "foo", bar: 888 }, {} as any);
+    } catch (error) {
+      expect(error.code).toBe("Error");
+      expect(error.name).toBe("unhandled-error");
+      expect(error.httpStatus).toBe(DEFAULT_ERROR_CODE);
     }
   });
 
@@ -154,11 +160,11 @@ describe("Handler Wrapper => ", () => {
     const wrapped = wrapper(handlerErrorFnWithDefaultChanged);
 
     try {
-      const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
-    } catch (e) {
-      expect(e.code).toBe("Error");
-      expect(e.name).toBe("unhandled-error");
-      expect(e.httpStatus).toBe(400);
+      await wrapped({ foo: "foo", bar: 888 }, {} as any);
+    } catch (error) {
+      expect(error.code).toBe("Error");
+      expect(error.name).toBe("unhandled-error");
+      expect(error.httpStatus).toBe(400);
     }
   });
 
@@ -167,10 +173,10 @@ describe("Handler Wrapper => ", () => {
     const wrapped = wrapper(handlerErrorFnWithKnownErrors(false, true));
 
     try {
-      const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
-    } catch (e) {
-      expect(e.name).toBe("known");
-      expect(e.httpStatus).toBe(404);
+      await wrapped({ foo: "foo", bar: 888 }, {} as any);
+    } catch (error) {
+      expect(error.name).toBe("known");
+      expect(error.httpStatus).toBe(404);
     }
   });
 
@@ -182,28 +188,21 @@ describe("Handler Wrapper => ", () => {
       const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
       // error is handled
       expect(response).toBeUndefined();
-    } catch (e) {
+    } catch {
       throw new Error("there should not have been an error when callback resolves the error");
     }
   });
 
-  it("Known error is identified with part of 'message'", async () => {
-    const fn: IHandlerFunction<IRequest, IResponse> = async (event, context) => {
-      context.errorMgmt.addHandler(401, { messageContains: "help me" }, { callback: () => false });
-      const e = Error("help me") as Error & { code: string };
-      e.code = "secret-code";
-      e.name = "named and shamed";
-      throw e;
-    };
 
-    const wrapped = wrapper(fn);
+  it("Known error is identified with part of 'message'", async () => {
+    const wrapped = wrapper(handleErrorFnWithErrorInMessage);
     try {
-      const response = await wrapped({ foo: "foo", bar: 777 }, {} as any);
+      await wrapped({ foo: "foo", bar: 777 }, {} as any);
       throw new Error("the above call should have errored out");
-    } catch (e) {
-      expect(e.code).toBe("secret-code");
-      expect(e.name).toBe("named and shamed");
-      expect(e.httpStatus).toBe(401);
+    } catch (error) {
+      expect(error.code).toBe("secret-code");
+      expect(error.name).toBe("named and shamed");
+      expect(error.httpStatus).toBe(401);
     }
   });
 });

@@ -15,6 +15,11 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "allowSyntheticDefaultImports": true,
+    "types": [
+      "jest",
+      "node",
+      "jest-extended"
+    ],
 
     "baseUrl": ".",
     "declaration": true,

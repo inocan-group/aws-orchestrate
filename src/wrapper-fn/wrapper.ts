@@ -10,7 +10,6 @@ import {
 
 import { get } from "native-dash";
 import { logger } from "aws-log";
-import { buildOrchestratedRequest, buildStepFunctionTaskInput, LambdaSequence, sequenceStatus } from "../sequences";
 import {
   ErrorMeta,
   ErrorHandler,
@@ -47,6 +46,7 @@ import {
   setContentType,
 } from "~/wrapper-fn";
 import { invoke as invokeLambda, invokeSequence } from "~/invoke";
+import { buildOrchestratedRequest, buildStepFunctionTaskInput, LambdaSequence, sequenceStatus } from "~/sequences";
 
 /**
  * **wrapper**

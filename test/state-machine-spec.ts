@@ -1,5 +1,6 @@
 import { IStepFunctionTask } from "common-types";
-import { State, StateMachine, StepFunction } from "~/wrapper-step-fn";
+import { condition, State, StateMachine, StepFunction } from "~/step-fn";
+import { IStepFnOptions } from "~/types";
 
 describe("State Machine", () => {
   beforeEach(() => {

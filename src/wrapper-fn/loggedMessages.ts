@@ -4,7 +4,7 @@ import { ILoggerApi } from "aws-log";
 import { get } from "native-dash";
 import { getRequestHeaders, getNewSequence } from ".";
 import { IApiGateway, IErrorClass } from "~/types";
-import { LambdaSequence } from "~/LambdaSequence";
+import { LambdaSequence } from "~/sequences";
 
 /**
  * A collection of log messages that the wrapper function will emit
