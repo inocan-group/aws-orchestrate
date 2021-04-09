@@ -96,10 +96,10 @@ module.exports = {
         link: "/step-fns/",
       },
       {
-        text: "Build System",
-        link: "/build-system/",
+        text: "Serverless Devops",
+        link: "/devops/",
       },
     ],
-    sidebar: ["/wrapper", "/sequence", "/build-system"],
+    sidebar: ["/wrapper", "/sequence", "/devops"],
   },
 };
