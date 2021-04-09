@@ -1,5 +1,5 @@
 import { IStepFunctionMap, IStepFunctionParallel } from "common-types";
-import { StepFunction } from "~/step-fn";
+import { condition, State, StateMachine, StepFunction } from "~/step-fn";
 
 describe("Idempotence", () => {
   beforeEach(() => {
@@ -16,10 +16,10 @@ describe("Idempotence", () => {
     const initialStateMachine = StateMachine("foo", { stepFunction: StepFunction(task1, task2, pass1) }).toJSON();
     const statesOutput = Object.keys(initialStateMachine.definition.States);
 
-    new Array(20).fill(0).forEach((_) => {
+    for (const _ of Array.from({length: 20}).fill(0)) {
       const currentStateMachine = StateMachine("foo", { stepFunction: StepFunction(task1, task2, pass1) }).toJSON();
       expect(Object.keys(currentStateMachine.definition.States)).toIncludeAllMembers(statesOutput);
-    });
+    }
   });
 
   it("All states definition modified should not change other output states names", () => {
@@ -33,21 +33,21 @@ describe("Idempotence", () => {
       stepFunction: StepFunction(task1, task2, pass1, wait, succeed),
     }).toJSON();
     const initialStatesOuput = Object.keys(initialStateMachine.definition.States);
-    const [initialOutputWaitState] = initialStatesOuput.filter((s) => s.startsWith("Wait-"));
+    const initialOutputWaitState = initialStatesOuput.find((s) => s.startsWith("Wait-"));
 
-    new Array(20).fill(0).forEach((index) => {
-      const modifiedWaitState = { ...wait, seconds: (wait.seconds + index) * 2 };
+    for (let index = 0; index < 20; index++) {
+      const modifiedWaitState = { ...wait, seconds: (wait.seconds || 0 + index) * 2 };
       const currentStateMachine = StateMachine("foo", {
         stepFunction: StepFunction(task1, task2, pass1, modifiedWaitState, succeed),
       }).toJSON();
       const currentStatesOutput = Object.keys(currentStateMachine.definition.States);
-      const [currentOutputWaitState] = currentStatesOutput.filter((s) => s.startsWith("Wait-"));
+      const currentOutputWaitState = currentStatesOutput.find((s) => s.startsWith("Wait-"));
 
       expect(currentStatesOutput.filter((s) => s !== currentOutputWaitState)).toIncludeAllMembers(
         initialStatesOuput.filter((s) => s !== initialOutputWaitState)
       );
       expect(currentOutputWaitState).not.toEqual(initialOutputWaitState);
-    });
+    }
   });
 
   it("choice conditions states definition without names should resolve always the same name event when parent state options has changed", () => {
@@ -64,11 +64,11 @@ describe("Idempotence", () => {
     const initialStateMachine = StateMachine("foo", { stepFunction: StepFunction(task1, choice) }).toJSON();
     const initialStatesOuput = Object.keys(initialStateMachine.definition.States);
 
-    new Array(20).fill(0).forEach((index) => {
+    for (const index of Array.from({length: 20}).fill(0)) {
       const modifiedChoice = { ...choice, comment: `foo-${index}` };
       const currentStateMachine = StateMachine("foo", { stepFunction: StepFunction(task1, modifiedChoice) }).toJSON();
       expect(Object.keys(currentStateMachine.definition.States)).toIncludeAllMembers(initialStatesOuput);
-    });
+    }
   });
 
   it("adding new choice condition states definition prior to the existing should affect only condition states names", () => {
@@ -86,7 +86,7 @@ describe("Idempotence", () => {
     const initialOutputState = Object.keys(initialStateMachine.definition.States);
     const initialWaitStateName = initialOutputState.find((s) => s.startsWith("Wait-"));
 
-    new Array(20).fill(0).forEach((index) => {
+    for (let index = 0; index < 20; index++) {
       const conditionCTask = State((s) => s.pass({ comment: `conditionCTask${index + 1}` }));
       const conditionC = condition((c) => c.stringEquals("c"), [conditionCTask]);
       const modifiedChoice = State((s) => s.choice([conditionC, conditionA, conditionB], { name: "myChoiceState" }));
@@ -97,7 +97,7 @@ describe("Idempotence", () => {
 
       expect(currentOutputState).toIncludeAllMembers([initialWaitStateName]);
       expect(currentOutputState.filter((s) => s !== initialWaitStateName)).not.toIncludeAllMembers(initialOutputState);
-    });
+    }
   });
 
   it("new states definition added in root definition should not change choice condition states names", () => {
@@ -114,13 +114,13 @@ describe("Idempotence", () => {
     const initialStateMachine = StateMachine("foo", { stepFunction: StepFunction(task1, choice) }).toJSON();
     const [initialOutputState, ...initialOutputRestState] = Object.keys(initialStateMachine.definition.States);
 
-    new Array(20).fill(0).forEach((index) => {
+    for (const index of Array.from({length: 20}).fill(0)) {
       const modifiedTask = { ...task1, comment: `random${index}` };
       const currentStateMachine = StateMachine("foo", { stepFunction: StepFunction(modifiedTask, choice) }).toJSON();
       const [currentOutputState, ...currentOutputRestState] = Object.keys(currentStateMachine.definition.States);
       expect(currentOutputState).not.toEqual(initialOutputState);
       expect(currentOutputRestState).toIncludeAllMembers(initialOutputRestState);
-    });
+    }
   });
 
   it("map iterator states definition without names modified should not affect other iterator state names", () => {
@@ -134,10 +134,11 @@ describe("Idempotence", () => {
     const initialOutputState = Object.keys(initialStateMachine.definition.States);
     const initialOutputMapState = initialOutputState.find((s) => s.startsWith("Map-"));
     const [initialIteratorOutputTarget, ...initialIteratorOutputState] = Object.keys(
+      // @ts-ignore
       (initialStateMachine.definition.States[initialOutputMapState] as IStepFunctionMap).Iterator.States
     );
 
-    new Array(20).fill(0).forEach((index) => {
+    for (const index of Array.from({length: 20}).fill(0)) {
       const modifiedPass1 = { ...pass1, comment: `random${index}` };
       const currentMapState = State((s) => s.map("$.items").use([modifiedPass1, pass2, pass3]));
       const currentStateMachine = StateMachine("foo", { stepFunction: StepFunction(task1, currentMapState) }).toJSON();
@@ -145,12 +146,13 @@ describe("Idempotence", () => {
       const currentMapStateName = currentOutputState.find((s) => s.startsWith("Map-"));
 
       const [modifiedOutputState, ...currentIteratorOutputStates] = Object.keys(
+        // @ts-ignore
         (currentStateMachine.definition.States[currentMapStateName] as IStepFunctionMap).Iterator.States
       );
 
       expect(modifiedOutputState).not.toEqual(initialIteratorOutputTarget);
       expect(currentIteratorOutputStates).toIncludeAllMembers(initialIteratorOutputState);
-    });
+    }
   });
 
   it("map state definition change should change map iterator states names", () => {
@@ -164,10 +166,11 @@ describe("Idempotence", () => {
     const initialOutputState = Object.keys(initialStateMachine.definition.States);
     const initialOutputMapState = initialOutputState.find((s) => s.startsWith("Map-"));
     const [initialIteratorOutputTarget, ...initialIteratorOutputState] = Object.keys(
+      // @ts-ignore
       (initialStateMachine.definition.States[initialOutputMapState] as IStepFunctionMap).Iterator.States
     );
 
-    new Array(20).fill(0).forEach((_, index) => {
+    for (const [index, _] of Array.from({length: 20}).fill(0).entries()) {
       const modifiedPass1 = { ...pass1, comment: `random${index}` };
       const currentMapState = State((s) => s.map("$.items", { comment: "foo" }).use([modifiedPass1, pass2, pass3]));
       const task2 = State((s) => s.task("task2"));
@@ -178,13 +181,14 @@ describe("Idempotence", () => {
       const currentMapStateName = currentOutputState.find((s) => s.startsWith("Map-"));
 
       const [modifiedOutputState, ...currentIteratorOutputStates] = Object.keys(
+        // @ts-ignore
         (currentStateMachine.definition.States[currentMapStateName] as IStepFunctionMap).Iterator.States
       );
 
       expect(initialOutputMapState).not.toEqual(currentMapStateName);
       expect(modifiedOutputState).not.toEqual(initialIteratorOutputTarget);
       expect(currentIteratorOutputStates).toIncludeAllMembers(initialIteratorOutputState);
-    });
+    }
   });
 
   it("parallel branches states definition without names added after should not affect exisiting state branches states names", () => {
@@ -203,11 +207,11 @@ describe("Idempotence", () => {
     const initialOutputBranches = (initialStateMachine.definition.States["myParallelState"] as IStepFunctionParallel)
       .Branches;
     const initialOutputBranchesStates = initialOutputBranches.reduce((acc, curr) => {
-      acc = [...acc, ...Object.keys(curr.States)];
+      acc = [...acc, ...Object.keys(curr.States || {})];
       return acc;
     }, [] as string[]);
 
-    new Array(20).fill(0).forEach((_, index) => {
+    for (const [index, _] of Array.from({length: 20}).fill(0).entries()) {
       const branch3 = StepFunction(State((s) => s.wait({ seconds: index + 1 })));
       const modifiedParallelState = State((s) =>
         s.parallel([StepFunction(branch1Task1, branch1Task2), StepFunction(branch2Task1, branch2Task2), branch3], {
@@ -218,12 +222,12 @@ describe("Idempotence", () => {
       const currentOutputBranches = (currentStateMachine.definition.States["myParallelState"] as IStepFunctionParallel)
         .Branches;
       const currentOutputBranchesStates = currentOutputBranches.reduce((acc, curr) => {
-        acc = [...acc, ...Object.keys(curr.States)];
+        acc = [...acc, ...Object.keys(curr.States || {})];
         return acc;
       }, [] as string[]);
 
       expect(currentOutputBranchesStates).toIncludeAllMembers(initialOutputBranchesStates);
-    });
+    }
   });
 
   it("parallel branches states definition without names added prior should affect exisiting state branches states names", () => {
@@ -242,11 +246,11 @@ describe("Idempotence", () => {
     const initialOutputBranches = (initialStateMachine.definition.States["myParallelState"] as IStepFunctionParallel)
       .Branches;
     const initialOutputBranchesStates = initialOutputBranches.reduce((acc, curr) => {
-      acc = [...acc, ...Object.keys(curr.States)];
+      acc = [...acc, ...Object.keys(curr.States || {})];
       return acc;
     }, [] as string[]);
 
-    new Array(20).fill(0).forEach((_, index) => {
+    for (const [index, _] of Array.from({length: 20}).fill(0).entries()) {
       const branch3 = StepFunction(State((s) => s.wait({ seconds: index + 1 })));
       const modifiedParallelState = State((s) =>
         s.parallel([branch3, StepFunction(branch1Task1, branch1Task2), StepFunction(branch2Task1, branch2Task2)], {
@@ -257,12 +261,12 @@ describe("Idempotence", () => {
       const currentOutputBranches = (currentStateMachine.definition.States["myParallelState"] as IStepFunctionParallel)
         .Branches;
       const currentOutputBranchesStates = currentOutputBranches.reduce((acc, curr) => {
-        acc = [...acc, ...Object.keys(curr.States)];
+        acc = [...acc, ...Object.keys(curr.States || {})];
         return acc;
       }, [] as string[]);
 
       expect(currentOutputBranchesStates).not.toIncludeAllMembers(initialOutputBranchesStates);
-    });
+    }
   });
 
   it("changing choice condition state definition nested with map should not affect map (children step fn) iterator state", () => {
@@ -280,19 +284,21 @@ describe("Idempotence", () => {
 
     const initialStateMachine = StateMachine("foo", { stepFunction: StepFunction(choice) }).toJSON();
     const initialOutputMapIterator = Object.keys(
+      // @ts-ignore
       (initialStateMachine.definition.States["myMap"] as IStepFunctionMap).Iterator.States
     );
 
-    new Array(20).fill(0).forEach((index) => {
+    for (let index = 0; index < 20; index++) {
       const conditionCTask = State((s) => s.pass({ comment: `conditionCTask${index + 1}` }));
       const conditionC = condition((c) => c.stringEquals("c"), [conditionCTask]);
       const modifiedChoice = State((s) => s.choice([conditionC, conditionA, conditionB], { name: "myChoiceState" }));
       const currentStateMachine = StateMachine("foo", { stepFunction: StepFunction(modifiedChoice) }).toJSON();
       const currentOutputMapIterator = Object.keys(
+        // @ts-ignore
         (currentStateMachine.definition.States["myMap"] as IStepFunctionMap).Iterator.States
       );
 
       expect(currentOutputMapIterator).toIncludeAllMembers(initialOutputMapIterator);
-    });
+    }
   });
 });

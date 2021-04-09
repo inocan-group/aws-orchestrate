@@ -7,44 +7,44 @@ const CORRELATION_ID = "c-123";
 const AWS_REQUEST_ID = "1234";
 const FUNCTION_NAME = "myHandlerFunction";
 const ERROR_CODE = 403;
+const handlerFnWithServerlessError: IHandlerFunction<void, void> = async (_req, _ctx) => {
+  throw new ServerlessError(ERROR_CODE, "a test of an explicit error throw", "testing");
+};
+
+const handlerWithDefaultErrorHandler: IHandlerFunction<void, void> = async (_req, ctx) => {
+  ctx.errorMgmt.setDefaultHandler((error: Error) => {
+    expect(error.name).toBe("Error");
+    expect(error.message).toBe("a test of an explicit error throw");
+    expect(error.stack).not.toBeUndefined();
+    return true;
+  });
+  throw new Error("a test of an explicit error throw");
+};
 
 describe("Handling errors => ", () => {
   it("throwing a ServerlessError is passed through by the wrapper function", async () => {
-    let foo: number = 0;
-    const myHandler: IHandlerFunction<void, void> = async (req, ctx) => {
-      foo = 1;
-      throw new ServerlessError(ERROR_CODE, "a test of an explicit error throw", "testing");
-    };
     try {
       const restore = helpers.captureStdout();
-      const wrapped = wrapper(myHandler);
+      const wrapped = wrapper(handlerFnWithServerlessError);
       restore();
-      const result = await wrapped(
+      await wrapped(
         { headers: { "X-Correlation-Id": CORRELATION_ID } } as IAWSLambdaProxyIntegrationRequest,
         {
           awsRequestId: AWS_REQUEST_ID,
           functionName: FUNCTION_NAME,
         } as IAWSLambaContext
       );
-    } catch (e) {
-      expect(e.name).toBe("ServerlessError");
-      expect(e.httpStatus).toBe(ERROR_CODE);
-      expect(e.correlationId).toBe(CORRELATION_ID);
-      expect(e.awsRequestId).toBe(AWS_REQUEST_ID);
+    } catch (error) {
+      expect(error.name).toBe("ServerlessError");
+      expect(error.httpStatus).toBe(ERROR_CODE);
+      expect(error.correlationId).toBe(CORRELATION_ID);
+      expect(error.awsRequestId).toBe(AWS_REQUEST_ID);
     }
   });
   it("throwing an error should be catch by default error handler", async () => {
-    const myHandler: IHandlerFunction<void, void> = async (req, ctx) => {
-      ctx.errorMgmt.setDefaultHandler((error: Error) => {
-        expect(error.name).toBe("Error");
-        expect(error.message).toBe("a test of an explicit error throw");
-        expect(error.stack).not.toBeUndefined();
-        return true;
-      });
-      throw new Error("a test of an explicit error throw");
-    };
+
     const restore = helpers.captureStdout();
-    const wrapped = wrapper(myHandler);
+    const wrapped = wrapper(handlerWithDefaultErrorHandler);
     restore();
     await wrapped(
       { headers: { "X-Correlation-Id": CORRELATION_ID } } as IAWSLambdaProxyIntegrationRequest,

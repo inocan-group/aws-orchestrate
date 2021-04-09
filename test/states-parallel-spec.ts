@@ -1,4 +1,5 @@
-import { IParallelOptions, State } from "../src/private";
+import { State } from "~/step-fn";
+import { IParallelOptions } from "~/types";
 
 describe("Parallel State", () => {
   beforeEach(() => {
