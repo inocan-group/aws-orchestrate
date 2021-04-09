@@ -1,4 +1,5 @@
 import {
+  arn,
   IAWSLambdaProxyIntegrationRequest,
   IAWSLambdaProxyIntegrationRequestV2,
   IAwsLambdaProxyRequestContextV2,
@@ -7,6 +8,7 @@ import {
   IHttpResponseHeaders,
 } from "common-types";
 import { LambdaSequence } from "~/sequences";
+import { IErrorClass } from "./defaultHandling";
 import { AwsResource } from "./general";
 
 export type ILambdaFunctionType = "task" | "fan-out" | "fan-in" | "other";

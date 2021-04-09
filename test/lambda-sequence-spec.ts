@@ -1,6 +1,5 @@
 import { IDictionary } from "common-types";
 import { decompress, dynamic, isCompressedSection, LambdaSequence } from "~/sequences";
-import { ISerializedSequence } from "~/types";
 
 describe("Lambda Sequence => ", () => {
   it("can instantiate", async () => {
@@ -93,11 +92,6 @@ describe("Lambda Sequence => ", () => {
     const { sequence: s, body: b, headers: h } = fn1Event;
     // way too small to be compressed
     expect(isCompressedSection(b)).toBe(false);
-    const { sequence, body, headers } = {
-      sequence: decompress<ISerializedSequence>(s),
-      headers: decompress<IDictionary>(h),
-      body: decompress<IDictionary>(b),
-    };
 
     // fn2 body
     const fn2Body = decompress<IDictionary>(fn1Event.body, true);
