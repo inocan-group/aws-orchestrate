@@ -1,7 +1,9 @@
 import * as helpers from "./testing/helpers";
 
 import { IAWSLambaContext, IAWSLambdaProxyIntegrationRequest } from "common-types";
-import { IHandlerFunction, ServerlessError, wrapper } from "../src/index";
+import { IHandlerFunction } from "~/types";
+import { ServerlessError } from "~/errors";
+import { wrapper } from "~/wrapper-fn";
 
 const CORRELATION_ID = "c-123";
 const AWS_REQUEST_ID = "1234";
@@ -42,7 +44,6 @@ describe("Handling errors => ", () => {
     }
   });
   it("throwing an error should be catch by default error handler", async () => {
-
     const restore = helpers.captureStdout();
     const wrapped = wrapper(handlerWithDefaultErrorHandler);
     restore();

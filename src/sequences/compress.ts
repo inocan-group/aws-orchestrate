@@ -1,6 +1,6 @@
 import { compress as c, decompress as d } from "lzutf8";
 import { HttpStatusCodes } from "common-types";
-import { UnhandledError } from "../errors/UnhandledError";
+import { UnhandledError } from "~/errors/UnhandledError";
 import { ICompressedSection } from "~/types";
 
 function compressionHandler(data: string) {

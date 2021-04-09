@@ -13,7 +13,7 @@ features:
 - title: Orchestration
   details: A strongly typed builder pattern for structuring a state machine. Developer DX is improved by providing clear guard rails through strong typing that describes what you can do and stops you from what you can't. It is built in a manner that promotes reuse through composable primitives. 
 - title: Serverless Devops
-  details: Configure your serverless config with strongly typed Typescript instead of the squishy YAML that the Serverless Framework provides. Not already onboard? What if we automatigically used AST to find and configure your functions (and step functions if you use them)? 
+  details: Configure your serverless config with strongly typed Typescript instead of the squishy YAML. Not already onboard? What if we automatigically used AST to find and configure your functions and step functions? Still not convinced? There's even more but you'll have to read about it. 
 
 footer: MIT Licensed | Copyright © Inocan Group
 ---
