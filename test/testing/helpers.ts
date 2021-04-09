@@ -1,6 +1,4 @@
 import { IDictionary } from "common-types";
-import { first, last } from "native-dash";
-
 import * as fs from "fs";
 import * as yaml from "js-yaml";
 import * as process from "process";
@@ -111,34 +109,6 @@ export function ignoreBoth() {
   };
 
   return restore;
-}
-
-/**
- * The first key in a Hash/Dictionary
- */
-export function firstKey<T = any>(dictionary: IDictionary<T>) {
-  return first(Object.keys(dictionary));
-}
-
-/**
- * The first record in a Hash/Dictionary of records
- */
-export function firstRecord<T = any>(dictionary: IDictionary<T>) {
-  return dictionary[this.firstKey(dictionary)];
-}
-
-/**
- * The last key in a Hash/Dictionary
- */
-export function lastKey<T = any>(listOf: IDictionary<T>) {
-  return last(Object.keys(listOf));
-}
-
-/**
- * The last record in a Hash/Dictionary of records
- */
-export function lastRecord<T = any>(dictionary: IDictionary<T>): T {
-  return dictionary[this.lastKey(dictionary)];
 }
 
 export function valuesOf<T = any>(listOf: IDictionary<T>, property: string) {
