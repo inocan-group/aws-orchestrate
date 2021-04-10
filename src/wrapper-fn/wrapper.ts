@@ -7,7 +7,6 @@ import {
   scalar,
   IAwsLambdaProxyIntegrationRequest,
   IAwsLambdaContext,
-  IApiGatewayResponse,
   IAwsApiGatewayResponse,
 } from "common-types";
 
@@ -23,23 +22,20 @@ import {
   ErrorWithinError,
 } from "~/errors";
 
-import { IHandlerContext, IWrapperOptions, OrchestratedErrorForwarder, AwsResource, WorkflowStatus } from "~/types";
+import { IWrapperContext, IWrapperOptions, OrchestratedErrorForwarder, WorkflowStatus } from "~/types";
 
 import {
   loggedMessages,
   setSecretHeaders,
   maskLoggingForSecrets,
   getLocalSecrets,
-  setFnHeaders,
-  getNewSequence,
-  invokeNewSequence,
+  setUserHeaders,
   getResponseHeaders,
   findError,
   getSecrets,
   setContentType,
 } from "~/wrapper-fn";
 import { invoke } from "~/invoke";
-import { buildOrchestratedRequest, buildStepFunctionTaskInput } from "~/sequences";
 import { extractRequestState } from "./extractRequestState";
 
 /**
@@ -53,14 +49,14 @@ import { extractRequestState } from "./extractRequestState";
  * features brought in by the wrapper function
  */
 export const wrapper = function <I, O extends any, Q extends IDictionary<scalar>, P extends IDictionary<scalar>>(
-  fn: (request: I, context: IHandlerContext<Q, P>) => Promise<O>,
+  fn: (request: I, context: IWrapperContext<Q, P>) => Promise<O>,
   options: IWrapperOptions = {}
 ) {
   /** this is the core Lambda event which the wrapper takes as an input */
   return async function (
     event: I | IAwsLambdaProxyIntegrationRequest,
     context: IAwsLambdaContext
-  ): Promise<O | ApiGatewayResponse<O>> {
+  ): Promise<O | IAwsApiGatewayResponse> {
     let workflowStatus = WorkflowStatus.initializing;
     const t0: epochWithMilliseconds = Date.now();
     const log = logger(options.loggerConfig).lambda(event, context);
@@ -74,50 +70,71 @@ export const wrapper = function <I, O extends any, Q extends IDictionary<scalar>
     const errorMeta: ErrorMeta = new ErrorMeta();
     /** the code to use for successful requests */
     let statusCode = 0;
-    let handlerContext: IHandlerContext<Q, P> = {} as IHandlerContext<Q, P>;
+    let handlerContext: IWrapperContext<Q, P> = {} as IWrapperContext<Q, P>;
 
+    // #region PREP
+
+    // catch all error prior to handing off to handler function
     try {
-      // const segment = xray.getSegment();
-      // segment.addMetadata("initialized", request);
       if (state.headers) {
         setSecretHeaders(state.headers, log);
         maskLoggingForSecrets(getLocalSecrets(), log);
       }
 
-      // #region PREP
-
       handlerContext = {
         ...context,
+        // function interface
         log,
         getSecrets,
         setSuccessCode: (code: number) => (statusCode = code),
         errorMgmt: errorMeta,
         invoke,
-        setHeaders: setFnHeaders,
+        setHeaders: setUserHeaders,
         setContentType,
 
+        // additonal props
         correlationId,
         headers: state.headers || {},
-        queryParameters: state.query || {},
-        pathParameters: state.path || {},
         token: state.token,
-        verb: state.verb,
-        claims: state.claims,
-
-        apiGateway: state.apiGateway,
         isApiGatewayRequest: state.isApiGateway,
-      };
-      // #endregion
+        caller: state.caller,
 
-      // #region CALL the HANDLER FUNCTION
-      workflowStatus = WorkflowStatus.handlerRunning;
+        // API-Gateway only props
+        ...(state.isApiGateway
+          ? {
+              queryParameters: state.query,
+              pathParameters: state.path,
+              verb: state.verb,
+              claims: state.claims,
+              identity: state.identity,
+              apiGateway: state.apiGateway,
+            }
+          : {}),
+      };
+    } catch (prepError) {
+      // TODO: implement
+    }
+    // #endregion
+
+    // #region HANDLER FN
+    workflowStatus = WorkflowStatus.handlerRunning;
+    const t1 = Date.now();
+    try {
       response = await fn(state.request, handlerContext);
       workflowStatus = WorkflowStatus.handlerComplete;
+    } catch (stepFnError) {
+      workflowStatus = WorkflowStatus.handlerComplete;
+      log.warn(`Error encountered executing handler: ${stepFnError.message}`, {
+        error: stepFnError,
+        prepTime: t1 - t0,
+      });
+      // TODO: complete
+    }
 
-      log.debug("handler function returned to wrapper function", { response });
-      // #endregion
+    // #endregion
 
-      // #region RETURN-VALUES
+    // #region CLOSE OUT
+    try {
       if (handlerContext.isApiGatewayRequest) {
         // API-GATEWAY Response
         const res: IAwsApiGatewayResponse = {
@@ -129,27 +146,11 @@ export const wrapper = function <I, O extends any, Q extends IDictionary<scalar>
         return res;
       } else {
         // NON API-GATEWAY Response
+        const t2 = Date.now();
+        log.info("Successful completion of handler", { response, duration: t2 - t0, prepTime: t1 - t0 });
+        return response;
       }
 
-      switch (handlerContext.triggeredBy) {
-        case AwsResource.ApiGateway:
-          const response: IApiGatewayResponse = {
-            // eslint-disable-next-line no-unneeded-ternary
-            statusCode: statusCode ? statusCode : response ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
-            headers: getResponseHeaders() as IDictionary,
-            body: response ? (typeof response === "string" ? response : JSON.stringify(response)) : "",
-          };
-
-          log.debug("the response will be", response);
-          return response;
-        case AwsResource.StepFunction:
-          const nextStepTaskInput = buildStepFunctionTaskInput<O>(response);
-          log.debug("Wrap result and pass to the next state machine's task step", { nextStepTaskInput });
-          return nextStepTaskInput;
-        default:
-          log.debug("Returning results to non-API Gateway caller", { response });
-          return response;
-      }
       // #endregion
     } catch (error) {
       console.log(`Error encountered: ${error.message}`, { error: error });
