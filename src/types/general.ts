@@ -1,11 +1,13 @@
 import {
-  IAWSLambaContext,
-  IAWSLambdaProxyIntegrationRequest,
+  IAwsLambaContext,
+  IAwsLambdaProxyIntegrationRequest,
   IDictionary,
   IServerlessFunction,
   Omit,
   arn,
-  IAWSLambdaProxyIntegrationRequestV2,
+  IAwsLambdaProxyIntegrationRequestV2,
+  IAwsLambdaProxyIntegrationRequestHeaders,
+  RestMethod,
 } from "common-types";
 import { ILoggerApi, IAwsLogConfig } from "aws-log";
 import { getSecrets, setContentType, setFnHeaders as setFunctionHeaders } from "~/wrapper-fn";
@@ -34,7 +36,7 @@ export type IWrapperFunction = IHandlerConfig;
  * The API Gateway's _proxy integration request_ structure with the
  * `body` and `headers` removed
  */
-export type IApiGateway = Omit<IAWSLambdaProxyIntegrationRequest, "body" | "headers">;
+export type IApiGateway = Omit<IAwsLambdaProxyIntegrationRequest, "body" | "headers">;
 
 export interface IWrapperOptions {
   /**
@@ -96,27 +98,40 @@ export interface IErrorHandlingDefault {
  * The AWS `context` plus additional properties/functions that the `wrapper`
  * function provides.
  */
-export interface IHandlerContext extends IAWSLambaContext {
+export interface IHandlerContext<Q, P> extends IAwsLambaContext {
   /**
-   * The HTTP headers variables passed in via API Gateway or forwarded along
-   * by `aws-orchestrate`.
+   * The HTTP headers variables passed by caller
    */
-  headers: IWrapperRequestHeaders;
+  headers: IAwsLambdaProxyIntegrationRequestHeaders | {};
   /**
    * A dictionary of name/value pairs based on the values passed in from the
-   * query parameters coming in from API Gateway
+   * _query parameters_ of the request
    */
-  queryParameters: IDictionary;
+  queryParameters: Q | {};
+  /**
+   * A dictionary of name/value pairs based on the values passed in from the
+   * URL/path of the request
+   */
+  pathParameters: P | {};
+
+  /**
+   * If the caller sent in a value in the `Authenticate` header then it will be
+   * represented here.
+   */
+  token: string | undefined;
+
+  /**
+   * If the caller is API Gateway, this property will indicate the REST verb used
+   * in the call.
+   */
+  verb: RestMethod | undefined;
+
   /**
    * The custom claims which this function received from API Gateway.
    *
-   * **Note:** the claims property is sourced from a deeply nested property in the API Gateway
-   * _request body_ -- `apiGateway.requestContext.authorizer.customClaims` -- so
-   * this item is just serving as a convenience to the conductor or HTTP event
-   * function (who is typically responsible for validating claims). Also note that if this variable is NOT
-   * set then this is defaulted to an empty hash/dictionary.
+   * > Note: currently this is only available in REST API's, not HTTP API's.
    */
-  claims: IDictionary;
+  claims?: IDictionary;
   /**
    * The sequence which this execution is part of
    */
@@ -163,10 +178,10 @@ export interface IHandlerContext extends IAWSLambaContext {
    */
   setSuccessCode: (code: number) => void;
   /**
-   * The API Gateway "proxy integration" request data; this is left blank if the call was not
-   * made from API Gateway (or the function is not using proxy integration)
+   * The API Gateway "proxy integration" request data; this can be either version 1.0 or 2.0.
+   * If the caller is not API Gateway it will be left undefined.
    */
-  apiGateway?: IAWSLambdaProxyIntegrationRequest | IAWSLambdaProxyIntegrationRequestV2;
+  apiGateway?: IAwsLambdaProxyIntegrationRequest;
   /**
    * A boolean flag which indicates whether the current execution was started by an API Gateway
    * event.

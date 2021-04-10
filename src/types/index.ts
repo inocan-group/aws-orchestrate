@@ -2,9 +2,9 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 03:11 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 03:42 PM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: arn, defaultHandling, general, sequence-types.
+// files: arn, defaultHandling, general, sequence-types, wrapper-types.
 // directories: step-fns.
 
 // local file exports
@@ -12,6 +12,7 @@ export * from "./arn";
 export * from "./defaultHandling";
 export * from "./general";
 export * from "./sequence-types";
+export * from "./wrapper-types";
 
 // directory exports
 export * from "./step-fns/index";

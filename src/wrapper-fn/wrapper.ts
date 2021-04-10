@@ -1,14 +1,16 @@
 /* eslint-disable no-case-declarations */
 import {
   HttpStatusCodes,
-  IAWSLambaContext,
-  IApiGatewayErrorResponse,
-  IApiGatewayResponse,
   IDictionary,
   isLambdaProxyRequest,
+  epochWithMilliseconds,
+  scalar,
+  IAwsLambdaProxyIntegrationRequest,
+  IAwsLambdaContext,
+  IApiGatewayResponse,
+  IAwsApiGatewayResponse,
 } from "common-types";
 
-import { get } from "native-dash";
 import { logger } from "aws-log";
 import {
   ErrorMeta,
@@ -21,20 +23,11 @@ import {
   ErrorWithinError,
 } from "~/errors";
 
-import {
-  IHandlerContext,
-  IOrchestrationRequestTypes,
-  IWrapperOptions,
-  OrchestratedErrorForwarder,
-  IOrchestratedResponse,
-  AwsResource,
-  IStepFunctionTaskResponse,
-} from "~/types";
+import { IHandlerContext, IWrapperOptions, OrchestratedErrorForwarder, AwsResource, WorkflowStatus } from "~/types";
 
 import {
-  registerSequence as register,
   loggedMessages,
-  saveSecretHeaders,
+  setSecretHeaders,
   maskLoggingForSecrets,
   getLocalSecrets,
   setFnHeaders,
@@ -45,8 +38,9 @@ import {
   getSecrets,
   setContentType,
 } from "~/wrapper-fn";
-import { invoke as invokeLambda, invokeSequence } from "~/invoke";
-import { buildOrchestratedRequest, buildStepFunctionTaskInput, LambdaSequence, sequenceStatus } from "~/sequences";
+import { invoke } from "~/invoke";
+import { buildOrchestratedRequest, buildStepFunctionTaskInput } from "~/sequences";
+import { extractRequestState } from "./extractRequestState";
 
 /**
  * **wrapper**
@@ -58,154 +52,103 @@ import { buildOrchestratedRequest, buildStepFunctionTaskInput, LambdaSequence, s
  * @param context the contextual props and functions which AWS provides plus additional
  * features brought in by the wrapper function
  */
-export const wrapper = function <I, O extends any>(
-  function_: (request: I, context: IHandlerContext) => Promise<O>,
+export const wrapper = function <I, O extends any, Q extends IDictionary<scalar>, P extends IDictionary<scalar>>(
+  fn: (request: I, context: IHandlerContext<Q, P>) => Promise<O>,
   options: IWrapperOptions = {}
 ) {
   /** this is the core Lambda event which the wrapper takes as an input */
   return async function (
-    event: IOrchestrationRequestTypes<I>,
-    context: IAWSLambaContext
-  ): Promise<
-    O | IApiGatewayResponse | IOrchestratedResponse<O> | IStepFunctionTaskResponse<O> | IApiGatewayErrorResponse
-  > {
-    let result: O = Symbol("Not Yet Defined") as O;
-    let workflowStatus:
-      | "initializing"
-      | "unboxing-from-prior-function"
-      | "starting-try-catch"
-      | "prep-starting"
-      | "running-function"
-      | "function-complete"
-      | "invoke-complete"
-      | "invoke-started"
-      | "sequence-defined"
-      | "sequence-starting"
-      | "sequence-started"
-      | "sequence-tracker-starting"
-      | "completing"
-      | "returning-values";
-    workflowStatus = "initializing";
-    context.callbackWaitsForEmptyEventLoop = false;
+    event: I | IAwsLambdaProxyIntegrationRequest,
+    context: IAwsLambdaContext
+  ): Promise<O | ApiGatewayResponse<O>> {
+    let workflowStatus = WorkflowStatus.initializing;
+    const t0: epochWithMilliseconds = Date.now();
     const log = logger(options.loggerConfig).lambda(event, context);
-    log.info("context object", { context });
+    const correlationId = log.getCorrelationId();
+    log.info("Starting Lambda Handler", { event, context });
+
+    const state = extractRequestState<I, Q, P>(event);
+    let response: O = Symbol("Not Yet Defined") as O;
+    context.callbackWaitsForEmptyEventLoop = false;
     const message = loggedMessages(log);
     const errorMeta: ErrorMeta = new ErrorMeta();
-
     /** the code to use for successful requests */
     let statusCode = 0;
-    workflowStatus = "unboxing-from-prior-function";
-    const { request, sequence, apiGateway, headers, triggeredBy } = LambdaSequence.from<I>(event);
-
-    let handlerContext: IHandlerContext = {} as IHandlerContext;
+    let handlerContext: IHandlerContext<Q, P> = {} as IHandlerContext<Q, P>;
 
     try {
-      workflowStatus = "starting-try-catch";
-      message.start(request, headers, context, sequence, apiGateway);
       // const segment = xray.getSegment();
       // segment.addMetadata("initialized", request);
-      saveSecretHeaders(headers, log);
-      maskLoggingForSecrets(getLocalSecrets(), log);
+      if (state.headers) {
+        setSecretHeaders(state.headers, log);
+        maskLoggingForSecrets(getLocalSecrets(), log);
+      }
 
       // #region PREP
-      workflowStatus = "prep-starting";
-      const status = sequenceStatus(log.getCorrelationId());
-      const registerSequence = register(log, context);
-      const invoke = invokeSequence(sequence);
-      const claims: IDictionary = JSON.parse(get(apiGateway || {}, "requestContext.authorizer.customClaims", "{}"));
 
       handlerContext = {
         ...context,
-        claims,
         log,
-        correlationId: log.getCorrelationId(),
-        headers,
-        queryParameters: apiGateway?.queryStringParameters || {},
-        setHeaders: setFnHeaders,
-        setContentType,
-        sequence,
-        registerSequence,
-        isSequence: sequence.isSequence,
-        isDone: sequence.isDone,
-        apiGateway,
         getSecrets,
         setSuccessCode: (code: number) => (statusCode = code),
-        isApiGatewayRequest: triggeredBy === "ApiGateway",
         errorMgmt: errorMeta,
         invoke,
-        triggeredBy,
+        setHeaders: setFnHeaders,
+        setContentType,
+
+        correlationId,
+        headers: state.headers || {},
+        queryParameters: state.query || {},
+        pathParameters: state.path || {},
+        token: state.token,
+        verb: state.verb,
+        claims: state.claims,
+
+        apiGateway: state.apiGateway,
+        isApiGatewayRequest: state.isApiGateway,
       };
       // #endregion
 
       // #region CALL the HANDLER FUNCTION
-      workflowStatus = "running-function";
-      result = await function_(request, handlerContext);
+      workflowStatus = WorkflowStatus.handlerRunning;
+      response = await fn(state.request, handlerContext);
+      workflowStatus = WorkflowStatus.handlerComplete;
 
-      log.debug("handler function returned to wrapper function", { result });
-      workflowStatus = "function-complete";
-      // #endregion
-
-      // #region SEQUENCE (next)
-      if (sequence.isSequence && !sequence.isDone) {
-        workflowStatus = "invoke-started";
-        const [function_, requestBody] = sequence.next<O>(result);
-        message.startingInvocation(function_, requestBody);
-        const invokeParameters = await invoke(function_, requestBody);
-        message.completingInvocation(function_, invokeParameters);
-        workflowStatus = "invoke-complete";
-      } else {
-        message.notPartOfExistingSequence();
-      }
-
-      // #endregion
-
-      // #region SEQUENCE (orchestration starting)
-      if (getNewSequence().isSequence) {
-        workflowStatus = "sequence-starting";
-        message.sequenceStarting();
-        const seqResponse = await invokeNewSequence();
-        message.sequenceStarted(seqResponse);
-        workflowStatus = "sequence-started";
-      } else {
-        message.notPartOfNewSequence();
-      }
-
-      // #endregion
-
-      // #region SEQUENCE (send to tracker)
-      if (options.sequenceTracker && sequence.isSequence) {
-        workflowStatus = "sequence-tracker-starting";
-        message.sequenceTracker(options.sequenceTracker, workflowStatus);
-        await invokeLambda(options.sequenceTracker, buildOrchestratedRequest(status(sequence)));
-        if (sequence.isDone) {
-          message.sequenceTrackerComplete(true);
-        } else {
-          message.sequenceTrackerComplete(false);
-        }
-      }
+      log.debug("handler function returned to wrapper function", { response });
       // #endregion
 
       // #region RETURN-VALUES
-      workflowStatus = "returning-values";
+      if (handlerContext.isApiGatewayRequest) {
+        // API-GATEWAY Response
+        const res: IAwsApiGatewayResponse = {
+          statusCode: statusCode ? statusCode : response ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
+          headers: getResponseHeaders() as IDictionary,
+          body: response ? (typeof response === "string" ? response : JSON.stringify(response)) : "",
+        };
+        message.returnToApiGateway(response, getResponseHeaders());
+        return res;
+      } else {
+        // NON API-GATEWAY Response
+      }
+
       switch (handlerContext.triggeredBy) {
         case AwsResource.ApiGateway:
           const response: IApiGatewayResponse = {
             // eslint-disable-next-line no-unneeded-ternary
-            statusCode: statusCode ? statusCode : (result ? HttpStatusCodes.Success : HttpStatusCodes.NoContent),
+            statusCode: statusCode ? statusCode : response ? HttpStatusCodes.Success : HttpStatusCodes.NoContent,
             headers: getResponseHeaders() as IDictionary,
-            body: result ? (typeof result === "string" ? result : JSON.stringify(result)) : "",
+            body: response ? (typeof response === "string" ? response : JSON.stringify(response)) : "",
           };
-          message.returnToApiGateway(result, getResponseHeaders());
+
           log.debug("the response will be", response);
           return response;
         case AwsResource.StepFunction:
-          workflowStatus = "returning-values";
-          const nextStepTaskInput = buildStepFunctionTaskInput<O>(result);
+          const nextStepTaskInput = buildStepFunctionTaskInput<O>(response);
           log.debug("Wrap result and pass to the next state machine's task step", { nextStepTaskInput });
           return nextStepTaskInput;
         default:
-          log.debug("Returning results to non-API Gateway caller", { result });
-          return result;
+          log.debug("Returning results to non-API Gateway caller", { response });
+          return response;
       }
       // #endregion
     } catch (error) {
@@ -288,16 +231,16 @@ export const wrapper = function <I, O extends any>(
                 if (passed === true) {
                   log.debug(
                     `The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${
-                      result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
+                      response ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
                     } ].`
                   );
                   return isApiGatewayRequest
                     ? {
-                        statusCode: result ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent,
+                        statusCode: response ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent,
                         headers: getResponseHeaders() as IDictionary,
-                        body: result ? JSON.stringify(result) : "",
+                        body: response ? JSON.stringify(response) : "",
                       }
-                    : result;
+                    : response;
                 } else {
                   log.debug(
                     "The error was passed to the callback/handler function but it did NOT resolve the error condition."

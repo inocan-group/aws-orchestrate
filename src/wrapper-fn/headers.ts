@@ -47,7 +47,7 @@ export function getContentType() {
  * the `aws-ssm` library. This data structure can be retrieved at any
  * point by a call to `getLocalSecrets()`.
  */
-export function saveSecretHeaders(headers: IDictionary, log: ILoggerApi) {
+export function setSecretHeaders(headers: IDictionary, log: ILoggerApi) {
   const secrets: string[] = [];
   const localSecrets = Object.keys(headers).reduce((headerSecrets: IDictionary, key: keyof typeof headers & string) => {
     if (key.slice(0, 4) === "O-S-") {

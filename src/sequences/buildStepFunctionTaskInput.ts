@@ -1,7 +1,6 @@
 import { IDictionary } from "common-types";
 import { getRequestHeaders } from "../wrapper-fn";
-import { compress } from "./compress";
-import { IOrchestratedHeaders, IStepFunctionTaskPayload } from "~/types";
+import { IStepFunctionTaskPayload } from "~/types";
 
 export function buildStepFunctionTaskInput<T>(
   body: T,
@@ -15,8 +14,7 @@ export function buildStepFunctionTaskInput<T>(
   const headers = additionalHeaders ? { ...getRequestHeaders(), ...additionalHeaders } : getRequestHeaders();
 
   return {
-    type: "step-fn-message-body",
+    headers,
     body,
-    headers: compress<IOrchestratedHeaders>(headers, 4096),
   };
 }
