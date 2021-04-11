@@ -24,7 +24,7 @@ export interface IStateMachineParams extends Omit<IStateMachine, 'definition' | 
   /**
    * Error handler used for all children states unless their overrites this one using `catch` option explicitely
    */
-  defaultErrorHandler?: Record<string, ErrDefn>
+  catch?: Record<string, ErrDefn>
   /**
    * The root step function desired to be the start point for our sÍtate machine
    */

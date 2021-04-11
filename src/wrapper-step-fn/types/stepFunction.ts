@@ -143,7 +143,7 @@ export type IStepFnOptions = {
   /**
    * Error handler used for all children states unless their overrites this one using `catch` option explicitely
    */
-  defaultErrorHandler?: Record<string, ErrDefn>
+  catch?: Record<string, ErrDefn>
 }
 
 export interface IStore {

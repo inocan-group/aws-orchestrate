@@ -73,7 +73,7 @@ interface IStepFunctionParseContext {
 }
 
 export const StateMachine: IStateMachineFactory = (stateMachineName, params): IStateMachineApi => {
-  const { stepFunction, defaultErrorHandler, ...stateMachineOpts } = params
+  const { stepFunction, catch: defaultErrorHandler, ...stateMachineOpts } = params
   const finalizedStepFn = isFinalizedStepFn(stepFunction) ? stepFunction : stepFunction.finalize()
   const processingStepFns: any = {}
 
@@ -88,7 +88,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
 
     const { catch: stateErrorHandler, retry, ...rest } = finalizedState
 
-    const errorHandler = stateErrorHandler || options.defaultErrorHandler
+    const errorHandler = stateErrorHandler || options.catch
     let errorHandlerResult: IStepFunctionCatcher[]
 
     if (errorHandler !== undefined) {
@@ -197,7 +197,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       finalizedStepFn.getState(),
       {
         ...finalizedStepFn.getOptions(),
-        defaultErrorHandler: undefined,
+        catch: undefined,
       },
       `errorHandler-${ctx.hashState}`,
     )
@@ -237,7 +237,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       )
     })
 
-    const errorHandler = stateErrorHandler || options.defaultErrorHandler
+    const errorHandler = stateErrorHandler || options.catch
     let errorHandlerResult: IStepFunctionCatcher[]
 
     if (errorHandler !== undefined) {
@@ -288,7 +288,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       },
       `map-${ctx.hashState}`,
     )
-    const errorHandler = stateErrorHandler || options.defaultErrorHandler
+    const errorHandler = stateErrorHandler || options.catch
     let errorHandlerResult: IStepFunctionCatcher[]
 
     if (errorHandler !== undefined) {
@@ -502,7 +502,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
   }
 
   const definition = parseStepFunction(finalizedStepFn.getState(), {
-    defaultErrorHandler,
+    catch: defaultErrorHandler,
     ...finalizedStepFn.getOptions(),
   })
 
