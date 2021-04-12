@@ -1,7 +1,7 @@
 import { IDictionary } from "common-types";
 import { compress } from "./compress";
 import { IOrchestratedRequest, ISerializedSequence, IOrchestratedHeaders } from "~/types";
-import { getRequestHeaders } from "~/wrapper-fn/headers";
+import { getRequestHeaders } from "~/wrapper-fn/util/headers";
 import { LambdaSequence } from "./LambdaSequence";
 
 export function buildOrchestratedRequest<T>(

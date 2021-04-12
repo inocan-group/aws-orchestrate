@@ -1,8 +1,8 @@
-import { IDictionary, IHttpResponseHeaders } from "common-types";
+import { Cookie, IDictionary, IHttpResponseHeaders } from "common-types";
 import { ILoggerApi, getCorrelationId, logger } from "aws-log";
 import { set } from "native-dash";
 import { getLocalSecrets, saveSecretsLocally } from "./secrets";
-import { IOrchestratedHeaders } from "~/types";
+import { ICookieOptions, IOrchestratedHeaders } from "~/types";
 import { sequenceStatus } from "~/sequences/sequenceStatus";
 
 /**
@@ -16,7 +16,21 @@ export const CORS_HEADERS = {
 
 let contentType = "application/json";
 let functionHeaders: IDictionary<string> = {};
+const cookies: Cookie[] = [];
 
+/**
+ * Publish all saved cookies as a CR delimited header string.
+ *
+ * Note: this must be done in this format because it can not be represented as a
+ * dictionary because each cookie has the same key value of `Set-Cookie`.
+ */
+export function publishCookies() {
+  return cookies.length > 0 ? cookies.map((i) => `Set-Cookie: ${i}`).join("\n") : "";
+}
+
+/**
+ * The currently set content-type for API-Gateway callers
+ */
 export function getContentType() {
   return contentType;
 }
@@ -46,8 +60,10 @@ export function getContentType() {
  * This format is consistent with the opinionated format established by
  * the `aws-ssm` library. This data structure can be retrieved at any
  * point by a call to `getLocalSecrets()`.
+ *
+ * @returns boolean returns true/false based on whether any secrets were found
  */
-export function setSecretHeaders(headers: IDictionary, log: ILoggerApi) {
+export function setSecretHeaders(headers: IDictionary): boolean {
   const secrets: string[] = [];
   const localSecrets = Object.keys(headers).reduce((headerSecrets: IDictionary, key: keyof typeof headers & string) => {
     if (key.slice(0, 4) === "O-S-") {
@@ -58,14 +74,9 @@ export function setSecretHeaders(headers: IDictionary, log: ILoggerApi) {
     }
     return headerSecrets;
   }, {});
-  if (secrets.length > 0) {
-    log.debug(`Secrets [ ${secrets.length} ] from headers were identified`, {
-      secrets,
-    });
-  }
 
   saveSecretsLocally(localSecrets);
-  return localSecrets;
+  return secrets.length > 0;
 }
 
 /**
@@ -107,11 +118,11 @@ export function setContentType(type: string) {
 /**
  * Get the user/developer defined headers for this function
  */
-export function getFnHeaders() {
+export function getUserHeaders() {
   return functionHeaders;
 }
 
-export function setFnHeaders(headers: IDictionary<string>) {
+export function setUserHeaders(headers: IDictionary<string>) {
   if (typeof headers !== "object") {
     throw new TypeError(
       `The value sent to setHeaders is not the required type. Was "${typeof headers}"; expected "object".`
@@ -131,7 +142,7 @@ function getBaseHeaders(options: IHttpResponseHeaders & IDictionary) {
 
   return {
     ...sequenceInfo,
-    ...getFnHeaders(),
+    ...getUserHeaders(),
     "X-Correlation-Id": getCorrelationId(),
   };
 }
@@ -156,4 +167,23 @@ export function getRequestHeaders(options: IHttpResponseHeaders = {}): IOrchestr
     ...getHeaderSecrets(),
     ...getBaseHeaders(options),
   };
+}
+
+/**
+ * Set a cookie header for caller to hopefully accept on receipt
+ *
+ */
+export function addCookie(name: string, value: string, options: ICookieOptions = {}) {
+  let cookie = `${name}=${value}`;
+  if (options.expires) {
+    cookie += "; Expires=${expires}";
+  }
+  if (options.maxAge) {
+    cookie += `; Max-Age: ${options.maxAge}`;
+  }
+  if (options.sameSite) {
+    cookie += `; SameSite=${options.sameSite}`;
+  }
+
+  cookies.push(cookie as Cookie);
 }

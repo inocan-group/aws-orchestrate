@@ -2,7 +2,7 @@ import { HttpStatusCodes, IDictionary } from "common-types";
 
 import { ILoggerApi } from "aws-log";
 import { get } from "native-dash";
-import { getRequestHeaders, getNewSequence } from ".";
+import { getRequestHeaders, getNewSequence } from "..";
 import { IApiGateway, IErrorClass } from "~/types";
 import { LambdaSequence } from "~/sequences";
 

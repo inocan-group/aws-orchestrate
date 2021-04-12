@@ -15,7 +15,7 @@
     "semi": ["error", "always"],
     "quotes": ["warn", "double"],
     "no-unused-vars": "off",
-    "curly": "error",
+    "curly": ["error", "multiline"],
     "brace-style": ["error", "1tbs", { "allowSingleLine": true }],
     // our use of `-spec` files for testing prevents us using this
     "unicorn/filename-case": "off",
@@ -25,6 +25,9 @@
     "unicorn/no-array-reduce": "off",
     "unicorn/prevent-abbreviations": "off",
     "unicorn/no-null": "off",
+    "no-nested-ternary": "off",
+    "unicorn/no-nested-ternary": "warn",
+
     // we need exceptions to be only "warn" because
     // there are valid use cases for generic variables being
     // used before being defined

@@ -5,6 +5,41 @@ import {
   RestMethod,
   scalar,
 } from "common-types";
+import { AwsApiStyle, AwsResource } from "./general";
+
+export type DeviceType = "desktop" | "mobile" | "tablet" | "smart-tv" | "unknown";
+
+export interface IWrapperIdentityEssentials {
+  /**
+   * Information about the Amazon Cognito identity provider when invoked through the AWS Mobile SDK.
+   * */
+  cognito?: string;
+}
+
+/**
+ * Aspects that identifier a caller from API-Gateway
+ */
+export interface IWrapperIdentityDetails extends IWrapperIdentityEssentials {
+  /**
+   * The IP address of the caller
+   */
+  ipAddress?: string;
+  /**
+   * The "user-agent" string that the caller provided
+   */
+  userAgent?: string;
+  /**
+   * If Cloudfront -- `CloudFront-Viewer-Country` header value -- can identify the
+   * caller's country it will be included here. If not it will just be an empty string.
+   */
+  country?: string;
+  /**
+   * Whether given device appears to be a desktop client, a tablet, phone, etc.
+   */
+  deviceType?: DeviceType;
+}
+
+export type IWrapperIdentity = IWrapperIdentityEssentials | IWrapperIdentityDetails;
 
 export interface IApiGatewayRequest<B, Q, P> {
   kind: "api-gateway";
@@ -14,10 +49,13 @@ export interface IApiGatewayRequest<B, Q, P> {
   headers: IAwsLambdaProxyIntegrationRequestHeaders;
   /** the value of the `Authorization` header (if it exists) */
   token: string | undefined;
+  identity: IWrapperIdentityDetails;
   path: P;
   query: Q;
   verb: RestMethod;
   claims?: IDictionary;
+  caller: AwsResource.ApiGateway;
+  api: AwsApiStyle;
 }
 
 export interface IBasicRequest<B> {
@@ -27,10 +65,12 @@ export interface IBasicRequest<B> {
   apiGateway: undefined;
   headers: undefined;
   token: undefined;
+  identity: IWrapperIdentityEssentials;
   path: undefined;
   query: undefined;
   verb: undefined;
   claims: undefined;
+  caller: AwsResource.Lambda;
 }
 
 /**
@@ -46,10 +86,12 @@ export interface IHeaderBodyRequest<B> {
   headers: IDictionary<scalar>;
   /** the value of the `Authorization` header (if it exists) */
   token: string | undefined;
+  identity: IWrapperIdentityEssentials;
   path: undefined;
   query: undefined;
   verb: undefined;
   claims: undefined;
+  caller: AwsResource.LambdaWithHeader;
 }
 
 export interface IHeaderBodyEvent<B> {
@@ -81,3 +123,5 @@ export enum WorkflowStatus {
   /** the wrapper fn is completing the final steps before exiting */
   "completing" = "completing (5 of 5)",
 }
+
+export type ApiGatewayResponse = {};
