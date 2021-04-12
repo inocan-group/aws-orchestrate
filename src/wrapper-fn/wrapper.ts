@@ -1,4 +1,3 @@
-/* eslint-disable no-case-declarations */
 import {
   IDictionary,
   epochWithMilliseconds,
@@ -10,16 +9,9 @@ import {
 } from "common-types";
 
 import { logger } from "aws-log";
-import { ErrorMeta, ServerlessError, convertToApiGatewayError } from "~/errors";
+import { ErrorMeta } from "~/errors";
+import { IWrapperContext, IWrapperContextFunctions, IWrapperContextProps, IWrapperOptions } from "~/types";
 import {
-  IWrapperContext,
-  IWrapperContextFunctions,
-  IWrapperContextProps,
-  IWrapperOptions,
-  WorkflowStatus,
-} from "~/types";
-import {
-  loggedMessages,
   setSecretHeaders,
   maskLoggingForSecrets,
   getLocalSecrets,
@@ -88,15 +80,13 @@ export const wrapper = function <I, O extends any, Q extends IDictionary<scalar>
       const contextProps: IWrapperContextProps<Q, P> = {
         correlationId,
         headers: state.headers || {},
-        token: state.token,
         isApiGatewayRequest: state.isApiGateway,
         caller: state.caller,
         identity: state.identity,
-
-        // API-Gateway only props
         ...(state.isApiGateway
           ? {
               api: state.api,
+              token: state.token,
               claims: state.claims,
               verb: state.verb,
               apiGateway: state.apiGateway,
@@ -106,6 +96,7 @@ export const wrapper = function <I, O extends any, Q extends IDictionary<scalar>
           : {}),
       };
 
+      // the handler's function is now ready for use
       handlerContext = {
         ...(context as Omit<IAwsLambdaContext, "identity">),
         ...contextProps,
@@ -116,7 +107,7 @@ export const wrapper = function <I, O extends any, Q extends IDictionary<scalar>
     }
     // #endregion
 
-    // #region HANDLER FN
+    // HANDLER FN EXECUTION and ERROR HANDLING
     const t1 = Date.now();
     const prepTime = t1 - t0;
     try {
@@ -127,6 +118,5 @@ export const wrapper = function <I, O extends any, Q extends IDictionary<scalar>
       const duration = Date.now() - t0;
       return handleError(handlerFnError, handlerContext, duration, prepTime);
     }
-    // #endregion
   };
 };
