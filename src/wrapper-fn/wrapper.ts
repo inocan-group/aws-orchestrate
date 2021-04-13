@@ -23,10 +23,12 @@ import { handleError, handlePrepError, handleReturn, prepForHandler } from "./st
  * @param context the contextual props and functions which AWS provides plus additional
  * features brought in by the wrapper function
  */
-export const wrapper = function <I, O extends any, Q extends IDictionary<scalar>, P extends IDictionary<scalar>>(
-  fn: (request: I, context: IWrapperContext<Q, P>) => Promise<O>,
-  options: IWrapperOptions = {}
-) {
+export const wrapper = function <
+  I,
+  O extends any,
+  Q extends IDictionary<scalar> = IDictionary<scalar>,
+  P extends IDictionary<scalar> = IDictionary<scalar>
+>(fn: (request: I, context: IWrapperContext<Q, P>) => Promise<O>, options: IWrapperOptions = {}) {
   /** this is the core Lambda event which the wrapper takes as an input */
   return async function (
     event: I | IAwsLambdaProxyIntegrationRequest,

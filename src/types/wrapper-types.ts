@@ -2,10 +2,31 @@ import {
   IAwsLambdaProxyIntegrationRequest,
   IAwsLambdaProxyIntegrationRequestHeaders,
   IDictionary,
+  IServerlessFunction,
   RestMethod,
   scalar,
 } from "common-types";
 import { AwsApiStyle, AwsResource } from "./general";
+import { IWrapperContext } from "./wrapper-context";
+
+export type IHandlerFunction<I, O, Q extends object = IDictionary, P extends object = IDictionary> = (
+  event: I,
+  context: IWrapperContext<Q, P>
+) => Promise<O>;
+
+/**
+ * The _meta-data_ for a handler function. This can include a description,
+ * events, timeouts, etc.
+ */
+export type IHandlerConfig = Omit<IServerlessFunction & { handler: string }, "handler">;
+
+/**
+ * The meta-data for a handler function; this symbol is now deprecated
+ * in favor of `IHandlerConfig`.
+ *
+ * @deprecated
+ */
+export type IWrapperFunction = IHandlerConfig;
 
 export type DeviceType = "desktop" | "mobile" | "tablet" | "smart-tv" | "unknown";
 

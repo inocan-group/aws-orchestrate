@@ -7,8 +7,8 @@ import {
   IHttpRequestHeaders,
   RestMethod,
 } from "common-types";
-import { ErrorMeta } from "~/errors/ErrorMeta";
 import { InvocationResponse, UnconstrainedHttpHeaders } from "~/invoke";
+import type { ErrorMeta } from "~/wrapper-fn/util/ErrorMeta";
 import { setContentType, addCookie, setUserHeaders } from "~/wrapper-fn/util/headers";
 import { getSecrets } from "~/wrapper-fn/util/secrets";
 import { AwsApiStyle, AwsResource } from "./general";
@@ -146,9 +146,6 @@ export interface IWrapperContextCommonProps {
   isApiGatewayRequest: boolean;
 }
 
-export type IWrapperContextProps<Q, P> = IWrapperContextCommonProps &
-  (IWrapperHeaderAndBodyContext | IWrapperApiGatewayContext<Q, P> | IWrapperLambdaContext);
-
 /**
  * Context when the caller is a Lambda which has the `headers`/`body`
  * props injected by `aws-orchestrate` when one function calls another
@@ -217,6 +214,10 @@ export type IWrapperApiGatewayContext<Q, P> = IWrapperContextCommonProps &
      */
     identity: IWrapperIdentityDetails;
   };
+
+/** properties that wrapper function adds to the AWS context */
+export type IWrapperContextProps<Q, P> = IWrapperContextCommonProps &
+  (IWrapperHeaderAndBodyContext | IWrapperApiGatewayContext<Q, P> | IWrapperLambdaContext);
 
 /**
  * The AWS `context` plus additional properties/functions that the `wrapper`

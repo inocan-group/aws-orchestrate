@@ -1,9 +1,13 @@
-import * as helpers from "./testing/helpers";
+import * as helpers from "../testing/helpers";
 
-import { IAWSLambaContext, IAWSLambdaProxyIntegrationRequest } from "common-types";
-import { IHandlerFunction } from "~/types";
 import { ServerlessError } from "~/errors";
 import { wrapper } from "~/wrapper-fn";
+import { IHandlerFunction } from "~/types";
+import {
+  IAwsLambdaContext,
+  IAwsLambdaProxyIntegrationRequest,
+  IAwsLambdaProxyIntegrationRequestV2,
+} from "common-types";
 
 const CORRELATION_ID = "c-123";
 const AWS_REQUEST_ID = "1234";
@@ -30,11 +34,11 @@ describe("Handling errors => ", () => {
       const wrapped = wrapper(handlerFnWithServerlessError);
       restore();
       await wrapped(
-        { headers: { "X-Correlation-Id": CORRELATION_ID } } as IAWSLambdaProxyIntegrationRequest,
+        { headers: { "X-Correlation-Id": CORRELATION_ID } } as IAwsLambdaProxyIntegrationRequest,
         {
           awsRequestId: AWS_REQUEST_ID,
           functionName: FUNCTION_NAME,
-        } as IAWSLambaContext
+        } as IAwsLambdaContext
       );
     } catch (error) {
       expect(error.name).toBe("ServerlessError");
@@ -47,12 +51,12 @@ describe("Handling errors => ", () => {
     const restore = helpers.captureStdout();
     const wrapped = wrapper(handlerWithDefaultErrorHandler);
     restore();
-    await wrapped(
-      { headers: { "X-Correlation-Id": CORRELATION_ID } } as IAWSLambdaProxyIntegrationRequest,
-      {
-        awsRequestId: AWS_REQUEST_ID,
-        functionName: FUNCTION_NAME,
-      } as IAWSLambaContext
-    );
+    const req = { headers: { "X-Correlation-Id": CORRELATION_ID } } as IAwsLambdaProxyIntegrationRequestV2;
+    const ctx = {
+      awsRequestId: AWS_REQUEST_ID,
+      functionName: FUNCTION_NAME,
+    } as IAwsLambdaContext;
+
+    expect.toThrowWithMessage(await wrapped(req, ctx), "a test of an explicit error throw");
   });
 });

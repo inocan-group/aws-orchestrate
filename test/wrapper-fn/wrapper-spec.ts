@@ -1,8 +1,8 @@
 import { IHandlerFunction, IWrapperContext } from "~/types";
-import { wrapper, IOrchestratedRequest, LambdaSequence } from "../src/index";
-import { HandledError } from "../src/errors/HandledError";
-import { UnhandledError } from "../src/errors/UnhandledError";
-import { DEFAULT_ERROR_CODE } from "../src/wrapper-fn/util/ErrorMeta";
+import { wrapper, IOrchestratedRequest, LambdaSequence } from "~/index";
+import { HandledError } from "~/errors/HandledError";
+import { UnhandledError } from "~/errors/UnhandledError";
+import { DEFAULT_ERROR_CODE } from "~/wrapper-fn/util/ErrorMeta";
 
 interface IRequest {
   foo: string;
@@ -71,7 +71,7 @@ const handleErrorFnWithErrorInMessage: IHandlerFunction<IRequest, IResponse> = (
 };
 
 describe("Handler Wrapper => ", () => {
-  it('By default the "callbackWaitsForEmptyEventLoop" is set to "false"', async () => {
+  it("By default the 'callbackWaitsForEmptyEventLoop' is set to \"false\"", async () => {
     process.env.AWS_STAGE = "dev";
     const wrapped = wrapper<IRequest, IResponse>(async (request, context) => {
       expect(context.callbackWaitsForEmptyEventLoop).toBe(false);
@@ -109,37 +109,6 @@ describe("Handler Wrapper => ", () => {
 
     expect(results.context.headers).toBeObject();
     expect(Object.keys(results.context.headers)).toHaveLength(0);
-  });
-
-  it.skip("An orchestrated request works", async () => {
-    process.env.AWS_STAGE = "dev";
-    process.env.AWS_REGION = "us-west-2";
-    process.env.AWS_ACCOUNT = "123456";
-    process.env.APP_NAME = "foobar";
-
-    const wrapped = wrapper(handlerFn);
-    const results = (await wrapped(orchestrateEvent, {} as any)) as IResponse;
-
-    expect(results).toBeObject();
-
-    console.log(results);
-
-    expect(results).toHaveProperty("request");
-    expect(results).toHaveProperty("context");
-
-    expect(results.request.foo).toBe(simpleEvent.foo);
-    expect(results.request.bar).toBe(simpleEvent.bar);
-
-    expect(results.context.headers).toBeObject();
-    expect(results.context.headers["X-Correlation-Id"]).toBeInstanceOf("string");
-    expect(results.context.headers["Content-Type"]).toBeString();
-    expect(results.context.headers["Content-Type"]).toEqual("application/json");
-
-    expect(results.context.sequence).toBeInstanceOf(LambdaSequence);
-    const seqSummary = results.context.sequence.toObject();
-    console.log(seqSummary);
-
-    expect(seqSummary.isSequence).toBe(true);
   });
 
   it("Unhandled error in function results in defaultCode and error proxied", async () => {

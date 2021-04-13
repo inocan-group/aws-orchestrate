@@ -1,19 +1,5 @@
-import { IAwsLambdaProxyIntegrationRequest, IServerlessFunction, Omit, arn } from "common-types";
+import { IAwsLambdaProxyIntegrationRequest, Omit, arn } from "common-types";
 import { IAwsLogConfig } from "aws-log";
-
-/**
- * The _meta-data_ for a handler function. This can include a description
- * (strongly suggested), events, timeouts, etc.
- */
-export type IHandlerConfig = Omit<IServerlessFunction & { handler: string }, "handler">;
-
-/**
- * The meta-data for a handler function; this symbol is now deprecated
- * in favor of `IHandlerConfig`.
- *
- * @deprecated
- */
-export type IWrapperFunction = IHandlerConfig;
 
 /**
  * The API Gateway's _proxy integration request_ structure with the
