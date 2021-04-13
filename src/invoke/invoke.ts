@@ -1,8 +1,6 @@
 import { IDictionary } from "common-types";
 import { logger } from "aws-log";
-import { IOrchestratedRequest } from "~/types";
-import { buildInvocationRequest, buildOrchestratedRequest, parseArn } from "..";
-import { LambdaSequence } from "~/sequences";
+import { buildInvocationRequest, parseArn } from "..";
 
 export type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 
@@ -55,23 +53,4 @@ export async function invoke<T = IDictionary>(
       resolve(data);
     });
   });
-}
-
-/**
- * A higher-order function which accepts a _sequence_ as an input first.
- * In essence, this just provides useful configuration which the _wrapper
- * function_ can provide and then it passes the remaining function down
- * to the consumer of this library to use in the handler function (aka, as
- * part of the `context` object passed into the handler).
- *
- * Calling the first function returns a _invocation_ function which just
- * takes the ARN and request params (optionally allowing additional
- * _headers_ too).
- */
-export function invokeSequence(sequence: LambdaSequence) {
-  return <T = IDictionary, H = UnconstrainedHttpHeaders>(functionArn: string, request: T, additionalHeaders?: H) => {
-    const boxedRequest = buildOrchestratedRequest<T>(request, sequence, additionalHeaders);
-
-    return invoke<IOrchestratedRequest<T>>(functionArn, boxedRequest);
-  };
 }
