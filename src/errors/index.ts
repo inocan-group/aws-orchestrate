@@ -2,20 +2,15 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 04:58 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 12:31 AM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: ErrorHandler, ErrorWithinError, HandledError, KnownError, LambdaError, RethrowError, ServerlessError, StepFnError, UnhandledError, UnknownError, isServerlessError.
+// files: ErrorHandler, KnownError, ServerlessError, StepFnError, UnknownError, isServerlessError.
 
 // local file exports
 export * from "./ErrorHandler";
-export * from "./ErrorWithinError";
-export * from "./HandledError";
 export * from "./KnownError";
-export * from "./LambdaError";
-export * from "./RethrowError";
 export * from "./ServerlessError";
 export * from "./StepFnError";
-export * from "./UnhandledError";
 export * from "./UnknownError";
 export * from "./isServerlessError";
 

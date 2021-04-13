@@ -1,6 +1,6 @@
 import { IDictionary } from "common-types";
-import { ServerlessError } from "./ServerlessError";
+import { ServerlessError } from "~/errors/ServerlessError";
 
-export function isServerlessError<T extends Error>(err: T): err is ServerlessError {
+export function isServerlessError(err: unknown): err is ServerlessError {
   return (err as IDictionary).name === "ServerlessError";
 }
