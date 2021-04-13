@@ -1,4 +1,4 @@
-import { ErrorHandler } from "./ErrorHandler";
+import { ErrorHandler } from "../../errors/ErrorHandler";
 import { IErrorIdentification, IErrorHandling, IErrorHandlerFunction, IErrorClass, IDefaultHandling } from "~/types";
 export const DEFAULT_ERROR_CODE = 500;
 
@@ -59,7 +59,7 @@ export class ErrorMeta {
      * how will an error be handled; it doesn't NEED to be handled and its a reasonable
      * goal/outcome just to set the appropriate http error code
      */
-    handling: IErrorHandling,
+    handling: IErrorHandling
   ) {
     this._errors.push(new ErrorHandler(code, identifiedBy, handling));
   }
@@ -128,11 +128,10 @@ export class ErrorMeta {
           this._arn = undefined;
           this._defaultHandlerFn = undefined;
         } else {
-console.log({
+          console.log({
             message: `The passed in setDefaultHandler param was of an unknown type ${typeof parameter}; the action has been ignored`,
           });
-}
-
+        }
     }
 
     return this;
@@ -144,31 +143,31 @@ console.log({
    */
   public get defaultHandling(): IDefaultHandling {
     if (this._arn) {
-return {
+      return {
         type: "error-forwarding",
         code: this.defaultErrorCode,
         arn: this._arn,
         prop: "_arn",
       };
-}
+    }
 
     if (this._defaultHandlerFn) {
-return {
+      return {
         type: "handler-fn",
         code: this.defaultErrorCode,
         defaultHandlerFn: this._defaultHandlerFn,
         prop: "_defaultHandlerFn",
       };
-}
+    }
 
     if (this._defaultError) {
-return {
+      return {
         type: "default-error",
         code: this.defaultErrorCode,
         error: this._defaultError,
         prop: "_defaultError",
       };
-}
+    }
 
     return {
       type: "default",

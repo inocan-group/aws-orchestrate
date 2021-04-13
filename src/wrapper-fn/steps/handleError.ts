@@ -1,37 +1,29 @@
-import { IWrapperContext } from "~/types";
-import { isServerlessError } from "~/errors";
+import { IServerlessError, IWrapperContext } from "~/types";
+import { isServerlessError, UnknownError } from "~/errors";
+import { handleServerlessError } from "./handleServerlessError";
+import { handleOtherErrors } from "./handleOtherErrors";
+import { IDictionary, isTypeSubtype } from "common-types";
+import { convertToApiGatewayError } from "../util";
 
 /**
- * Handles all errors which are thrown while the handler function (within the wrapper)
- * is being executed.
+ * Handles all errors which are thrown when using the _wrapper function_
+ * and past the _prep_ phase.
  */
-export function handleError<T extends Error, P, Q>(
+export async function handleError<I, O, P, Q, T extends Error = Error>(
   error: T,
+  request: I,
   context: IWrapperContext<P, Q>,
   duration: number,
   prepTime: number
 ) {
+  const log = context.log;
   try {
     const log = context.log;
     if (isServerlessError(error)) {
-      // if a handler function throws a serverless error we just keep as is
-      // as this was an intentional error being thrown by handler
-      log.info(`Done. Returning a ServerlessError error thrown by handler function`, {
-        success: false,
-        duration,
-        prepTime,
-      });
-      // enhance the error with meta attributes
-      error.functionName = context.functionName;
-      error.correlationId = context.correlationId;
-      error.awsRequestId = context.awsRequestId;
+      // A `ServerlessError` is always an _intentful_ error which a user
+      // will have thrown for explicit reasons
 
-      // respond based on whether caller is API Gateway
-      if (context.isApiGatewayRequest) {
-        return convertToApiGatewayError(error);
-      } else {
-        throw error;
-      }
+      return handleServerlessError(error, context, duration, prepTime);
     } else {
       // An error was thrown by the handler function but it was not a ServerlessError
       // which means it may have been unexpected, however, it's also possible that the
@@ -40,7 +32,22 @@ export function handleError<T extends Error, P, Q>(
         error,
         context,
       });
-      return manageHandlerError(error, errorMeta);
+
+      return handleOtherErrors<I, O, P, Q>(error, context.errorMgmt, request, context);
     }
-  } catch (errorHandlingError) {}
+  } catch (errorHandlingError) {
+    log.warn("There was an error which occurred during error handling", { originalError: error, errorHandlingError });
+    const classification =
+      typeof (error as IDictionary).classification === "string" &&
+      isTypeSubtype(((error as unknown) as IServerlessError).classification)
+        ? (error as IDictionary).classification
+        : "wrapper-fn/unknown-error";
+    const err = isServerlessError(error) ? error : new UnknownError(error, context, classification);
+    err.errorHandlingError = errorHandlingError;
+    if (context.isApiGatewayRequest) {
+      return convertToApiGatewayError(err);
+    } else {
+      throw err;
+    }
+  }
 }

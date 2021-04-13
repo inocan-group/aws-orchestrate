@@ -1,6 +1,6 @@
 import { HttpStatusCodes, IAwsApiGatewayResponse, IDictionary } from "common-types";
 import { IWrapperContext } from "~/types";
-import { getResponseHeaders } from "../util";
+import { getResponseHeaders, getStatusCode } from "../util";
 
 /**
  * When the wrapper function gets a returned value from the _handler function_
@@ -10,11 +10,11 @@ import { getResponseHeaders } from "../util";
 export function handleReturn<O, Q, P>(
   response: O,
   context: IWrapperContext<Q, P>,
-  statusCode: number,
   duration: number,
   prepTime: number
 ): O | IAwsApiGatewayResponse {
   const log = context.log;
+  const statusCode = getStatusCode();
 
   if (context.isApiGatewayRequest) {
     // API Gateway - Returned Results

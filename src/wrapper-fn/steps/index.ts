@@ -2,9 +2,9 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 12:11 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 01:02 PM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: handleError, handleOtherErrors, handlePrepError, handleReturn, handleServerlessError.
+// files: handleError, handleOtherErrors, handlePrepError, handleReturn, handleServerlessError, prepForHandler.
 
 // local file exports
 export * from "./handleError";
@@ -12,6 +12,7 @@ export * from "./handleOtherErrors";
 export * from "./handlePrepError";
 export * from "./handleReturn";
 export * from "./handleServerlessError";
+export * from "./prepForHandler";
 
 // Note:
 // -----

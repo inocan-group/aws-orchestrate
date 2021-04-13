@@ -1,8 +1,8 @@
-import { IHandlerContext, IHandlerFunction } from "~/types";
+import { IHandlerFunction, IWrapperContext } from "~/types";
 import { wrapper, IOrchestratedRequest, LambdaSequence } from "../src/index";
 import { HandledError } from "../src/errors/HandledError";
 import { UnhandledError } from "../src/errors/UnhandledError";
-import { DEFAULT_ERROR_CODE } from "../src/errors/ErrorMeta";
+import { DEFAULT_ERROR_CODE } from "../src/wrapper-fn/util/ErrorMeta";
 
 interface IRequest {
   foo: string;
@@ -12,7 +12,7 @@ interface IRequest {
 interface IResponse {
   testing: boolean;
   request: IRequest;
-  context: IHandlerContext;
+  context: IWrapperContext<any, any>;
 }
 
 /** returns the sent in event and context */
@@ -192,7 +192,6 @@ describe("Handler Wrapper => ", () => {
       throw new Error("there should not have been an error when callback resolves the error");
     }
   });
-
 
   it("Known error is identified with part of 'message'", async () => {
     const wrapped = wrapper(handleErrorFnWithErrorInMessage);

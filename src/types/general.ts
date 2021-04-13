@@ -1,6 +1,5 @@
 import { IAwsLambdaProxyIntegrationRequest, IServerlessFunction, Omit, arn } from "common-types";
 import { IAwsLogConfig } from "aws-log";
-import { IHandlerContext } from "./wrapper-context";
 
 /**
  * The _meta-data_ for a handler function. This can include a description
@@ -93,35 +92,4 @@ export enum AwsApiStyle {
   RestApi = "RestApi",
   /** API Gateway called using the more modern HTTP API */
   HttpApi = "HttpApi",
-}
-
-export interface IErrorHandling {
-  /** forward to another lambda function */
-  forwardTo?: arn;
-  /**
-   * send it to a callback function; if the callback
-   * returns `true` then no error will be thrown with
-   * the understanding that the error has been handled
-   * in some way.
-   */
-  callback?: (e: Error) => boolean;
-}
-
-export interface IErrorHandlingDefault {
-  defaultHandling: true;
-}
-
-/**
- * **IOrchestrationHandlerFunction**
- *
- * A type definition for an AWS Lambda "Handler Function" which is being wrapped
- * by the `handler` function from `aws-orchestrate`. Because this wrapping allows
- * us to be "better citizens" from a Typescript standpoint this type definition
- * requires that you state explicitly the **Request**<`E`> and **Response**<`R`> types
- * as generics passed in.
- */
-export type IHandlerFunction<E, R> = (event: E, context: IHandlerContext) => Promise<R>;
-
-export interface IErrorWithExtraProperties extends Error {
-  [key: string]: any;
 }

@@ -3563,10 +3563,10 @@ common-tags@^1.8.0:
   resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.20.4.tgz#04ae28abe818be3486b9eabf71e3cc178f0d85f9"
   integrity sha512-PmP+hgUO2dUmQsXgYZ6B63CPpeVKuuO/tcPpBQmeoKXxCunR7CkoyLVfE1Bjly8uQ+HFVDCI6fXvcPquFFkA8w==
 
-common-types@^1.21.5:
-  version "1.21.5"
-  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.21.5.tgz#aaeea9e119df467978a43e4ca02c736cb76ab0d8"
-  integrity sha512-eNn9hBZrIh+pLs7h+1t6AvFdgphcDtfBbVW5ygfHV1owi9Bw03NO7qBou+kSnrBQefJrySpmFmBAJiLA3efUAg==
+common-types@^1.21.7:
+  version "1.21.7"
+  resolved "https://registry.yarnpkg.com/common-types/-/common-types-1.21.7.tgz#2af840cc320f5e7a95c430f0f95ce794989da415"
+  integrity sha512-aKvz5ThWPE8U7wvYDUeQqedUORTtulWRSSW13ORckZHHFXh9q2IdkCc9bXi4QfHEYZhHuPKB4oywQUFjxWxQlA==
 
 commondir@^1.0.1:
   version "1.0.1"
