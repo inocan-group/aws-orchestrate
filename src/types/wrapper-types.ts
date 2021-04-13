@@ -9,7 +9,10 @@ import {
 import { AwsApiStyle, AwsResource } from "./general";
 import { IWrapperContext } from "./wrapper-context";
 
-export type IHandlerFunction<I, O, Q extends object = IDictionary, P extends object = IDictionary> = (
+export type IQueryParameters = IDictionary<scalar>;
+export type IPathParameters = IDictionary<scalar>;
+
+export type IHandlerFunction<I, O, Q extends object = IQueryParameters, P extends object = IPathParameters> = (
   event: I,
   context: IWrapperContext<Q, P>
 ) => Promise<O>;
@@ -144,6 +147,3 @@ export enum WorkflowStatus {
   /** the wrapper fn is completing the final steps before exiting */
   "completing" = "completing (5 of 5)",
 }
-
-export type IQueryParameters = IDictionary<scalar>;
-export type IPathParameters = IDictionary<scalar>;

@@ -2,7 +2,7 @@ import { Cookie, IDictionary, IHttpResponseHeaders } from "common-types";
 import { getCorrelationId, logger } from "aws-log";
 import { set } from "native-dash";
 import { getLocalSecrets, saveSecretsLocally } from "./secrets";
-import { ICookieOptions, IOrchestratedHeaders } from "~/types";
+import { ICookieOptions } from "~/types";
 
 /**
  * Ensures that frontend clients who call Lambda's
@@ -142,7 +142,7 @@ function getBaseHeaders(more?: IHttpResponseHeaders) {
 /**
  * All the HTTP _Response_ headers to send when returning to API Gateway
  */
-export function getResponseHeaders(options: IHttpResponseHeaders = {}): IOrchestratedHeaders {
+export function getResponseHeaders(options: IHttpResponseHeaders = {}) {
   return {
     ...getBaseHeaders(options),
     ...CORS_HEADERS,
@@ -154,7 +154,7 @@ export function getResponseHeaders(options: IHttpResponseHeaders = {}): IOrchest
  * All the HTTP _Request_ headers to send when calling
  * another function
  */
-export function getRequestHeaders(options: IHttpResponseHeaders = {}): IOrchestratedHeaders {
+export function getRequestHeaders(options: IHttpResponseHeaders = {}) {
   return {
     ...getHeaderSecrets(),
     ...getBaseHeaders(options),

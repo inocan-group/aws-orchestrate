@@ -1,6 +1,6 @@
 import { IDictionary } from "common-types";
 import { getCorrelationId, getContext } from "aws-log";
-import { IParsedArn } from "./parseArn";
+import { IParsedArn } from "~/types";
 
 /**
  * buildRequest

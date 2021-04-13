@@ -1,6 +1,6 @@
 import { IAwsApiGatewayResponse } from "common-types";
 import { KnownError, UnknownError } from "~/errors";
-import { IWrapperContext } from "~/types";
+import { IPathParameters, IQueryParameters, IWrapperContext } from "~/types";
 import { findError, ErrorMeta, convertToApiGatewayError, getStatusCode, getResponseHeaders } from "../util";
 
 /**
@@ -14,11 +14,17 @@ import { findError, ErrorMeta, convertToApiGatewayError, getStatusCode, getRespo
  * @param error The error from the handler function
  * @param errorMeta the configuration for error management
  */
-export async function handleOtherErrors<I, O, P, Q, T extends Error = Error>(
+export async function handleOtherErrors<
+  I,
+  O,
+  Q extends object = IQueryParameters,
+  P extends object = IPathParameters,
+  T extends Error = Error
+>(
   originatingError: T,
   errorMeta: ErrorMeta<I, O>,
   request: I,
-  context: IWrapperContext<I, O, P, Q>
+  context: IWrapperContext<I, O, Q, P>
 ): Promise<IAwsApiGatewayResponse | O> {
   const { log, isApiGatewayRequest } = context;
   const found = findError<I, O>(originatingError, errorMeta);

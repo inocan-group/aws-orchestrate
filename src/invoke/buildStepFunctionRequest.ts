@@ -1,6 +1,5 @@
 import { IDictionary } from "common-types";
-import { buildStepFunctionTaskInput } from "~/sequences";
-import { IParsedArn } from "./parseArn";
+import { IParsedArn } from "~/types";
 
 /**
  * buildRequest
