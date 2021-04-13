@@ -51,8 +51,9 @@ export interface IErrorHandlingDefault {
   defaultHandling: true;
 }
 
-export interface IErrorWithExtraProperties extends Error {
-  [key: string]: any;
+export interface IError extends Error {
+  code?: string;
+  httpStatus?: number;
 }
 
 export interface IExtendedError {

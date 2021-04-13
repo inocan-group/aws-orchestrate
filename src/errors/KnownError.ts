@@ -25,13 +25,16 @@ export class KnownError<I, O, T extends Error = Error> extends Error implements 
     if (classification) {
       if (isTypeSubtype(classification)) {
         this.classification = classification;
-        this.code = classification.split("/").pop() as string;
+        this.code = (originatingError as any).code
+          ? (originatingError as any).code
+          : (classification.split("/").pop() as string);
       } else {
         const parts = classification.split("/");
         this.classification = (parts.length === 1
           ? `aws-orchestrate/${classification}`
           : `${parts[0]}/${parts[1]}`) as TypeSubtype;
-        this.code = parts.length === 1 ? classification : "known-error";
+        const code = (originatingError as any).code ? ((originatingError as any).code as string) : undefined;
+        this.code = code ? code : parts.length === 1 ? classification : "known-error";
       }
     } else {
       this.classification = "wrapper-fn/known-error";

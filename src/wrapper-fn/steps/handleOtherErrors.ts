@@ -1,6 +1,6 @@
 import { IAwsApiGatewayResponse } from "common-types";
 import { KnownError, UnknownError } from "~/errors";
-import { IPathParameters, IQueryParameters, IWrapperContext } from "~/types";
+import { IError, IPathParameters, IQueryParameters, IWrapperContext } from "~/types";
 import { findError, ErrorMeta, convertToApiGatewayError, getStatusCode, getResponseHeaders } from "../util";
 
 /**
@@ -19,7 +19,7 @@ export async function handleOtherErrors<
   O,
   Q extends object = IQueryParameters,
   P extends object = IPathParameters,
-  T extends Error = Error
+  T extends IError = IError
 >(
   originatingError: T,
   errorMeta: ErrorMeta<I, O>,
@@ -32,6 +32,9 @@ export async function handleOtherErrors<
 
   if (found) {
     error = new KnownError<I, O>(originatingError, found, context);
+    if (originatingError.code) {
+      error.code = originatingError.code;
+    }
 
     // User has requested error to be forwarded
     if (found.handling && found.handling.forwardTo) {
@@ -77,6 +80,10 @@ export async function handleOtherErrors<
   }
 
   error = new UnknownError(originatingError, context);
+  error.httpStatus = errorMeta.defaultErrorCode;
+  if (originatingError.code) {
+    error.code = originatingError.code;
+  }
 
   if (isApiGatewayRequest) {
     return convertToApiGatewayError(error);

@@ -1,6 +1,21 @@
 import { IAwsLambdaProxyIntegrationRequestV2 } from "common-types";
+import { IWrapperContext } from "~/types";
 
-export const SimpleEvent = {};
+export interface IRequest {
+  foo: string;
+  bar: number;
+}
+
+export interface IResponse {
+  testing: boolean;
+  request: IRequest;
+  context: IWrapperContext<any, any>;
+}
+
+export const simpleEvent: IRequest = {
+  foo: "foo is foo",
+  bar: 456,
+};
 
 export const SimpleApiGatewayEvent_V2: (body: any) => IAwsLambdaProxyIntegrationRequestV2 = (body = SimpleEvent) => ({
   version: "2.0",

@@ -1,18 +1,8 @@
-import { IHandlerFunction, isApiGatewayResponse, IWrapperContext } from "~/types";
+import { IHandlerFunction, isApiGatewayResponse } from "~/types";
 import { isServerlessError, ServerlessError, wrapper } from "~/index";
 import { DEFAULT_ERROR_CODE } from "~/wrapper-fn/util/ErrorMeta";
-import { SimpleApiGatewayEvent_V2, SimpleEvent } from "./data/test-events";
-
-interface IRequest {
-  foo: string;
-  bar: number;
-}
-
-interface IResponse {
-  testing: boolean;
-  request: IRequest;
-  context: IWrapperContext<any, any>;
-}
+import { IRequest, IResponse, SimpleApiGatewayEvent_V2, simpleEvent } from "./data/test-events";
+import { IAwsApiGatewayResponse } from "common-types";
 
 /** returns the sent in event and context */
 const handlerFn: IHandlerFunction<IRequest, IResponse> = async (request, context) => {
@@ -24,6 +14,11 @@ const handlerErrorFn: IHandlerFunction<IRequest, IResponse> = async (_event, _co
   throw new Error("this is an error god dammit");
 };
 
+const handlerWithKnownErrors: IHandlerFunction<IRequest, IResponse> = async (_event, context) => {
+  context.errorMgmt.addHandler(404, { messageContains: "missing" }, { callback: async () => false });
+  throw new Error("missing something");
+};
+
 /**
  * handler which throws a ServerlessError
  */
@@ -31,18 +26,13 @@ const handlerServerlessErrorFn: IHandlerFunction<IRequest, IResponse> = async (_
   throw new ServerlessError(404, "explicit throw of a ServerlessError", "test/serverless-error");
 };
 
-const handlerErrorFnWithDefaultChanged: IHandlerFunction<IRequest, IResponse> = async (_event, context) => {
+const handlerWithDefaultCodeChanged: IHandlerFunction<IRequest, IResponse> = async (_event, context) => {
   context.errorMgmt.setDefaultErrorCode(400);
   throw new Error("this is an error god dammit");
 };
 
-const simpleEvent: IRequest = {
-  foo: "foo is foo",
-  bar: 456,
-};
-
-const handleErrorFnWithErrorInMessage: IHandlerFunction<IRequest, IResponse> = (_event, context) => {
-  context.errorMgmt.addHandler(401, { messageContains: "help me" }, { callback: () => false });
+const handlerWithCallback: IHandlerFunction<IRequest, IResponse> = (_event, context) => {
+  context.errorMgmt.addHandler(401, { messageContains: "help me" }, { callback: async () => false });
   const e = new Error("help me") as Error & { code: string };
   e.code = "secret-code";
   e.name = "named and shamed";
@@ -92,33 +82,34 @@ describe("Handler Wrapper => ", () => {
     const wrapped = wrapper(handlerServerlessErrorFn);
     try {
       await wrapped(simpleEvent, {} as any);
-      expect.fail("The handler function should have thrown an error");
+      throw new Error("The handler function should have thrown an error");
     } catch (error) {
       expect(error).toBeInstanceOf(ServerlessError);
       if (isServerlessError(error)) {
         expect(error.name).toBe("ServerlessError");
       } else {
-        expect.fail("The isServerlessError type guard failed");
+        throw new Error("The isServerlessError type guard failed");
       }
     }
   });
 
   it("A handler which throws a ServerlessError but is called via API Gateway returns an error response", async () => {
     const wrapped = wrapper(handlerServerlessErrorFn);
+    let result: IResponse | IAwsApiGatewayResponse;
     try {
-      const event = SimpleApiGatewayEvent_V2(SimpleEvent);
-      const result = await wrapped(event, {} as any);
-      expect(result).toHaveProperty("statusCode");
-      if (isApiGatewayResponse(result)) {
-        expect(result.statusCode).toBe(403);
-        expect(typeof result.body).toBe("string");
-      } else {
-        expect.fail("The type guard for an API Gateway should not have failed");
-      }
+      const event = SimpleApiGatewayEvent_V2(simpleEvent);
+      result = await wrapped(event, {} as any);
     } catch (error) {
-      expect.fail(
+      throw new Error(
         `a ServerlessError thrown in handler should not result in the wrapper throwing an error when called from API Gateway, instead got error: ${error.message}`
       );
+    }
+    expect(result).toHaveProperty("statusCode");
+    if (isApiGatewayResponse(result)) {
+      expect(result.statusCode).toBe(404);
+      expect(typeof result.body).toBe("string");
+    } else {
+      throw new Error("The type guard for an API Gateway should not have failed");
     }
   });
 
@@ -129,58 +120,45 @@ describe("Handler Wrapper => ", () => {
     try {
       await wrapped({ foo: "foo", bar: 888 }, {} as any);
     } catch (error) {
-      expect(error.code).toBe("Error");
-      expect(error.name).toBe("unhandled-error");
+      expect(error.code).toBe("unknown-error");
+      expect(error.name).toBe("UnknownError");
       expect(error.httpStatus).toBe(DEFAULT_ERROR_CODE);
     }
   });
 
   it("Unhandled error has defaultCode modified when defaults are changed", async () => {
     process.env.AWS_STAGE = "dev";
-    const wrapped = wrapper(handlerErrorFnWithDefaultChanged);
+    const wrapped = wrapper(handlerWithDefaultCodeChanged);
 
     try {
       await wrapped({ foo: "foo", bar: 888 }, {} as any);
+      throw new Error("handler should have failed");
     } catch (error) {
-      expect(error.code).toBe("Error");
-      expect(error.name).toBe("unhandled-error");
+      expect(error.code).toBe("unknown-error");
+      expect(error.name).toBe("UnknownError");
       expect(error.httpStatus).toBe(400);
     }
   });
 
-  it("Known error with callback that does NOT resolve results in appropriate response", async () => {
+  it("Known error is identified", async () => {
     process.env.AWS_STAGE = "dev";
-    const wrapped = wrapper(handlerErrorFnWithKnownErrors(false, true));
+    const wrapped = wrapper(handlerWithKnownErrors);
 
     try {
       await wrapped({ foo: "foo", bar: 888 }, {} as any);
     } catch (error) {
-      expect(error.name).toBe("known");
+      expect(error.name).toBe("KnownError");
       expect(error.httpStatus).toBe(404);
     }
   });
 
-  it("Known error with callback that does resolve results in appropriate response", async () => {
-    process.env.AWS_STAGE = "dev";
-    const wrapped = wrapper(handlerErrorFnWithKnownErrors(true, true));
-
-    try {
-      const response = await wrapped({ foo: "foo", bar: 888 }, {} as any);
-      // error is handled
-      expect(response).toBeUndefined();
-    } catch {
-      throw new Error("there should not have been an error when callback resolves the error");
-    }
-  });
-
   it("Known error is identified with part of 'message'", async () => {
-    const wrapped = wrapper(handleErrorFnWithErrorInMessage);
+    const wrapped = wrapper(handlerWithCallback);
     try {
       await wrapped({ foo: "foo", bar: 777 }, {} as any);
       throw new Error("the above call should have errored out");
     } catch (error) {
       expect(error.code).toBe("secret-code");
-      expect(error.name).toBe("named and shamed");
       expect(error.httpStatus).toBe(401);
     }
   });

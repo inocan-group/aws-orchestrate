@@ -5,7 +5,7 @@ import { resolve } from "path";
 const config: InitialOptionsTsJest = {
   verbose: true,
   preset: "ts-jest/presets/js-with-ts",
-  testMatch: ["**/test/?(*-)+(spec|test).ts", "**/src/?(*-)+(spec|test).ts"],
+  testMatch: ["**/test/**/?(*-)+(spec|test).ts"],
   moduleNameMapper: {
     "^[/]{0,1}~/(.*)$": resolve(process.cwd(), "src", "$1"),
   },
