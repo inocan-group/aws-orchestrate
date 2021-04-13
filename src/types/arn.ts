@@ -1,7 +1,9 @@
+import { AwsRegion, AwsAccountId, AwsStage } from "common-types";
+
 export interface IParsedArn {
-  region: string;
-  account: string;
-  stage: string;
+  region: AwsRegion;
+  account: AwsAccountId;
+  stage: AwsStage | string;
   appName: string;
   fn: string;
 }

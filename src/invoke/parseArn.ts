@@ -1,21 +1,34 @@
-import { IDictionary } from "common-types";
+import { AwsRegion, IDictionary, AwsAccountId, AwsStage, isAwsRegion } from "common-types";
 import { getStage } from "aws-log";
 import { ensureFunctionName } from "~/shared/ensureFunctionName";
 import { AwsResource, IParsedArn } from "~/types";
+import { ServerlessError } from "~/errors";
 
 /**
  * Looks for aspects of the ARN in environment variables
  */
-export function getEnvironmentVars() {
-  const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
-  const account = process.env.AWS_ACCOUNT || process.env.AWS_ACCOUNT_ID;
-  const stage =
-    process.env.AWS_STAGE || process.env.ENVIRONMENT || process.env.STAGE || process.env.NODE_ENV || getStage();
+export function getArnComponents() {
+  const region = (process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION) as AwsRegion | undefined;
+  const account = (process.env.AWS_ACCOUNT || process.env.AWS_ACCOUNT_ID) as AwsAccountId | undefined;
+  const stage = (process.env.AWS_STAGE ||
+    process.env.ENVIRONMENT ||
+    process.env.STAGE ||
+    process.env.NODE_ENV ||
+    getStage()) as AwsStage | undefined;
   const appName = process.env.SERVICE_NAME || process.env.APP_NAME;
+
+  if (region && !isAwsRegion(region)) {
+    throw new ServerlessError(
+      500,
+      `The region "${region}" was detected in the AWS_REGION or AWS_DEFAULT_REGION environment variable but is not a valid region!`,
+      "wrapper-fn/invalid-region"
+    );
+  }
 
   return { region, account, stage, appName };
 }
 
+/** identify the AwsResource by **arn** name regex patterns */
 const ResourceArnFormatRegex: IDictionary<RegExp | undefined> = {
   [AwsResource.Lambda]: /arn:aws:lambda:([\w-].*):(\d.*):function:(.*)/,
   [AwsResource.StepFunction]: /arn:aws:states:([\w-].*):(\d.*):stateMachine:(.*)/,
@@ -28,21 +41,38 @@ const patterns: IDictionary<RegExp> = {
   appName: /\s+[\s-]*/,
 };
 
+/**
+ * Takes a "fully qualified" ARN and decomposes it into its constituant parts:
+ *
+ * - region
+ * - account
+ * - function name
+ * - stage
+ * - app name
+ */
 function parseFullyQualifiedString(arn: string, target: AwsResource): IParsedArn {
   if (!ResourceArnFormatRegex || target in ResourceArnFormatRegex) {
     throw new Error("ApiGateway not supported. Apigateway should be called by http request");
   }
-
-  const [_, region, account, remain] = arn.match(ResourceArnFormatRegex[target]);
+  const re = ResourceArnFormatRegex[target];
+  if (!re) {
+    throw new ServerlessError(
+      500,
+      `The AWS resource target of "${target}" did not have a RegExp to help parse the fully qualified ARN`,
+      "wrapper-fn/missing-regex"
+    );
+  }
+  // TODO: see if there's not a better way of typing this
+  const [_, region, account, remain] = arn.match(re) as [any, AwsRegion, AwsAccountId, string];
   const parts = remain.split("-");
-  const function_ = parts[parts.length - 1];
+  const fnName = parts[parts.length - 1];
   const stage = parts[parts.length - 2];
   const appName = parts.slice(0, -2).join("-");
 
   return {
     region,
     account,
-    fn: ensureFunctionName(function_),
+    fn: ensureFunctionName(fnName),
     stage,
     appName,
   };
@@ -76,22 +106,32 @@ function parsingError(section: keyof typeof patterns) {
  * variables.
  */
 function parsePartiallyQualifiedString(fnName: string): IParsedArn {
-  const output: IParsedArn = {
-    ...getEnvironmentVars(),
-    ...{ fn: ensureFunctionName(fnName.split(":").pop()) },
+  const fn = fnName.split(":").pop();
+  let output: Partial<IParsedArn> = {
+    ...getArnComponents(),
+    ...(fn ? { fn: ensureFunctionName(fn) } : {}),
   };
+
   for (const section of ["region", "account", "stage", "appName"]) {
-    if (!output[section]) {
-      output[section] = seek(section, fnName);
-      if (!output[section]) {
+    if (!Object.keys(output).includes(section)) {
+      const found = seek(section, fnName);
+      if (found) {
+        output = { ...output, [section]: found };
+      } else {
         parsingError(section);
       }
     }
   }
 
-  return output;
+  return output as IParsedArn;
 }
 
+/**
+ * **parseArn**
+ *
+ * Takes a _partial_ or _fully qualified_ **ARN** string and attempts to build the
+ * all the components that constitute a fully qualified ARN (aka., `IParsedArn`).
+ */
 export function parseArn(arn: string, target: AwsResource = AwsResource.Lambda): IParsedArn {
   const isFullyQualified = arn.slice(0, 3) === "arn";
 

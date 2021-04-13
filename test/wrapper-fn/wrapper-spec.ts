@@ -1,8 +1,7 @@
-import { IHandlerFunction, IWrapperContext } from "~/types";
-import { wrapper } from "~/index";
-import { HandledError } from "~/errors/HandledError";
-import { UnhandledError } from "~/errors/UnhandledError";
+import { IHandlerFunction, isApiGatewayResponse, IWrapperContext } from "~/types";
+import { isServerlessError, ServerlessError, wrapper } from "~/index";
 import { DEFAULT_ERROR_CODE } from "~/wrapper-fn/util/ErrorMeta";
+import { SimpleApiGatewayEvent_V2, SimpleEvent } from "./data/test-events";
 
 interface IRequest {
   foo: string;
@@ -20,31 +19,21 @@ const handlerFn: IHandlerFunction<IRequest, IResponse> = async (request, context
   return { testing: true, request, context };
 };
 
+/** handler which throws base Error */
 const handlerErrorFn: IHandlerFunction<IRequest, IResponse> = async (_event, _context) => {
   throw new Error("this is an error god dammit");
+};
+
+/**
+ * handler which throws a ServerlessError
+ */
+const handlerServerlessErrorFn: IHandlerFunction<IRequest, IResponse> = async (_evt, _ctx) => {
+  throw new ServerlessError(404, "explicit throw of a ServerlessError", "test/serverless-error");
 };
 
 const handlerErrorFnWithDefaultChanged: IHandlerFunction<IRequest, IResponse> = async (_event, context) => {
   context.errorMgmt.setDefaultErrorCode(400);
   throw new Error("this is an error god dammit");
-};
-
-const handlerErrorFnWithKnownErrors: (
-  cbResult: boolean,
-  isHandled: boolean
-) => IHandlerFunction<IRequest, IResponse> = (cbResult, isHandled = false) => async (_event, context) => {
-  context.errorMgmt.addHandler(404, { errorClass: HandledError }, { callback: (_e) => cbResult });
-  const BOGUS_ERROR_CODE = 399;
-
-  if (isHandled) {
-    const e = new Error("saw that one coming!");
-    e.name = "known";
-    throw new HandledError(BOGUS_ERROR_CODE, e, context.log.getContext());
-  } else {
-    const e = new Error("unhandled error!");
-    e.name = "unknown";
-    throw new UnhandledError(BOGUS_ERROR_CODE, e);
-  }
 };
 
 const simpleEvent: IRequest = {
@@ -80,8 +69,6 @@ describe("Handler Wrapper => ", () => {
 
     expect(results).toHaveProperty("request");
     expect(results).toHaveProperty("context");
-    expect((results as IResponse).context).toHaveProperty("isSequence");
-    expect((results as IResponse).context).toHaveProperty("isDone");
   });
 
   it("A bare request works", async () => {
@@ -99,6 +86,40 @@ describe("Handler Wrapper => ", () => {
 
     expect(results.context.headers).toBeObject();
     expect(Object.keys(results.context.headers)).toHaveLength(0);
+  });
+
+  it("A handler which throws a ServerlessError is accepted and thrown", async () => {
+    const wrapped = wrapper(handlerServerlessErrorFn);
+    try {
+      await wrapped(simpleEvent, {} as any);
+      expect.fail("The handler function should have thrown an error");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ServerlessError);
+      if (isServerlessError(error)) {
+        expect(error.name).toBe("ServerlessError");
+      } else {
+        expect.fail("The isServerlessError type guard failed");
+      }
+    }
+  });
+
+  it("A handler which throws a ServerlessError but is called via API Gateway returns an error response", async () => {
+    const wrapped = wrapper(handlerServerlessErrorFn);
+    try {
+      const event = SimpleApiGatewayEvent_V2(SimpleEvent);
+      const result = await wrapped(event, {} as any);
+      expect(result).toHaveProperty("statusCode");
+      if (isApiGatewayResponse(result)) {
+        expect(result.statusCode).toBe(403);
+        expect(typeof result.body).toBe("string");
+      } else {
+        expect.fail("The type guard for an API Gateway should not have failed");
+      }
+    } catch (error) {
+      expect.fail(
+        `a ServerlessError thrown in handler should not result in the wrapper throwing an error when called from API Gateway, instead got error: ${error.message}`
+      );
+    }
   });
 
   it("Unhandled error in function results in defaultCode and error proxied", async () => {

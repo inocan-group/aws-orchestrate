@@ -4,13 +4,15 @@ import {
   isProxyRequestContextV2,
   IAwsLambdaContext,
 } from "common-types";
-import { AwsApiStyle, AwsResource, DeviceType } from "~/types";
 import {
+  AwsApiStyle,
+  AwsResource,
+  DeviceType,
   IRequestState,
-  isHeaderBodyEvent,
+  isHeaderBodyRequest,
   IWrapperIdentityDetails,
   IWrapperIdentityEssentials,
-} from "~/types/wrapper-types";
+} from "~/types";
 
 /**
  * Ensures that the relevant "state" from the caller is received in a consistent
@@ -76,12 +78,11 @@ export function extractRequestState<I, Q extends object, P extends object>(
     cognito: context.identity,
   };
 
-  return isHeaderBodyEvent(event)
+  return isHeaderBodyRequest<I>(event)
     ? {
         kind: "header-body",
-        request: event.body as I,
+        request: event.body,
         isApiGateway: false,
-        apiGateway: undefined,
         headers: event.headers,
         token: event.headers.Authenticate as string,
         identity,
@@ -93,9 +94,8 @@ export function extractRequestState<I, Q extends object, P extends object>(
       }
     : {
         kind: "basic",
-        request: event,
+        request: event as I,
         isApiGateway: false,
-        apiGateway: undefined,
         headers: undefined,
         token: undefined,
         identity,

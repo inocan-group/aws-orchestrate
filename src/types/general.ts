@@ -57,6 +57,11 @@ export enum AwsResource {
    * The caller came via API Gateway.
    */
   ApiGateway = "ApiGateway",
+
+  /**
+   * The caller was a StepFunction task
+   */
+  StepFunction = "StepFunction",
 }
 
 /**

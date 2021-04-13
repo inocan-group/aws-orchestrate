@@ -1,3 +1,5 @@
+import { IAwsApiGatewayResponse } from "common-types";
+
 export type IErrorHandlerFunction = (error: Error) => Promise<boolean> | boolean;
 
 export interface IErrorClass extends Error {
@@ -5,6 +7,10 @@ export interface IErrorClass extends Error {
   code?: string;
   errorCode?: number;
   httpStatus?: number;
+}
+
+export function isApiGatewayResponse(response: unknown): response is IAwsApiGatewayResponse {
+  return response !== null && typeof response === "object" && Object.keys(response as object).includes("statusCode");
 }
 
 export interface IDefaultHandlingBase {

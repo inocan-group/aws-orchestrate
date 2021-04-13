@@ -3,7 +3,7 @@ import { errorHandler, retryHandler, State, StateMachine, StepFunction } from "~
 
 describe("Step Function Builder Error Handler", () => {
   beforeEach(() => {
-    process.env.AWS_REGION = "fooregion";
+    process.env.AWS_REGION = "us-east-1";
     process.env.AWS_STAGE = "dev";
     process.env.AWS_ACCOUNT = "1234";
     process.env.APP_NAME = "abcapp";
@@ -35,15 +35,15 @@ describe("Step Function Builder Error Handler", () => {
 
     expect(
       resultStates
-      .filter((r) => r.Type === "Task" && r.Catch !== undefined)
-      .every((r: IStepFunctionStep) => {
-        return "Catch" in r
-          ? () => {
-              const [defaultHandler] = r.Catch || [];
-              return defaultHandler.Next === "foo1";
-            }
-          : false;
-      })
+        .filter((r) => r.Type === "Task" && r.Catch !== undefined)
+        .every((r: IStepFunctionStep) => {
+          return "Catch" in r
+            ? () => {
+                const [defaultHandler] = r.Catch || [];
+                return defaultHandler.Next === "foo1";
+              }
+            : false;
+        })
     ).toBeTrue();
   });
 
@@ -65,15 +65,15 @@ describe("Step Function Builder Error Handler", () => {
 
     expect(
       resultStates
-      .filter((r) => r.Type === "Task" && r.Catch !== undefined)
-      .every((r: IStepFunctionStep) => {
-        return "Catch" in r
-          ? () => {
-              const [defaultHandler] = r.Catch || [];
-              return defaultHandler.Next === "foo1";
-            }
-          : false;
-      })
+        .filter((r) => r.Type === "Task" && r.Catch !== undefined)
+        .every((r: IStepFunctionStep) => {
+          return "Catch" in r
+            ? () => {
+                const [defaultHandler] = r.Catch || [];
+                return defaultHandler.Next === "foo1";
+              }
+            : false;
+        })
     ).toBeTrue();
   });
 

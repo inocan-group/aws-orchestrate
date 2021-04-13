@@ -21,7 +21,7 @@ export function buildInvocationRequest<
   const FunctionName = `arn:aws:lambda:${arn.region}:${arn.account}:function:${arn.appName}-${arn.stage}-${arn.fn}`;
   const correlationHeaders = {
     "X-Correlation-Id": getCorrelationId(),
-    "x-calling-function": getContext().functionName,
+    "x-calling-function": getContext().functionName as string,
     "x-calling-request-id": getContext().requestId,
   };
 

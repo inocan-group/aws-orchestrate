@@ -4,7 +4,7 @@ import { IStepFnOptions } from "~/types";
 
 describe("State Machine", () => {
   beforeEach(() => {
-    process.env.AWS_REGION = "fooregion";
+    process.env.AWS_REGION = "us-east-1";
     process.env.AWS_STAGE = "dev";
     process.env.AWS_ACCOUNT = "1234";
     process.env.APP_NAME = "abcapp";

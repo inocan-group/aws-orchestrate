@@ -14,7 +14,7 @@ export type IPathParameters = IDictionary<scalar>;
 
 export type IHandlerFunction<I, O, Q extends object = IQueryParameters, P extends object = IPathParameters> = (
   event: I,
-  context: IWrapperContext<Q, P>
+  context: IWrapperContext<I, O, Q, P>
 ) => Promise<O>;
 
 /**
@@ -65,7 +65,7 @@ export interface IWrapperIdentityDetails extends IWrapperIdentityEssentials {
 
 export type IWrapperIdentity = IWrapperIdentityEssentials | IWrapperIdentityDetails;
 
-export interface IApiGatewayRequest<B, Q, P> {
+export interface IApiGatewayRequestState<B, Q extends object, P extends object> {
   kind: "api-gateway";
   request: B;
   isApiGateway: true;
@@ -78,15 +78,14 @@ export interface IApiGatewayRequest<B, Q, P> {
   query: Q;
   verb: RestMethod;
   claims?: IDictionary;
-  caller: AwsResource.ApiGateway;
+  caller: AwsResource;
   api: AwsApiStyle;
 }
 
-export interface IBasicRequest<B> {
+export interface IBasicRequestState<B> {
   kind: "basic";
   request: B;
   isApiGateway: false;
-  apiGateway: undefined;
   headers: undefined;
   token: undefined;
   identity: IWrapperIdentityEssentials;
@@ -94,7 +93,7 @@ export interface IBasicRequest<B> {
   query: undefined;
   verb: undefined;
   claims: undefined;
-  caller: AwsResource.Lambda;
+  caller: AwsResource;
 }
 
 /**
@@ -102,11 +101,10 @@ export interface IBasicRequest<B> {
  * `headers` and `body` this will be treated separately
  * from a raw `body` request
  */
-export interface IHeaderBodyRequest<B> {
+export interface IHeaderBodyRequestState<B> {
   kind: "header-body";
   request: B;
   isApiGateway: false;
-  apiGateway: undefined;
   headers: IDictionary<scalar>;
   /** the value of the `Authorization` header (if it exists) */
   token: string | undefined;
@@ -118,22 +116,10 @@ export interface IHeaderBodyRequest<B> {
   caller: AwsResource.LambdaWithHeader;
 }
 
-export interface IHeaderBodyEvent<B> {
-  headers: IDictionary<scalar>;
-  body: B;
-}
-
-export function isHeaderBodyEvent<B>(event: unknown): event is IHeaderBodyEvent<B> {
-  return (
-    typeof event === "object" &&
-    event != null &&
-    Object.keys(event).length === 2 &&
-    (event as IDictionary).body &&
-    (event as IDictionary).headers
-  );
-}
-
-export type IRequestState<B, Q, P> = IApiGatewayRequest<B, Q, P> | IBasicRequest<B> | IHeaderBodyRequest<B>;
+export type IRequestState<B, Q extends object, P extends object> =
+  | IApiGatewayRequestState<B, Q, P>
+  | IBasicRequestState<B>
+  | IHeaderBodyRequestState<B>;
 
 export enum WorkflowStatus {
   /** handler setting up context and getting ready to hand over to handler fn */

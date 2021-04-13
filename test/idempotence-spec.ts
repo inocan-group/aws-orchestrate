@@ -3,7 +3,7 @@ import { condition, State, StateMachine, StepFunction } from "~/step-fn";
 
 describe("Idempotence", () => {
   beforeEach(() => {
-    process.env.AWS_REGION = "fooregion";
+    process.env.AWS_REGION = "us-east-1";
     process.env.AWS_STAGE = "dev";
     process.env.AWS_ACCOUNT = "1234";
     process.env.APP_NAME = "abcapp";
@@ -16,7 +16,7 @@ describe("Idempotence", () => {
     const initialStateMachine = StateMachine("foo", { stepFunction: StepFunction(task1, task2, pass1) }).toJSON();
     const statesOutput = Object.keys(initialStateMachine.definition.States);
 
-    for (const _ of Array.from({length: 20}).fill(0)) {
+    for (const _ of Array.from({ length: 20 }).fill(0)) {
       const currentStateMachine = StateMachine("foo", { stepFunction: StepFunction(task1, task2, pass1) }).toJSON();
       expect(Object.keys(currentStateMachine.definition.States)).toIncludeAllMembers(statesOutput);
     }
@@ -64,7 +64,7 @@ describe("Idempotence", () => {
     const initialStateMachine = StateMachine("foo", { stepFunction: StepFunction(task1, choice) }).toJSON();
     const initialStatesOuput = Object.keys(initialStateMachine.definition.States);
 
-    for (const index of Array.from({length: 20}).fill(0)) {
+    for (const index of Array.from({ length: 20 }).fill(0)) {
       const modifiedChoice = { ...choice, comment: `foo-${index}` };
       const currentStateMachine = StateMachine("foo", { stepFunction: StepFunction(task1, modifiedChoice) }).toJSON();
       expect(Object.keys(currentStateMachine.definition.States)).toIncludeAllMembers(initialStatesOuput);
@@ -114,7 +114,7 @@ describe("Idempotence", () => {
     const initialStateMachine = StateMachine("foo", { stepFunction: StepFunction(task1, choice) }).toJSON();
     const [initialOutputState, ...initialOutputRestState] = Object.keys(initialStateMachine.definition.States);
 
-    for (const index of Array.from({length: 20}).fill(0)) {
+    for (const index of Array.from({ length: 20 }).fill(0)) {
       const modifiedTask = { ...task1, comment: `random${index}` };
       const currentStateMachine = StateMachine("foo", { stepFunction: StepFunction(modifiedTask, choice) }).toJSON();
       const [currentOutputState, ...currentOutputRestState] = Object.keys(currentStateMachine.definition.States);
@@ -138,7 +138,7 @@ describe("Idempotence", () => {
       (initialStateMachine.definition.States[initialOutputMapState] as IStepFunctionMap).Iterator.States
     );
 
-    for (const index of Array.from({length: 20}).fill(0)) {
+    for (const index of Array.from({ length: 20 }).fill(0)) {
       const modifiedPass1 = { ...pass1, comment: `random${index}` };
       const currentMapState = State((s) => s.map("$.items").use([modifiedPass1, pass2, pass3]));
       const currentStateMachine = StateMachine("foo", { stepFunction: StepFunction(task1, currentMapState) }).toJSON();
@@ -170,7 +170,7 @@ describe("Idempotence", () => {
       (initialStateMachine.definition.States[initialOutputMapState] as IStepFunctionMap).Iterator.States
     );
 
-    for (const [index, _] of Array.from({length: 20}).fill(0).entries()) {
+    for (const [index, _] of Array.from({ length: 20 }).fill(0).entries()) {
       const modifiedPass1 = { ...pass1, comment: `random${index}` };
       const currentMapState = State((s) => s.map("$.items", { comment: "foo" }).use([modifiedPass1, pass2, pass3]));
       const task2 = State((s) => s.task("task2"));
@@ -211,7 +211,7 @@ describe("Idempotence", () => {
       return acc;
     }, [] as string[]);
 
-    for (const [index, _] of Array.from({length: 20}).fill(0).entries()) {
+    for (const [index, _] of Array.from({ length: 20 }).fill(0).entries()) {
       const branch3 = StepFunction(State((s) => s.wait({ seconds: index + 1 })));
       const modifiedParallelState = State((s) =>
         s.parallel([StepFunction(branch1Task1, branch1Task2), StepFunction(branch2Task1, branch2Task2), branch3], {
@@ -250,7 +250,7 @@ describe("Idempotence", () => {
       return acc;
     }, [] as string[]);
 
-    for (const [index, _] of Array.from({length: 20}).fill(0).entries()) {
+    for (const [index, _] of Array.from({ length: 20 }).fill(0).entries()) {
       const branch3 = StepFunction(State((s) => s.wait({ seconds: index + 1 })));
       const modifiedParallelState = State((s) =>
         s.parallel([branch3, StepFunction(branch1Task1, branch1Task2), StepFunction(branch2Task1, branch2Task2)], {

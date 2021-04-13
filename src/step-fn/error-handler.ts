@@ -33,6 +33,20 @@ export const errorTypes: IErrorType = {
   },
 };
 
+const defaultRetryHandler = (state: Record<string, RetryOptions>) => (options: RetryOptions) => {
+  return {
+    ...state,
+    [errorTypes.all]: { ...options },
+  };
+};
+
+const defaultHandler = (state: Record<string, ErrDefn>) => (selector: IErrorHandlerPointer, resultPath = "$.error") => {
+  return {
+    ...state,
+    [errorTypes.all]: { selector, resultPath },
+  };
+};
+
 const conditionalRetryHandler = (state: Record<string, RetryOptions>) => (
   errorType: IErrorTypeSelector,
   options: RetryOptions
@@ -47,13 +61,6 @@ const conditionalRetryHandler = (state: Record<string, RetryOptions>) => (
   };
 };
 
-const defaultRetryHandler = (state: Record<string, RetryOptions>) => (options: RetryOptions) => {
-  return {
-    ...state,
-    [errorTypes.all]: { ...options },
-  };
-};
-
 /**
  * Define how step function's errors or lambda fn execution errors are going to be handled with a fluent API syntax
  * Allows to configure options to make our state to be executed again.
@@ -65,22 +72,6 @@ export function retryHandler(handlerFunction: (r: IRetryHandlerApi) => Record<st
   const api: IRetryHandlerApi = {
     default: defaultRetryHandler(state),
     handle: conditionalRetryHandler(state),
-  };
-
-  return handlerFunction(api);
-}
-
-/**
- * Define how step function's errors or lambda fn execution errors are going to be handled with a fluent API syntax
- * It let you continue to a fallback state or whatever user defined state such as `ErrorNotification`
- *
- * @param handlerFn a callback that exposes methods to be used to defined an error handler.
- */
-export function errorHandler(handlerFunction: (e: IErrHandlerApi) => Record<string, ErrDefn>) {
-  const state: Record<string, ErrDefn> = {};
-  const api: IErrHandlerApi = {
-    default: defaultHandler(state),
-    handle: conditionalHandler(state),
   };
 
   return handlerFunction(api);
@@ -101,12 +92,21 @@ const conditionalHandler = (state: Record<string, ErrDefn>) => (
   };
 };
 
-const defaultHandler = (state: Record<string, ErrDefn>) => (selector: IErrorHandlerPointer, resultPath = "$.error") => {
-  return {
-    ...state,
-    [errorTypes.all]: { selector, resultPath },
+/**
+ * Define how step function's errors or lambda fn execution errors are going to be handled with a fluent API syntax
+ * It let you continue to a fallback state or whatever user defined state such as `ErrorNotification`
+ *
+ * @param handlerFn a callback that exposes methods to be used to defined an error handler.
+ */
+export function errorHandler(handlerFunction: (e: IErrHandlerApi) => Record<string, ErrDefn>) {
+  const state: Record<string, ErrDefn> = {};
+  const api: IErrHandlerApi = {
+    default: defaultHandler(state),
+    handle: conditionalHandler(state),
   };
-};
+
+  return handlerFunction(api);
+}
 
 function isState(object: Finalized<IState> | IFinalizedStepFn): object is Finalized<IState> {
   return "type" in object;

@@ -22,7 +22,9 @@ import { handleError, handlePrepError, handleReturn, prepForHandler } from "./st
  * features brought in by the wrapper function
  */
 export const wrapper = function <
+  /** the body's input */
   I,
+  /** the handler's output*/
   O extends any,
   Q extends object = IQueryParameters,
   P extends object = IPathParameters
