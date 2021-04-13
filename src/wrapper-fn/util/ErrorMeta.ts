@@ -40,8 +40,8 @@ export interface IExpectedErrorOptions<T extends IError = Error> {
  * By default, all errors are given a 500 exit code and log the error at the "error" severity
  * level but perform no additional work.
  */
-export class ErrorMeta {
-  private _errors: ErrorHandler[] = [];
+export class ErrorMeta<I, O> {
+  private _errors: ErrorHandler<I, O>[] = [];
   private _defaultErrorCode: number = DEFAULT_ERROR_CODE;
   private _arn?: string;
   private _defaultHandlerFn?: IErrorHandlerFunction;
@@ -59,7 +59,7 @@ export class ErrorMeta {
      * how will an error be handled; it doesn't NEED to be handled and its a reasonable
      * goal/outcome just to set the appropriate http error code
      */
-    handling: IErrorHandling
+    handling: IErrorHandling<I, O>
   ) {
     this._errors.push(new ErrorHandler(code, identifiedBy, handling));
   }
@@ -84,8 +84,8 @@ export class ErrorMeta {
     return this;
   }
 
-  setDefaultHandler(function_: IErrorHandlerFunction): ErrorMeta;
-  setDefaultHandler(error: Error): ErrorMeta;
+  setDefaultHandler(function_: IErrorHandlerFunction): ErrorMeta<I, O>;
+  setDefaultHandler(error: Error): ErrorMeta<I, O>;
   /**
    * **setDefaultHandler**
    *
@@ -102,15 +102,15 @@ export class ErrorMeta {
    *
    * In all cases, it will replace the runtime error's stack with what was passed in.
    */
-  setDefaultHandler(function_: (error: Error) => Promise<boolean> | boolean): ErrorMeta;
+  setDefaultHandler(function_: (error: Error) => Promise<boolean> | boolean): ErrorMeta<I, O>;
   /**
    * **setDefaultHandler**
    *
    * @param arn the function's arn (this can be the abbreviated variety so long as
    * proper ENV variables are set)
    */
-  setDefaultHandler(arn: string): ErrorMeta;
-  setDefaultHandler(parameter: string | Error | IErrorHandlerFunction): ErrorMeta {
+  setDefaultHandler(arn: string): ErrorMeta<I, O>;
+  setDefaultHandler(parameter: string | Error | IErrorHandlerFunction): ErrorMeta<I, O> {
     switch (typeof parameter) {
       case "string":
         this._arn = parameter;

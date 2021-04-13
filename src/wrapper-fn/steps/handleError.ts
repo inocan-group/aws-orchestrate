@@ -1,4 +1,4 @@
-import { IServerlessError, IWrapperContext } from "~/types";
+import { IPathParameters, IQueryParameters, IServerlessError, IWrapperContext } from "~/types";
 import { isServerlessError, UnknownError } from "~/errors";
 import { handleServerlessError } from "./handleServerlessError";
 import { handleOtherErrors } from "./handleOtherErrors";
@@ -9,13 +9,13 @@ import { convertToApiGatewayError } from "../util";
  * Handles all errors which are thrown when using the _wrapper function_
  * and past the _prep_ phase.
  */
-export async function handleError<I, O, P, Q, T extends Error = Error>(
-  error: T,
-  request: I,
-  context: IWrapperContext<P, Q>,
-  duration: number,
-  prepTime: number
-) {
+export async function handleError<
+  I,
+  O,
+  Q extends object = IQueryParameters,
+  P extends object = IPathParameters,
+  T extends Error = Error
+>(error: T, request: I, context: IWrapperContext<I, O, Q, P>, duration: number, prepTime: number) {
   const log = context.log;
   try {
     const log = context.log;

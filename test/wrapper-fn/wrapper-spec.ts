@@ -1,5 +1,5 @@
 import { IHandlerFunction, IWrapperContext } from "~/types";
-import { wrapper, IOrchestratedRequest, LambdaSequence } from "~/index";
+import { wrapper } from "~/index";
 import { HandledError } from "~/errors/HandledError";
 import { UnhandledError } from "~/errors/UnhandledError";
 import { DEFAULT_ERROR_CODE } from "~/wrapper-fn/util/ErrorMeta";
@@ -50,16 +50,6 @@ const handlerErrorFnWithKnownErrors: (
 const simpleEvent: IRequest = {
   foo: "foo is foo",
   bar: 456,
-};
-
-const orchestrateEvent: IOrchestratedRequest<IRequest> = {
-  type: "orchestrated-message-body",
-  sequence: LambdaSequence.add("fn1").add("fn2", { foo: 1, bar: 2 }).toObject(),
-  headers: {
-    "Content-Type": "application/json",
-    "X-Correlation-Id": "12345",
-  },
-  body: simpleEvent,
 };
 
 const handleErrorFnWithErrorInMessage: IHandlerFunction<IRequest, IResponse> = (_event, context) => {

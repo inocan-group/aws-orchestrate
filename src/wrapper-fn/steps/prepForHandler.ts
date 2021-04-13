@@ -1,6 +1,13 @@
 import { ILoggerApi } from "aws-log";
 import { IAwsLambdaContext } from "common-types";
-import { IRequestState, IWrapperContext, IWrapperContextFunctions, IWrapperContextProps } from "~/types";
+import {
+  IPathParameters,
+  IQueryParameters,
+  IRequestState,
+  IWrapperContext,
+  IWrapperContextFunctions,
+  IWrapperContextProps,
+} from "~/types";
 import {
   getLocalSecrets,
   maskLoggingForSecrets,
@@ -14,12 +21,12 @@ import {
 } from "../util";
 import { invoke } from "~/invoke";
 
-export function prepForHandler<I, Q, P>(
+export function prepForHandler<I, O, Q extends object = IQueryParameters, P extends object = IPathParameters>(
   state: IRequestState<I, Q, P>,
   context: IAwsLambdaContext,
-  errorMeta: ErrorMeta,
+  errorMeta: ErrorMeta<I, O>,
   log: ILoggerApi
-): IWrapperContext<Q, P> {
+): IWrapperContext<I, O, Q, P> {
   const correlationId = log.getCorrelationId();
 
   if (state.headers) {
@@ -31,7 +38,7 @@ export function prepForHandler<I, Q, P>(
     maskLoggingForSecrets(getLocalSecrets(), log);
   }
 
-  const contextFns: IWrapperContextFunctions = {
+  const contextFns: IWrapperContextFunctions<I, O> = {
     log,
     getSecrets,
     setSuccessCode: setStatusCode,

@@ -145,4 +145,5 @@ export enum WorkflowStatus {
   "completing" = "completing (5 of 5)",
 }
 
-export type ApiGatewayResponse = {};
+export type IQueryParameters = IDictionary<scalar>;
+export type IPathParameters = IDictionary<scalar>;

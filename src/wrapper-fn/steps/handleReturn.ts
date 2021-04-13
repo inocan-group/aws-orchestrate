@@ -1,5 +1,5 @@
 import { HttpStatusCodes, IAwsApiGatewayResponse, IDictionary } from "common-types";
-import { IWrapperContext } from "~/types";
+import { IPathParameters, IQueryParameters, IWrapperContext } from "~/types";
 import { getResponseHeaders, getStatusCode } from "../util";
 
 /**
@@ -7,9 +7,9 @@ import { getResponseHeaders, getStatusCode } from "../util";
  * this function is responsible for returning the appropriate response to
  * the caller.
  */
-export function handleReturn<O, Q, P>(
+export function handleReturn<O, Q extends object = IQueryParameters, P extends object = IPathParameters>(
   response: O,
-  context: IWrapperContext<Q, P>,
+  context: IWrapperContext<any, O, Q, P>,
   duration: number,
   prepTime: number
 ): O | IAwsApiGatewayResponse {
@@ -35,7 +35,7 @@ export function handleReturn<O, Q, P>(
         prepTime,
       });
     } else {
-      log.info(`Done. Returning successful results to API Gateway.`, {
+      log.info("Done. Returning successful results to API Gateway.", {
         success: true,
         response: res,
         duration,

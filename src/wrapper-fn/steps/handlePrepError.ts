@@ -1,6 +1,7 @@
 import { ILoggerApi } from "aws-log";
 import { IAwsLambdaContext } from "common-types";
-import { convertToApiGatewayError, ServerlessError } from "~/errors";
+import { convertToApiGatewayError } from "../util";
+import { ServerlessError } from "~/errors";
 
 export function handlePrepError<T extends Error>(
   prepError: T,

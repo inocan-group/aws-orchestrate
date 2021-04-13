@@ -18,7 +18,7 @@ import { IWrapperIdentity, IWrapperIdentityDetails } from "./wrapper-types";
  * The _functions_ provided by the wrapper function that are provided
  * to all users of the wrapper regardless of who the caller is.
  */
-export interface IWrapperContextFunctions {
+export interface IWrapperContextFunctions<I, O> {
   /**
    * **log**
    *
@@ -67,7 +67,7 @@ export interface IWrapperContextFunctions {
    *
    * Read the [docs]() for more info.
    */
-  errorMgmt: ErrorMeta;
+  errorMgmt: ErrorMeta<I, O>;
   /**
    * **setContentType**
    *
@@ -223,6 +223,9 @@ export type IWrapperContextProps<Q, P> = IWrapperContextCommonProps &
  * The AWS `context` plus additional properties/functions that the `wrapper`
  * function provides.
  */
-export type IWrapperContext<Q, P> = Omit<IAwsLambdaContext, "identity"> &
+export type IWrapperContext<I, O, Q extends object = IDictionary, P extends object = IDictionary> = Omit<
+  IAwsLambdaContext,
+  "identity"
+> &
   IWrapperContextProps<Q, P> &
-  IWrapperContextFunctions;
+  IWrapperContextFunctions<I, O>;

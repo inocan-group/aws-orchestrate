@@ -7,16 +7,20 @@ import { ErrorMeta } from ".";
  * the function defined and return it's `ErrorHandler` if found.
  * If _not_ found then return `false`.
  */
-export function findError<O>(e: Error & { code?: string }, expectedErrors: ErrorMeta): false | ErrorHandler<O> {
-  let found: false | ErrorHandler<O> = false;
-  for (const index of expectedErrors.list) {
+export function findError<I, O>(
+  e: Error & { code?: string },
+  expectedErrors: ErrorMeta<I, O>
+): false | ErrorHandler<I, O> {
+  let found: false | ErrorHandler<I, O> = false;
+  for (const idx of expectedErrors.list) {
+    const messageContains = idx.identifiedBy.messageContains;
     if (
-      (e.code && e.code === index.identifiedBy.code) ||
-      (e.name && e.name === index.identifiedBy.name) ||
-      (e.message && e.message.includes(index.identifiedBy.messageContains)) ||
-      (index.identifiedBy.errorClass && e instanceof index.identifiedBy.errorClass)
+      (e.code && e.code === idx.identifiedBy.code) ||
+      (e.name && e.name === idx.identifiedBy.name) ||
+      (e.message && messageContains && e.message.includes(messageContains)) ||
+      (idx.identifiedBy.errorClass && e instanceof idx.identifiedBy.errorClass)
     ) {
-      found = index;
+      found = idx;
     }
   }
 

@@ -1,6 +1,19 @@
 import { arn, HttpStatusCodes, TypeSubtype } from "common-types";
+import { ErrorHandler } from "~/errors";
+import { IWrapperContext } from "./wrapper-context";
+import { IPathParameters, IQueryParameters } from "./wrapper-types";
 
-export type IErrorHandlingCallback<O> = (e: Error) => Promise<O | false>;
+/**
+ * A callback function provided by Handler Function to the wrapper
+ * to handle error conditions.
+ */
+export type IErrorHandlingCallback<
+  I,
+  O,
+  Q extends object = IQueryParameters,
+  P extends object = IPathParameters,
+  T extends Error = Error
+> = (error: T, handler: ErrorHandler<I, O>, request: I, context: IWrapperContext<I, O, Q, P>) => Promise<O | false>;
 
 /**
  * Provides the _means_ that an error can be "handled". This is either
@@ -9,7 +22,7 @@ export type IErrorHandlingCallback<O> = (e: Error) => Promise<O | false>;
  *
  * In the case of a `callback`, if a function returns "truthy" it will
  */
-export interface IErrorHandling<O> {
+export interface IErrorHandling<I, O, Q extends object = IQueryParameters, P extends object = IPathParameters> {
   /**
    * forward to another lambda function to report the error or take some other action.
    *
@@ -31,7 +44,7 @@ export interface IErrorHandling<O> {
    * **not** fixed the problem and the original error will be used (but this callback error
    * will be attached as a the `callbackError` property)
    */
-  callback?: IErrorHandlingCallback<O>;
+  callback?: IErrorHandlingCallback<I, O, Q, P>;
 }
 
 export interface IErrorHandlingDefault {

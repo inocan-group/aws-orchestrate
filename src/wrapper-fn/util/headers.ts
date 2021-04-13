@@ -1,9 +1,8 @@
 import { Cookie, IDictionary, IHttpResponseHeaders } from "common-types";
-import { ILoggerApi, getCorrelationId, logger } from "aws-log";
+import { getCorrelationId, logger } from "aws-log";
 import { set } from "native-dash";
 import { getLocalSecrets, saveSecretsLocally } from "./secrets";
 import { ICookieOptions, IOrchestratedHeaders } from "~/types";
-import { sequenceStatus } from "~/sequences/sequenceStatus";
 
 /**
  * Ensures that frontend clients who call Lambda's
@@ -132,16 +131,9 @@ export function setUserHeaders(headers: IDictionary<string>) {
   functionHeaders = headers;
 }
 
-function getBaseHeaders(options: IHttpResponseHeaders & IDictionary) {
-  const correlationId = getCorrelationId();
-  const sequenceInfo = options.sequence
-    ? {
-        "O-Sequence-Status": JSON.stringify(sequenceStatus(correlationId)(options.sequence)),
-      }
-    : {};
-
+function getBaseHeaders(more?: IHttpResponseHeaders) {
   return {
-    ...sequenceInfo,
+    ...(more ? more : {}),
     ...getUserHeaders(),
     "X-Correlation-Id": getCorrelationId(),
   };

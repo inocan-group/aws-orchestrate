@@ -1,7 +1,5 @@
 import {
-  IDictionary,
   epochWithMilliseconds,
-  scalar,
   IAwsLambdaProxyIntegrationRequest,
   IAwsLambdaContext,
   IAwsApiGatewayResponse,
@@ -9,7 +7,7 @@ import {
 } from "common-types";
 
 import { logger } from "aws-log";
-import { IWrapperContext, IWrapperOptions } from "~/types";
+import { IPathParameters, IQueryParameters, IWrapperContext, IWrapperOptions } from "~/types";
 import { ErrorMeta, extractRequestState } from "./util";
 import { handleError, handlePrepError, handleReturn, prepForHandler } from "./steps";
 
@@ -26,9 +24,9 @@ import { handleError, handlePrepError, handleReturn, prepForHandler } from "./st
 export const wrapper = function <
   I,
   O extends any,
-  Q extends IDictionary<scalar> = IDictionary<scalar>,
-  P extends IDictionary<scalar> = IDictionary<scalar>
->(fn: (request: I, context: IWrapperContext<Q, P>) => Promise<O>, options: IWrapperOptions = {}) {
+  Q extends object = IQueryParameters,
+  P extends object = IPathParameters
+>(fn: (request: I, context: IWrapperContext<I, O, Q, P>) => Promise<O>, options: IWrapperOptions = {}) {
   /** this is the core Lambda event which the wrapper takes as an input */
   return async function (
     event: I | IAwsLambdaProxyIntegrationRequest,
@@ -40,12 +38,12 @@ export const wrapper = function <
     const state = extractRequestState<I, Q, P>(event, context);
     let response: O = Symbol("Not Yet Defined") as O;
     context.callbackWaitsForEmptyEventLoop = false;
-    const errorMeta: ErrorMeta = new ErrorMeta();
-    let wrapperContext: IWrapperContext<Q, P>;
+    const errorMeta = new ErrorMeta<I, O>();
+    let wrapperContext: IWrapperContext<I, O, Q, P>;
 
     // PREP
     try {
-      wrapperContext = prepForHandler<I, Q, P>(state, context, errorMeta, log);
+      wrapperContext = prepForHandler<I, O, Q, P>(state, context, errorMeta, log);
     } catch (prepError) {
       return handlePrepError(prepError, context, isLambdaProxyRequest(event), log);
     }

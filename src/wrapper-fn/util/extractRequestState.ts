@@ -1,7 +1,5 @@
 import {
   IAwsLambdaProxyIntegrationRequest,
-  IDictionary,
-  scalar,
   isLambdaProxyRequest,
   isProxyRequestContextV2,
   IAwsLambdaContext,
@@ -27,17 +25,23 @@ import {
  * caller versus other callers and ensures that all "state" passed in by the caller
  * can be handed in a consistent and typed manner.
  */
-export function extractRequestState<B, Q extends IDictionary<scalar>, P extends IDictionary<scalar>>(
-  event: B | IAwsLambdaProxyIntegrationRequest,
+export function extractRequestState<I, Q extends object, P extends object>(
+  event: I | IAwsLambdaProxyIntegrationRequest,
   context: IAwsLambdaContext
-): IRequestState<B, Q, P> {
+): IRequestState<I, Q, P> {
   if (isLambdaProxyRequest(event)) {
     let deviceType: DeviceType;
-    if (event.headers["CloudFront-Is-Desktop-Viewer"]) deviceType = "desktop";
-    else if (event.headers["CloudFront-Is-Tablet-Viewer"]) deviceType = "mobile";
-    else if (event.headers["CloudFront-Is-Tablet-Viewer"]) deviceType = "tablet";
-    else if (event.headers["CloudFront-Is-SmartTV-Viewer"]) deviceType = "smart-tv";
-    else deviceType = "unknown";
+    if (event.headers["CloudFront-Is-Desktop-Viewer"]) {
+      deviceType = "desktop";
+    } else if (event.headers["CloudFront-Is-Tablet-Viewer"]) {
+      deviceType = "mobile";
+    } else if (event.headers["CloudFront-Is-Tablet-Viewer"]) {
+      deviceType = "tablet";
+    } else if (event.headers["CloudFront-Is-SmartTV-Viewer"]) {
+      deviceType = "smart-tv";
+    } else {
+      deviceType = "unknown";
+    }
 
     const identity: IWrapperIdentityDetails = {
       ipAddress: isProxyRequestContextV2(event)
@@ -53,7 +57,7 @@ export function extractRequestState<B, Q extends IDictionary<scalar>, P extends 
 
     return {
       kind: "api-gateway",
-      request: JSON.parse(event.body) as B,
+      request: JSON.parse(event.body) as I,
       identity,
       isApiGateway: true,
       apiGateway: event,
@@ -75,7 +79,7 @@ export function extractRequestState<B, Q extends IDictionary<scalar>, P extends 
   return isHeaderBodyEvent(event)
     ? {
         kind: "header-body",
-        request: event.body as B,
+        request: event.body as I,
         isApiGateway: false,
         apiGateway: undefined,
         headers: event.headers,

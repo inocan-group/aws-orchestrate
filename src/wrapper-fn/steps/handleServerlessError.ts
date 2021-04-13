@@ -1,5 +1,6 @@
 import { ServerlessError } from "~/errors";
 import { IWrapperContext } from "~/types";
+import { convertToApiGatewayError } from "../util";
 
 export function handleServerlessError<Q, P>(
   error: ServerlessError,

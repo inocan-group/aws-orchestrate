@@ -2,9 +2,9 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 04:35 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 12:21 AM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: arn, cookies, defaultHandling, error-types, general, sequence-types, wrapper-context, wrapper-types.
+// files: arn, cookies, defaultHandling, error-types, general, wrapper-context, wrapper-types.
 // directories: step-fns.
 
 // local file exports
@@ -13,7 +13,6 @@ export * from "./cookies";
 export * from "./defaultHandling";
 export * from "./error-types";
 export * from "./general";
-export * from "./sequence-types";
 export * from "./wrapper-context";
 export * from "./wrapper-types";
 

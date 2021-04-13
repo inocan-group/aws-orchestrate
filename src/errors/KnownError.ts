@@ -2,7 +2,7 @@ import { isTypeSubtype, TypeSubtype } from "common-types";
 import { IServerlessError, IWrapperContext } from "~/types";
 import { ErrorHandler } from "./ErrorHandler";
 
-export class KnownError<O, T extends Error = Error> extends Error implements IServerlessError {
+export class KnownError<I, O, T extends Error = Error> extends Error implements IServerlessError {
   public kind = "KnownError";
   public name = "KnownError";
   public httpStatus;
@@ -14,7 +14,7 @@ export class KnownError<O, T extends Error = Error> extends Error implements ISe
 
   constructor(
     public originatingError: T,
-    handler: ErrorHandler<O>,
+    handler: ErrorHandler<I, O>,
     context: IWrapperContext<any, any>,
     classification?: string
   ) {
