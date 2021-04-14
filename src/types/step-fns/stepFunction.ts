@@ -1,3 +1,4 @@
+import { ICatchConfig } from "~/step-fn";
 import {
   IState,
   Finalized,
@@ -12,7 +13,6 @@ import {
   IPassOptions,
   IParallelOptions,
   Result,
-  ErrDefn,
 } from "~/types";
 
 export enum ParamsKind {
@@ -37,7 +37,7 @@ export type IStepFnOptions = {
   /**
    * Error handler used for all children states unless their overrites this one using `catch` option explicitely
    */
-  defaultErrorHandler?: Record<string, ErrDefn>;
+  catch?: ICatchConfig;
 };
 
 /**
@@ -131,7 +131,7 @@ export interface IStepFunctionFactory {
   /**
    * It accepts states (such as task, choice, etc) `IState` and a step function option hash `IStepFnOptions`
    */
-  catch?: Record<string, ErrDefn>
+  catch?: ICatchConfig;
   (...params: IStepFnShorthand): IConfigurableStepFn;
 }
 

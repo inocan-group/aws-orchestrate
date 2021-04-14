@@ -1,4 +1,5 @@
 import { IDictionary } from "common-types";
+import { ICatchConfig } from "~/step-fn";
 import type {
   ErrDefn,
   IBaseState,
@@ -26,7 +27,7 @@ export interface IMapOptions extends IOptionsWithInput {
   maxConcurrency?: number;
   /** An array of objects, called Retriers that define a retry policy in case the state encounters runtime errors. */
   retry?: Record<string, RetryOptions>;
-  catch?: Record<string, ErrDefn>;
+  catch?: ICatchConfig;
 }
 
 export interface IMapUseConfiguration<T> {

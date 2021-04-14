@@ -1,3 +1,4 @@
+import { ICatchConfig } from "~/step-fn";
 import {
   IBaseOptions,
   IBaseState,
@@ -16,7 +17,7 @@ export interface IParallelConfiguration {
 }
 
 export interface IParallelOptions extends IBaseOptions {
-  catch?: Record<string, ErrDefn>;
+  catch?: ICatchConfig;
   /** An array of objects, called Retriers that define a retry policy in case the state encounters runtime errors. */
   retry?: Record<string, RetryOptions>;
 }

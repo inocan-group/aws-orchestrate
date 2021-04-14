@@ -1,5 +1,5 @@
 import { IStepFunctionStep, IStepFunctionTask } from "common-types";
-import { errorHandler, RetryConfig, State, StateMachine, StepFunction } from "~/step-fn";
+import { CatchConfig, errorHandler, RetryConfig, State, StateMachine, StepFunction } from "~/step-fn";
 import { RetryOptions } from "~/types";
 
 describe("Step Function Builder Error Handler", () => {
@@ -12,8 +12,8 @@ describe("Step Function Builder Error Handler", () => {
 
   it("Definig error step function should start with first state finalized", () => {
     const fooStepFn = StepFunction({
-      catch: errorHandler(e => e.default(s => s.task('foo'))),
-    }).task('task1')
+      catch: errorHandler((e) => e.default((s) => s.task("foo"))),
+    }).task("task1");
 
     const action = () => StateMachine("foo", { stepFunction: fooStepFn }).toJSON();
 
@@ -29,8 +29,8 @@ describe("Step Function Builder Error Handler", () => {
 
     const stateMachine = StateMachine("fooStateMachine", {
       stepFunction: fooStepFn,
-      catch: errorHandler(e => e.default(finalizedStepFn)),
-    }).toJSON()
+      catch: errorHandler((e) => e.default(finalizedStepFn)),
+    }).toJSON();
 
     const resultStates = Object.values(stateMachine.definition.States);
 
@@ -55,8 +55,8 @@ describe("Step Function Builder Error Handler", () => {
       .succeed("foo3");
 
     const fooStepFn = StepFunction({
-      catch: errorHandler(e => e.default(finalizedStepFn)),
-    }).task('task1')
+      catch: CatchConfig((c) => c.allErrors({ selector: finalizedStepFn })),
+    }).task("task1");
 
     const stateMachine = StateMachine("fooStateMachine", {
       stepFunction: fooStepFn,
@@ -90,10 +90,10 @@ describe("Step Function Builder Error Handler", () => {
       .finalize();
 
     const fooStepFn = StepFunction({
-      catch: errorHandler(e => e.default(finalizedStepFn)),
-    }).task('task1', {
-      catch: errorHandler(e => e.handle(h => h.all, finalizedStepFn2).withoutDefault()),
-    })
+      catch: errorHandler((e) => e.default(finalizedStepFn)),
+    }).task("task1", {
+      catch: errorHandler((e) => e.handle((h) => h.all, finalizedStepFn2).withoutDefault()),
+    });
 
     const stateMachine = StateMachine("fooStateMachine", {
       stepFunction: fooStepFn,
@@ -103,25 +103,25 @@ describe("Step Function Builder Error Handler", () => {
 
     expect(
       resultStates
-        .filter(r => r.Type === 'Task' && r.Catch !== undefined)
+        .filter((r) => r.Type === "Task" && r.Catch !== undefined)
         .every((r: IStepFunctionTask) => {
-          const [defaultHandler] = r.Catch
-          return defaultHandler.Next !== 'foo1'
-        }),
-    ).toBeTrue()
-  })
+          const [defaultHandler] = r.Catch;
+          return defaultHandler.Next !== "foo1";
+        })
+    ).toBeTrue();
+  });
 
-  it('Defining state `retry` error handler should be populated to the output state definition', () => {
-    const retryOptions: RetryOptions = { maxAttempts: 5 }
-    const fooTask = State(s => s.task('fooTask', { retry:  RetryConfig(api => api.allErrors(retryOptions)) }));
+  it("Defining state `retry` error handler should be populated to the output state definition", () => {
+    const retryOptions: RetryOptions = { maxAttempts: 5 };
+    const fooTask = State((s) => s.task("fooTask", { retry: RetryConfig((api) => api.allErrors(retryOptions)) }));
 
-    const myStateMachine = StateMachine('fooStateMachine', { stepFunction: StepFunction(fooTask) }).toJSON()
+    const myStateMachine = StateMachine("fooStateMachine", { stepFunction: StepFunction(fooTask) }).toJSON();
 
-    expect((myStateMachine.definition.States['fooTask'] as IStepFunctionTask).Retry[0].MaxAttempts).toBe(
-      retryOptions.maxAttempts,
-    )
-  })
-})
+    expect((myStateMachine.definition.States["fooTask"] as IStepFunctionTask).Retry[0].MaxAttempts).toBe(
+      retryOptions.maxAttempts
+    );
+  });
+});
 
 // TODO: implement this syntax instead of the existing one
 // catch: e => e.permissions(fn1, fn2).custom(cond, fn5).allOthers(fn3,fn4)
@@ -129,7 +129,7 @@ describe("Step Function Builder Error Handler", () => {
 // export interface IErrHandlerBuilder<T> {
 //   all: (...rest: any[]) => IErrHandlerBuilder<T | 'all'>;
 //   custom: (cond: string, ...rest: any[]) => IErrHandlerBuilder;
-//   allOthers: (...rest: any[]) => IErrHandlerBuilder; 
+//   allOthers: (...rest: any[]) => IErrHandlerBuilder;
 // }
 
 // const foo: Exclude<IErrHandlerBuilder, 'allOthers'>;
