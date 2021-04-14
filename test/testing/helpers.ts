@@ -1,7 +1,4 @@
-// tslint:disable:no-implicit-dependencies
-import { IDictionary } from "common-types";
-import { first, last } from "lodash";
-
+import { IAwsLambdaProxyIntegrationRequestV2, IDictionary, RestMethod } from "common-types";
 import * as fs from "fs";
 import * as yaml from "js-yaml";
 import * as process from "process";
@@ -25,6 +22,49 @@ interface Console {
 
 declare var console: Console;
 
+export function fakeApiGatewayRequest<T>(request: T, method: RestMethod = "POST"): IAwsLambdaProxyIntegrationRequestV2 {
+  return ({
+    cookies: [],
+    version: "2.0",
+    headers: {
+      Accept: "",
+      "Accept-Encoding": "",
+      "cache-control": "",
+      "CloudFront-Forwarded-Proto": "false",
+      "CloudFront-Is-Desktop-Viewer": "true",
+      "CloudFront-Is-Mobile-Viewer": "false",
+      "CloudFront-Is-SmartTV-Viewer": "false",
+      "CloudFront-Is-Tablet-Viewer": "false",
+      "User-Agent": "fake-user-agent",
+      "Content-Type": "application/json",
+      "CloudFront-Viewer-Country": "US",
+      Host: "",
+      Via: "",
+      "X-Amz-Cf-Id": "cf-1234",
+      "X-Amzn-Trace-Id": "xxx-aaa-bbb",
+      "X-Forwarded-Proto": "",
+      "X-Forwarded-For": "",
+    },
+    isBase64Encoded: false,
+    rawPath: "/fake/path",
+    rawQueryString: "page=1",
+    queryStringParameters: { page: 1 },
+    requestContext: ({
+      http: {
+        method,
+        path: "/fake/path",
+        protocol: "https",
+        sourceIp: "1.2.3.4",
+        userAgent:
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36",
+      },
+    } as unknown) as IAwsLambdaProxyIntegrationRequestV2["requestContext"],
+    routeKey: "",
+
+    body: JSON.stringify(request),
+  } as unknown) as IAwsLambdaProxyIntegrationRequestV2;
+}
+
 export function restoreStdoutAndStderr() {
   console._restored = true;
 }
@@ -44,14 +84,16 @@ export function setupEnv() {
     if (!process.env.AWS_STAGE) {
       process.env.AWS_STAGE = "test";
     }
-    const current = process.env;
-    const yamlConfig: IDictionary = yaml.load(fs.readFileSync("./env.yml", "utf8"));
+    // const current = process.env;
+    const yamlConfig = yaml.load(fs.readFileSync("./env.yml", "utf8")) as IDictionary;
     const combined = {
       ...yamlConfig[process.env.AWS_STAGE],
       ...process.env,
     };
 
-    Object.keys(combined).forEach((key) => (process.env[key] = combined[key]));
+    for (const key of Object.keys(combined)) {
+      process.env[key] = combined[key];
+    }
     envIsSetup = true;
 
     return combined;
@@ -110,34 +152,6 @@ export function ignoreBoth() {
   };
 
   return restore;
-}
-
-/**
- * The first key in a Hash/Dictionary
- */
-export function firstKey<T = any>(dictionary: IDictionary<T>) {
-  return first(Object.keys(dictionary));
-}
-
-/**
- * The first record in a Hash/Dictionary of records
- */
-export function firstRecord<T = any>(dictionary: IDictionary<T>) {
-  return dictionary[this.firstKey(dictionary)];
-}
-
-/**
- * The last key in a Hash/Dictionary
- */
-export function lastKey<T = any>(listOf: IDictionary<T>) {
-  return last(Object.keys(listOf));
-}
-
-/**
- * The last record in a Hash/Dictionary of records
- */
-export function lastRecord<T = any>(dictionary: IDictionary<T>): T {
-  return dictionary[this.lastKey(dictionary)];
 }
 
 export function valuesOf<T = any>(listOf: IDictionary<T>, property: string) {

@@ -1,6 +1,6 @@
-import { IDictionary } from 'common-types'
-import { IParsedArn } from '../private'
-import { getCorrelationId, getContext } from 'aws-log'
+import { IDictionary } from "common-types";
+import { getCorrelationId, getContext } from "aws-log";
+import { IParsedArn } from "~/types";
 
 /**
  * buildRequest
@@ -15,23 +15,23 @@ import { getCorrelationId, getContext } from 'aws-log'
  */
 export function buildInvocationRequest<
   T extends IDictionary & {
-    headers?: IDictionary<string>
+    headers?: IDictionary<string>;
   }
->(arn: IParsedArn, request: T): import('aws-sdk').Lambda.InvocationRequest {
-  const FunctionName = `arn:aws:lambda:${arn.region}:${arn.account}:function:${arn.appName}-${arn.stage}-${arn.fn}`
+>(arn: IParsedArn, request: T): import("aws-sdk").Lambda.InvocationRequest {
+  const FunctionName = `arn:aws:lambda:${arn.region}:${arn.account}:function:${arn.appName}-${arn.stage}-${arn.fn}`;
   const correlationHeaders = {
-    'X-Correlation-Id': getCorrelationId(),
-    'x-calling-function': getContext().functionName,
-    'x-calling-request-id': getContext().requestId,
-  }
+    "X-Correlation-Id": getCorrelationId(),
+    "x-calling-function": getContext().functionName as string,
+    "x-calling-request-id": getContext().requestId,
+  };
 
-  request.headers = request.headers ? { ...correlationHeaders, ...request.headers } : correlationHeaders
-  const Payload = JSON.stringify(request)
+  request.headers = request.headers ? { ...correlationHeaders, ...request.headers } : correlationHeaders;
+  const Payload = JSON.stringify(request);
 
   return {
     FunctionName,
     Payload,
-    LogType: 'None',
-    InvocationType: 'Event',
-  }
+    LogType: "None",
+    InvocationType: "Event",
+  };
 }
