@@ -1,4 +1,4 @@
-import * as helpers from "../testing/helpers";
+import * as helpers from "../helpers/helpers";
 
 import { ServerlessError } from "~/errors";
 import { wrapper } from "~/wrapper-fn";

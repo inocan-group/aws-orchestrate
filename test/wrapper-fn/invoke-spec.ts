@@ -1,5 +1,5 @@
-import { parseArn, buildInvocationRequest } from "~/invoke";
-import { ensureFunctionName } from "~/shared";
+import { buildInvocationRequest } from "~/invoke";
+import { ensureFunctionName, parseArn } from "~/shared";
 import { getStage } from "aws-log";
 
 describe("ensureFunctionName() →", () => {

@@ -1,7 +1,7 @@
 import { IHandlerFunction, isApiGatewayResponse } from "~/types";
 import { isServerlessError, ServerlessError, wrapper } from "~/index";
 import { DEFAULT_ERROR_CODE } from "~/wrapper-fn/util/ErrorMeta";
-import { IRequest, IResponse, SimpleApiGatewayEvent_V2, simpleEvent } from "./data/test-events";
+import { IRequest, IResponse, SimpleApiGatewayEvent_V2, simpleEvent } from "../data/test-events";
 import { IAwsApiGatewayResponse } from "common-types";
 
 /** returns the sent in event and context */

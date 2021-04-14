@@ -41,7 +41,7 @@ export interface IErrorIdentification {
  * This enum is inteded to be used to determine an specific aws resource.
  * It should be become bigger as we need more resources types
  */
-export enum AwsResource {
+export enum AwsSource {
   /**
    * Another lambda -- or at least no other recognized caller -- called
    * the handler function.
@@ -69,7 +69,7 @@ export enum AwsResource {
  * which attempts to catalog AWS resources which might be calling a given
  * Lambda function.
  */
-export type IAwsResource = keyof typeof AwsResource;
+export type IAwsResource = keyof typeof AwsSource;
 
 /**
  * Historically, when you used API Gateway you were developing with the

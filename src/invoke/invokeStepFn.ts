@@ -1,15 +1,15 @@
 import { IDictionary } from "common-types";
 import { logger } from "aws-log";
 import { StartExecutionOutput } from "aws-sdk/clients/stepfunctions";
-import { AwsResource } from "~/types";
-import { parseArn } from "./parseArn";
+import { AwsSource } from "~/types";
+import { parseArn } from "~/shared";
 import { buildStepFunctionRequest } from "./buildStepFunctionRequest";
 
 export async function invokeStepFn(stepArn: string, request: IDictionary) {
   const stepFunction = new (await import("aws-sdk")).StepFunctions({ params: { foo: "bar" } });
   return new Promise<StartExecutionOutput>((resolve, reject) => {
     stepFunction.startExecution(
-      buildStepFunctionRequest(parseArn(stepArn, AwsResource.StepFunction), request),
+      buildStepFunctionRequest(parseArn(stepArn, AwsSource.StepFunction), request),
       (error, data) => {
         if (error) {
           const log = logger().reloadContext().addToLocalContext({ workflow: "aws-log/stepFunction" });
