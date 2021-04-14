@@ -48,14 +48,12 @@ const defaultHandler = (state: Record<string, ErrDefn>) => (selector: IErrorHand
   };
 };
 
-
 // const foo = permissions({}).dataLimitExceeded({}).allErrors({});
-
 
 // const f = RetryConfig(api => api.allErrors({}).runtime({}).dataLimitExceeded({}).custom("", {}))
 
 export function RetryConfig<T extends string = never>(api: (api: IRetryApi<"">) => IRetryApi<T>) {
-  const result = api(retryApi({})) as unknown as IRetryApi<"">;
+  const result = (api(retryApi({})) as unknown) as IRetryApi<"">;
   return result.state;
 }
 
@@ -72,80 +70,131 @@ export type IRetryConfig = {
   [errorTypes.timeout]?: RetryOptions;
   // [custom: PropType<IErrorType>]: RetryOptions;
 };
-export type IRetryConfigurator<E extends string, T extends string = ""> = (opts:RetryOptions) => IRetryApi<E | T>;
-export type IRetryCustomConfigurator<E extends string, T extends string = ""> = (customError: string, opts:RetryOptions) => IRetryApi<E | T>;
+export type IRetryConfigurator<E extends string, T extends string = ""> = (opts: RetryOptions) => IRetryApi<E | T>;
+export type IRetryCustomConfigurator<E extends string, T extends string = ""> = (
+  customError: string,
+  opts: RetryOptions
+) => IRetryApi<E | T>;
 
-export type IRetryApi<E extends string> = Omit<{
-  state: IRetryConfig;
-  allErrors: IRetryConfigurator<E,"allErrors">;
-  runtime: IRetryConfigurator<E,"runtime">;
-  timeout: IRetryConfigurator<E,"timeout">;
-  dataLimitExceeded: IRetryConfigurator<E,"dataLimitExceeded">;
-  taskFailed: IRetryConfigurator<E,"taskFailed">;
-  permissions: IRetryConfigurator<E,"permissions">;
-  custom: IRetryCustomConfigurator<E>;
-}, E>;
+export type IRetryApi<E extends string> = Omit<
+  {
+    state: IRetryConfig;
+    allErrors: IRetryConfigurator<E, "allErrors">;
+    runtime: IRetryConfigurator<E, "runtime">;
+    timeout: IRetryConfigurator<E, "timeout">;
+    dataLimitExceeded: IRetryConfigurator<E, "dataLimitExceeded">;
+    taskFailed: IRetryConfigurator<E, "taskFailed">;
+    permissions: IRetryConfigurator<E, "permissions">;
+    custom: IRetryCustomConfigurator<E>;
+  },
+  E
+>;
 
 function retryApi<TExclude extends string = "state">(state: Record<string, RetryOptions>) {
   const config = retryWrapper<TExclude>(state);
   return {
     state,
-    allErrors(opts: RetryOptions) { return config<"allErrors">(opts, errorTypes.all); },
-    runtime(opts: RetryOptions) { return config<"runtime">(opts, errorTypes.runtime); },
-    timeout(opts: RetryOptions) { return config<"timeout">(opts, errorTypes.timeout); },
-    dataLimitExceeded(opts: RetryOptions) { return config<"dataLimitExceeded">(opts, errorTypes.dataLimitExceeded); },
-    taskFailed(opts: RetryOptions) { return config<"taskFailed">(opts, errorTypes.taskFailed); },
-    permissions(opts: RetryOptions) { return config<"permissions">(opts, errorTypes.permissions); },
-    custom<C extends string>(customError: C, opts: RetryOptions) { return config(opts, customError); },
+    allErrors(opts: RetryOptions) {
+      return config<"allErrors">(opts, errorTypes.all);
+    },
+    runtime(opts: RetryOptions) {
+      return config<"runtime">(opts, errorTypes.runtime);
+    },
+    timeout(opts: RetryOptions) {
+      return config<"timeout">(opts, errorTypes.timeout);
+    },
+    dataLimitExceeded(opts: RetryOptions) {
+      return config<"dataLimitExceeded">(opts, errorTypes.dataLimitExceeded);
+    },
+    taskFailed(opts: RetryOptions) {
+      return config<"taskFailed">(opts, errorTypes.taskFailed);
+    },
+    permissions(opts: RetryOptions) {
+      return config<"permissions">(opts, errorTypes.permissions);
+    },
+    custom<C extends string>(customError: C, opts: RetryOptions) {
+      return config(opts, customError);
+    },
   };
 }
 
-/**
- * Proposal:
- * 
- * Use same utiliy functions as retry but for errors taking benefit of Typescript Union, so we can reuse same utility function, but it will have different behaviour based on our needs.
- */
+export type ICatchConfigurator<E extends string, T extends string = ""> = (opts: ErrDefn) => ICatchApi<E | T>;
+export type ICatchCustomConfigurator<E extends string, T extends string = ""> = (
+  customError: string,
+  opts: ErrDefn
+) => ICatchApi<E | T>;
 
- export function allErrors(opts: RetryOptions) {
-  return retryApi({}).allErrors(opts);
-}
+export type ICatchApi<E extends string> = Omit<
+  {
+    state: ICatchConfig;
+    allErrors: ICatchConfigurator<E, "allErrors">;
+    runtime: ICatchConfigurator<E, "runtime">;
+    timeout: ICatchConfigurator<E, "timeout">;
+    dataLimitExceeded: ICatchConfigurator<E, "dataLimitExceeded">;
+    taskFailed: ICatchConfigurator<E, "taskFailed">;
+    permissions: ICatchConfigurator<E, "permissions">;
+    custom: ICatchCustomConfigurator<E>;
+  },
+  E
+>;
 
-export function runtime(opts: RetryOptions) {
-  return retryApi({}).runtime(opts);
-}
-
-export function timeout(opts: RetryOptions) {
-  return retryApi({}).timeout(opts);
-}
-
-export function dataLimitExceeded(opts: RetryOptions) {
-  return retryApi({}).dataLimitExceeded(opts);
-}
-
-export function taskFailed(opts: RetryOptions) {
-  return retryApi({}).taskFailed(opts);
-}
-
-export function permissions(opts: RetryOptions) {
-  return retryApi({}).permissions(opts);
-}
-
-// TODO: All other utility functions got fixed moving from variable with arrow function to just function, but this one still throwing TS7056 error. It is related to recursive inferred typing
-//
-export function customError(error: string, opts: RetryOptions) {
-  return retryApi({}).custom(error, opts);
-}
-
-function retryWrapper<T extends string>(state: IRetryConfig) { 
-  return  <E extends string = "">(opts: RetryOptions, offset: string): IRetryApi<T | E> => {
+function catchWrapper<T extends string>(state: Record<string, ErrDefn>) {
+  return <E extends string = "">(opts: ErrDefn, offset: string): ICatchApi<T | E> => {
     const newState = { ...state, [offset]: opts };
-    return retryApi<T | E>(newState); 
-  }; 
+    return catchApi<T | E>(newState);
+  };
 }
 
-// Tests
-allErrors({}).permissions({}).runtime({}).dataLimitExceeded({}).taskFailed({}).timeout({}).custom("asdasda", {}).custom("asdasd", {});
-allErrors({}).custom("", {}).dataLimitExceeded({});
+export type ICatchConfig = {
+  [errorTypes.all]?: ErrDefn;
+  [errorTypes.dataLimitExceeded]?: ErrDefn;
+  [errorTypes.permissions]?: ErrDefn;
+  [errorTypes.runtime]?: ErrDefn;
+  [errorTypes.taskFailed]?: ErrDefn;
+  [errorTypes.timeout]?: ErrDefn;
+};
+
+function catchApi<TExclude extends string = "state">(state: Record<string, ErrDefn>) {
+  const config = catchWrapper<TExclude>(state);
+  return {
+    state,
+    allErrors(opts: ErrDefn) {
+      return config<"allErrors">(opts, errorTypes.all);
+    },
+    runtime(opts: ErrDefn) {
+      return config<"runtime">(opts, errorTypes.runtime);
+    },
+    timeout(opts: ErrDefn) {
+      return config<"timeout">(opts, errorTypes.timeout);
+    },
+    dataLimitExceeded(opts: ErrDefn) {
+      return config<"dataLimitExceeded">(opts, errorTypes.dataLimitExceeded);
+    },
+    taskFailed(opts: ErrDefn) {
+      return config<"taskFailed">(opts, errorTypes.taskFailed);
+    },
+    permissions(opts: ErrDefn) {
+      return config<"permissions">(opts, errorTypes.permissions);
+    },
+    custom<C extends string>(customError: C, opts: ErrDefn) {
+      return config(opts, customError);
+    },
+  };
+}
+
+export function CatchConfig<T extends string = never>(api: (api: ICatchApi<"">) => ICatchApi<T>) {
+  const result = (api(catchApi({})) as unknown) as ICatchApi<"">;
+  return result.state;
+}
+
+CatchConfig(c => c.allErrors({selector: s => s.wait()}));
+
+function retryWrapper<T extends string>(state: IRetryConfig) {
+  return <E extends string = "">(opts: RetryOptions, offset: string): IRetryApi<T | E> => {
+    const newState = { ...state, [offset]: opts };
+    return retryApi<T | E>(newState);
+  };
+}
 
 const conditionalRetryHandler = (state: Record<string, RetryOptions>) => (
   errorType: IErrorTypeSelector,
@@ -228,9 +277,9 @@ export function goToConfiguration(finalizedState: Finalized<IState> | IFinalized
   const next =
     typeof finalizedState === "string" // is next state name
       ? finalizedState
-      : (isState(finalizedState) // is next state object
+      : isState(finalizedState) // is next state object
       ? finalizedState.name
-      : getFirstState(finalizedState)); // is finalized StepFn which has first state finalized
+      : getFirstState(finalizedState); // is finalized StepFn which has first state finalized
 
   return {
     type: "GoTo",
