@@ -1,5 +1,6 @@
 import { IStepFunctionStep, IStepFunctionTask } from "common-types";
-import { errorHandler, retryHandler, State, StateMachine, StepFunction } from "~/step-fn";
+import { errorHandler, RetryConfig, State, StateMachine, StepFunction } from "~/step-fn";
+import { RetryOptions } from "~/types";
 
 describe("Step Function Builder Error Handler", () => {
   beforeEach(() => {
@@ -111,8 +112,8 @@ describe("Step Function Builder Error Handler", () => {
   })
 
   it('Defining state `retry` error handler should be populated to the output state definition', () => {
-    const retryOptions = { maxAttempts: 5 }
-    const fooTask = State(s => s.task('fooTask', { retry:  r => r.permissions({}).dataLimitExceeded({}).allErrors({}) }))
+    const retryOptions: RetryOptions = { maxAttempts: 5 }
+    const fooTask = State(s => s.task('fooTask', { retry:  RetryConfig(api => api.allErrors(retryOptions)) }));
 
     const myStateMachine = StateMachine('fooStateMachine', { stepFunction: StepFunction(fooTask) }).toJSON()
 

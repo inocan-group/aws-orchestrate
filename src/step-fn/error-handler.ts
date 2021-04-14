@@ -1,3 +1,4 @@
+/* eslint-disable no-use-before-define */
 import { hash } from "native-dash";
 import { ServerlessError } from "~/errors";
 import {
@@ -47,13 +48,65 @@ const defaultHandler = (state: Record<string, ErrDefn>) => (selector: IErrorHand
   };
 };
 
+
+// const foo = permissions({}).dataLimitExceeded({}).allErrors({});
+
+
+// const f = RetryConfig(api => api.allErrors({}).runtime({}).dataLimitExceeded({}).custom("", {}))
+
+export function RetryConfig<T extends string = never>(api: (api: IRetryApi<"">) => IRetryApi<T>) {
+  const result = api(retryApi({})) as unknown as IRetryApi<"">;
+  return result.state;
+}
+
+// type PropType<TObj, TProp extends keyof TObj = keyof TObj> = TObj[TProp]
+
+// type xxx = PropType<IErrorType>
+// type sss = Partial<Record<string, RetryOptions>> | Record<string, RetryOptions>
+export type IRetryConfig = {
+  [errorTypes.all]?: RetryOptions;
+  [errorTypes.dataLimitExceeded]?: RetryOptions;
+  [errorTypes.permissions]?: RetryOptions;
+  [errorTypes.runtime]?: RetryOptions;
+  [errorTypes.taskFailed]?: RetryOptions;
+  [errorTypes.timeout]?: RetryOptions;
+  // [custom: PropType<IErrorType>]: RetryOptions;
+};
+export type IRetryConfigurator<E extends string, T extends string = ""> = (opts:RetryOptions) => IRetryApi<E | T>;
+export type IRetryCustomConfigurator<E extends string, T extends string = ""> = (customError: string, opts:RetryOptions) => IRetryApi<E | T>;
+
+export type IRetryApi<E extends string> = Omit<{
+  state: IRetryConfig;
+  allErrors: IRetryConfigurator<E,"allErrors">;
+  runtime: IRetryConfigurator<E,"runtime">;
+  timeout: IRetryConfigurator<E,"timeout">;
+  dataLimitExceeded: IRetryConfigurator<E,"dataLimitExceeded">;
+  taskFailed: IRetryConfigurator<E,"taskFailed">;
+  permissions: IRetryConfigurator<E,"permissions">;
+  custom: IRetryCustomConfigurator<E>;
+}, E>;
+
+function retryApi<TExclude extends string = "state">(state: Record<string, RetryOptions>) {
+  const config = retryWrapper<TExclude>(state);
+  return {
+    state,
+    allErrors(opts: RetryOptions) { return config<"allErrors">(opts, errorTypes.all); },
+    runtime(opts: RetryOptions) { return config<"runtime">(opts, errorTypes.runtime); },
+    timeout(opts: RetryOptions) { return config<"timeout">(opts, errorTypes.timeout); },
+    dataLimitExceeded(opts: RetryOptions) { return config<"dataLimitExceeded">(opts, errorTypes.dataLimitExceeded); },
+    taskFailed(opts: RetryOptions) { return config<"taskFailed">(opts, errorTypes.taskFailed); },
+    permissions(opts: RetryOptions) { return config<"permissions">(opts, errorTypes.permissions); },
+    custom<C extends string>(customError: C, opts: RetryOptions) { return config(opts, customError); },
+  };
+}
+
 /**
  * Proposal:
  * 
  * Use same utiliy functions as retry but for errors taking benefit of Typescript Union, so we can reuse same utility function, but it will have different behaviour based on our needs.
  */
 
-export function allErrors(opts: RetryOptions) {
+ export function allErrors(opts: RetryOptions) {
   return retryApi({}).allErrors(opts);
 }
 
@@ -90,63 +143,9 @@ function retryWrapper<T extends string>(state: IRetryConfig) {
   }; 
 }
 
-
-
 // Tests
 allErrors({}).permissions({}).runtime({}).dataLimitExceeded({}).taskFailed({}).timeout({}).custom("asdasda", {}).custom("asdasd", {});
 allErrors({}).custom("", {}).dataLimitExceeded({});
-
-// const foo = permissions({}).dataLimitExceeded({}).allErrors({});
-
-export type IRetryConfigurator<E extends string, T extends string = ""> = (opts:RetryOptions) => IRetryApi<E | T>;
-export type IRetryCustomConfigurator<E extends string, T extends string = ""> = (customError: string, opts:RetryOptions) => IRetryApi<E | T>;
-
-export type IRetryApi<E extends string> = Omit<{
-  state: IRetryConfig;
-  allErrors: IRetryConfigurator<E,"allErrors">;
-  runtime: IRetryConfigurator<E,"runtime">;
-  timeout: IRetryConfigurator<E,"timeout">;
-  dataLimitExceeded: IRetryConfigurator<E,"dataLimitExceeded">;
-  taskFailed: IRetryConfigurator<E,"taskFailed">;
-  permissions: IRetryConfigurator<E,"permissions">;
-  custom: IRetryCustomConfigurator<E>;
-}, E>;
-
-// const f = RetryConfig(api => api.allErrors({}).runtime({}).dataLimitExceeded({}).custom("", {}))
-
-// function RetryConfig<T extends string = never>(api: (api: IRetryApi<"">) => IRetryApi<infer T>) {
-//   const foo = api(retryApi({}))
-
-//   return "state" in foo ? foo.state : undefined;
-// }
-
-// type PropType<TObj, TProp extends keyof TObj = keyof TObj> = TObj[TProp]
-
-// type xxx = PropType<IErrorType>
-// type sss = Partial<Record<string, RetryOptions>> | Record<string, RetryOptions>
-export type IRetryConfig = {
-  [errorTypes.all]?: RetryOptions;
-  [errorTypes.dataLimitExceeded]?: RetryOptions;
-  [errorTypes.permissions]?: RetryOptions;
-  [errorTypes.runtime]?: RetryOptions;
-  [errorTypes.taskFailed]?: RetryOptions;
-  [errorTypes.timeout]?: RetryOptions;
-  // [custom: PropType<IErrorType>]: RetryOptions;
-};
-
-function retryApi<TExclude extends string = "state">(state: Record<string, RetryOptions>) {
-  const config = retryWrapper<TExclude>(state);
-  return {
-    state,
-    allErrors(opts: RetryOptions) { return config<"allErrors">(opts, errorTypes.all); },
-    runtime(opts: RetryOptions) { return config<"runtime">(opts, errorTypes.runtime); },
-    timeout(opts: RetryOptions) { return config<"timeout">(opts, errorTypes.timeout); },
-    dataLimitExceeded(opts: RetryOptions) { return config<"dataLimitExceeded">(opts, errorTypes.dataLimitExceeded); },
-    taskFailed(opts: RetryOptions) { return config<"taskFailed">(opts, errorTypes.taskFailed); },
-    permissions(opts: RetryOptions) { return config<"permissions">(opts, errorTypes.permissions); },
-    custom<C extends string>(customError: C, opts: RetryOptions) { return config(opts, customError); },
-  };
-}
 
 const conditionalRetryHandler = (state: Record<string, RetryOptions>) => (
   errorType: IErrorTypeSelector,
