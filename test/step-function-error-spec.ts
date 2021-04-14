@@ -11,7 +11,7 @@ describe('Step Function Builder Error Handler', () => {
 
   it('Definig error step function should start with first state finalized', () => {
     const fooStepFn = StepFunction({
-      defaultErrorHandler: errorHandler(e => e.default(s => s.task('foo'))),
+      catch: errorHandler(e => e.default(s => s.task('foo'))),
     }).task('task1')
 
     const action = () => StateMachine('foo', { stepFunction: fooStepFn }).toJSON()
@@ -28,7 +28,7 @@ describe('Step Function Builder Error Handler', () => {
 
     const stateMachine = StateMachine('fooStateMachine', {
       stepFunction: fooStepFn,
-      defaultErrorHandler: errorHandler(e => e.default(finalizedStepFn)),
+      catch: errorHandler(e => e.default(finalizedStepFn)),
     }).toJSON()
 
     const resultStates = Object.values(stateMachine.definition.States)
@@ -50,7 +50,7 @@ describe('Step Function Builder Error Handler', () => {
       .succeed('foo3')
 
     const fooStepFn = StepFunction({
-      defaultErrorHandler: errorHandler(e => e.default(finalizedStepFn)),
+      catch: errorHandler(e => e.default(finalizedStepFn)),
     }).task('task1')
 
     const stateMachine = StateMachine('fooStateMachine', {
@@ -82,7 +82,7 @@ describe('Step Function Builder Error Handler', () => {
       .finalize()
 
     const fooStepFn = StepFunction({
-      defaultErrorHandler: errorHandler(e => e.default(finalizedStepFn)),
+      catch: errorHandler(e => e.default(finalizedStepFn)),
     }).task('task1', {
       catch: errorHandler(e => e.handle(h => h.all, finalizedStepFn2).withoutDefault()),
     })
@@ -105,7 +105,7 @@ describe('Step Function Builder Error Handler', () => {
 
   it('Defining state `retry` error handler should be populated to the output state definition', () => {
     const retryOptions = { maxAttempts: 5 }
-    const fooTask = State(s => s.task('fooTask', { retry: retryHandler(e => e.default(retryOptions)) }))
+    const fooTask = State(s => s.task('fooTask', { retry:  r => r.permissions({}).dataLimitExceeded({}).allErrors({}) }))
 
     const myStateMachine = StateMachine('fooStateMachine', { stepFunction: StepFunction(fooTask) }).toJSON()
 
