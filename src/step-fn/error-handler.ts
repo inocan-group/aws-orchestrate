@@ -87,30 +87,30 @@ function retryWrapper<T extends string>(state: IRetryConfig) {
   return  <E extends string = "">(opts: RetryOptions, offset: string): IRetryApi<T | E> => {
     const newState = { ...state, [offset]: opts };
     return retryApi<T | E>(newState); 
-  } 
+  }; 
 }
 
 
 
 // Tests
-allErrors({}).permissions({}).runtime({}).dataLimitExceeded({}).taskFailed({}).timeout({}).custom("asdasda", {}).custom("asdasd", {})
+allErrors({}).permissions({}).runtime({}).dataLimitExceeded({}).taskFailed({}).timeout({}).custom("asdasda", {}).custom("asdasd", {});
 allErrors({}).custom("", {}).dataLimitExceeded({});
 
-const foo = permissions({}).dataLimitExceeded({}).allErrors({})
+// const foo = permissions({}).dataLimitExceeded({}).allErrors({});
 
 export type IRetryConfigurator<E extends string, T extends string = ""> = (opts:RetryOptions) => IRetryApi<E | T>;
 export type IRetryCustomConfigurator<E extends string, T extends string = ""> = (customError: string, opts:RetryOptions) => IRetryApi<E | T>;
 
 export type IRetryApi<E extends string> = Omit<{
   state: IRetryConfig;
-  allErrors: IRetryConfigurator<E,'allErrors'>;
-  runtime: IRetryConfigurator<E,'runtime'>;
-  timeout: IRetryConfigurator<E,'timeout'>;
-  dataLimitExceeded: IRetryConfigurator<E,'dataLimitExceeded'>;
-  taskFailed: IRetryConfigurator<E,'taskFailed'>;
-  permissions: IRetryConfigurator<E,'permissions'>;
-  custom: IRetryCustomConfigurator<E>
-}, E>
+  allErrors: IRetryConfigurator<E,"allErrors">;
+  runtime: IRetryConfigurator<E,"runtime">;
+  timeout: IRetryConfigurator<E,"timeout">;
+  dataLimitExceeded: IRetryConfigurator<E,"dataLimitExceeded">;
+  taskFailed: IRetryConfigurator<E,"taskFailed">;
+  permissions: IRetryConfigurator<E,"permissions">;
+  custom: IRetryCustomConfigurator<E>;
+}, E>;
 
 // const f = RetryConfig(api => api.allErrors({}).runtime({}).dataLimitExceeded({}).custom("", {}))
 
@@ -120,28 +120,32 @@ export type IRetryApi<E extends string> = Omit<{
 //   return "state" in foo ? foo.state : undefined;
 // }
 
-export interface IRetryConfig {
+// type PropType<TObj, TProp extends keyof TObj = keyof TObj> = TObj[TProp]
+
+// type xxx = PropType<IErrorType>
+// type sss = Partial<Record<string, RetryOptions>> | Record<string, RetryOptions>
+export type IRetryConfig = {
   [errorTypes.all]?: RetryOptions;
   [errorTypes.dataLimitExceeded]?: RetryOptions;
   [errorTypes.permissions]?: RetryOptions;
   [errorTypes.runtime]?: RetryOptions;
   [errorTypes.taskFailed]?: RetryOptions;
   [errorTypes.timeout]?: RetryOptions;
-  [custom: string]: RetryOptions;
-}
+  // [custom: PropType<IErrorType>]: RetryOptions;
+};
 
 function retryApi<TExclude extends string = "state">(state: Record<string, RetryOptions>) {
   const config = retryWrapper<TExclude>(state);
   return {
     state,
-    allErrors(opts: RetryOptions) { return config<"allErrors">(opts, errorTypes.all) },
-    runtime(opts: RetryOptions) { return config<"runtime">(opts, errorTypes.runtime) },
-    timeout(opts: RetryOptions) { return config<"timeout">(opts, errorTypes.timeout) },
-    dataLimitExceeded(opts: RetryOptions) { return config<"dataLimitExceeded">(opts, errorTypes.dataLimitExceeded) },
-    taskFailed(opts: RetryOptions) { return config<"taskFailed">(opts, errorTypes.taskFailed) },
-    permissions(opts: RetryOptions) { return config<"permissions">(opts, errorTypes.permissions) },
-    custom<C extends string>(customError: C, opts: RetryOptions) { return config(opts, customError) },
-  }
+    allErrors(opts: RetryOptions) { return config<"allErrors">(opts, errorTypes.all); },
+    runtime(opts: RetryOptions) { return config<"runtime">(opts, errorTypes.runtime); },
+    timeout(opts: RetryOptions) { return config<"timeout">(opts, errorTypes.timeout); },
+    dataLimitExceeded(opts: RetryOptions) { return config<"dataLimitExceeded">(opts, errorTypes.dataLimitExceeded); },
+    taskFailed(opts: RetryOptions) { return config<"taskFailed">(opts, errorTypes.taskFailed); },
+    permissions(opts: RetryOptions) { return config<"permissions">(opts, errorTypes.permissions); },
+    custom<C extends string>(customError: C, opts: RetryOptions) { return config(opts, customError); },
+  };
 }
 
 const conditionalRetryHandler = (state: Record<string, RetryOptions>) => (
