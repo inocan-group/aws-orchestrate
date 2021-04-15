@@ -30,6 +30,12 @@ export const errorTypes: IErrorType = {
   },
 };
 
+/**
+ * Define how step function's errors or lambda fn execution errors are going to be handled with a fluent API syntax
+ * Allows to configure options to make our state to be executed again.
+ *
+ * @param api a callback that exposes methods to be used to defined an error retry handler.
+ */
 export function RetryConfig<T extends string = never>(api: (api: IRetryApi<"">) => IRetryApi<T>) {
   const result = (api(retryApi({})) as unknown) as IRetryApi<"">;
   return result.state;
@@ -49,6 +55,7 @@ export type IRetryCustomConfigurator<E extends string, T extends string = ""> = 
   customError: string,
   opts: RetryOptions
 ) => IRetryApi<E | T>;
+
 
 export type IRetryApi<E extends string> = Omit<
   {
@@ -159,6 +166,12 @@ function catchApi<T extends string = "state">(state: Record<string, ErrDefn>) {
 export type ICatchFluentApi<T extends string = never> = (api: ICatchApi<"">) => ICatchApi<T>;
 export type IRetryFluentApi<T extends string = never> = (api: IRetryApi<"">) => IRetryApi<T>;
 
+/**
+ * Define how step function's errors or lambda fn execution errors are going to be handled with a fluent API syntax
+ * It let you continue to a fallback state or whatever user defined state such as `ErrorNotification`
+ *
+ * @param api a callback that exposes methods to be used to defined an error handler.
+ */
 export function CatchConfig<T extends string = never>(api: ICatchFluentApi<T>) {
   const result = (api(catchApi({})) as unknown) as ICatchApi<"">;
   return result.state;
@@ -171,20 +184,10 @@ function retryWrapper<T extends string>(state: IRetryConfig) {
   };
 }
 
-/**
- * Define how step function's errors or lambda fn execution errors are going to be handled with a fluent API syntax
- * Allows to configure options to make our state to be executed again.
- *
- * @param handlerFn a callback that exposes methods to be used to defined an error retry handler.
- */
 
 
-/**
- * Define how step function's errors or lambda fn execution errors are going to be handled with a fluent API syntax
- * It let you continue to a fallback state or whatever user defined state such as `ErrorNotification`
- *
- * @param handlerFn a callback that exposes methods to be used to defined an error handler.
- */
+
+
 
 function isState(object: Finalized<IState> | IFinalizedStepFn): object is Finalized<IState> {
   return "type" in object;
