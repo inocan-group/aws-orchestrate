@@ -1,4 +1,4 @@
-import { ICatchConfig } from "~/step-fn";
+import { ICatchConfig, ICatchFluentApi } from "~/step-fn";
 import {
   IState,
   Finalized,
@@ -37,7 +37,7 @@ export type IStepFnOptions = {
   /**
    * Error handler used for all children states unless their overrites this one using `catch` option explicitely
    */
-  catch?: ICatchConfig;
+  catch?: ICatchConfig | ICatchFluentApi;
 };
 
 /**
@@ -131,7 +131,7 @@ export interface IStepFunctionFactory {
   /**
    * It accepts states (such as task, choice, etc) `IState` and a step function option hash `IStepFnOptions`
    */
-  catch?: ICatchConfig;
+  catch?: ICatchConfig | ICatchFluentApi;
   (...params: IStepFnShorthand): IConfigurableStepFn;
 }
 

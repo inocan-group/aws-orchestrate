@@ -126,7 +126,7 @@ export type ICatchConfig = {
   [errorTypes.runtime]?: ErrDefn;
   [errorTypes.taskFailed]?: ErrDefn;
   [errorTypes.timeout]?: ErrDefn;
-} & { [key: string]: ErrDefn};;
+} & { [key: string]: ErrDefn};
 
 function catchApi<T extends string = "state">(state: Record<string, ErrDefn>) {
   const config = catchWrapper<T>(state);
