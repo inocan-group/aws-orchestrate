@@ -1,4 +1,3 @@
-import { IDictionary } from "common-types";
 import { IFinalizedStepFn, IFluentApi, IStepFnShorthand } from "~/types";
 
 /**

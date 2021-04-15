@@ -1,5 +1,5 @@
 import { IStepFunctionStep, IStepFunctionTask } from "common-types";
-import { CatchConfig, errorHandler, RetryConfig, State, StateMachine, StepFunction } from "~/step-fn";
+import { CatchConfig, RetryConfig, State, StateMachine, StepFunction } from "~/step-fn";
 import { RetryOptions } from "~/types";
 
 describe("Step Function Builder Error Handler", () => {
@@ -12,7 +12,7 @@ describe("Step Function Builder Error Handler", () => {
 
   it("Definig error step function should start with first state finalized", () => {
     const fooStepFn = StepFunction({
-      catch: errorHandler((e) => e.default((s) => s.task("foo"))),
+      catch: CatchConfig(e => e.allErrors({selector: s => s.task("foo")})),
     }).task("task1");
 
     const action = () => StateMachine("foo", { stepFunction: fooStepFn }).toJSON();
@@ -29,7 +29,7 @@ describe("Step Function Builder Error Handler", () => {
 
     const stateMachine = StateMachine("fooStateMachine", {
       stepFunction: fooStepFn,
-      catch: errorHandler((e) => e.default(finalizedStepFn)),
+      catch: CatchConfig(c => c.allErrors({selector: finalizedStepFn})),
     }).toJSON();
 
     const resultStates = Object.values(stateMachine.definition.States);
@@ -90,9 +90,9 @@ describe("Step Function Builder Error Handler", () => {
       .finalize();
 
     const fooStepFn = StepFunction({
-      catch: errorHandler((e) => e.default(finalizedStepFn)),
+      catch: CatchConfig((c) => c.allErrors({selector: finalizedStepFn})),
     }).task("task1", {
-      catch: errorHandler((e) => e.handle((h) => h.all, finalizedStepFn2).withoutDefault()),
+      catch: CatchConfig((c) => c.allErrors({selector: finalizedStepFn2}))
     });
 
     const stateMachine = StateMachine("fooStateMachine", {
@@ -104,8 +104,9 @@ describe("Step Function Builder Error Handler", () => {
     expect(
       resultStates
         .filter((r) => r.Type === "Task" && r.Catch !== undefined)
-        .every((r: IStepFunctionTask) => {
-          const [defaultHandler] = r.Catch;
+        .every((r) => {
+          const task = r as unknown as IStepFunctionTask;
+          const [defaultHandler] = task.Catch || [];
           return defaultHandler.Next !== "foo1";
         })
     ).toBeTrue();
@@ -117,19 +118,8 @@ describe("Step Function Builder Error Handler", () => {
 
     const myStateMachine = StateMachine("fooStateMachine", { stepFunction: StepFunction(fooTask) }).toJSON();
 
-    expect((myStateMachine.definition.States["fooTask"] as IStepFunctionTask).Retry[0].MaxAttempts).toBe(
+    expect((myStateMachine.definition.States["fooTask"] as IStepFunctionTask).Retry![0].MaxAttempts).toBe(
       retryOptions.maxAttempts
     );
   });
 });
-
-// TODO: implement this syntax instead of the existing one
-// catch: e => e.permissions(fn1, fn2).custom(cond, fn5).allOthers(fn3,fn4)
-
-// export interface IErrHandlerBuilder<T> {
-//   all: (...rest: any[]) => IErrHandlerBuilder<T | 'all'>;
-//   custom: (cond: string, ...rest: any[]) => IErrHandlerBuilder;
-//   allOthers: (...rest: any[]) => IErrHandlerBuilder;
-// }
-
-// const foo: Exclude<IErrHandlerBuilder, 'allOthers'>;

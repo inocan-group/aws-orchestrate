@@ -159,7 +159,7 @@ function catchApi<T extends string = "state">(state: Record<string, ErrDefn>) {
 export type ICatchFluentApi<T extends string = never> = (api: ICatchApi<"">) => ICatchApi<T>;
 export type IRetryFluentApi<T extends string = never> = (api: IRetryApi<"">) => IRetryApi<T>;
 
-export function CatchConfig(api: ICatchFluentApi) {
+export function CatchConfig<T extends string = never>(api: ICatchFluentApi<T>) {
   const result = (api(catchApi({})) as unknown) as ICatchApi<"">;
   return result.state;
 }
