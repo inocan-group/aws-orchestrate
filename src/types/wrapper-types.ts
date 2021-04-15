@@ -6,7 +6,7 @@ import {
   RestMethod,
   scalar,
 } from "common-types";
-import { AwsApiStyle, AwsResource } from "./general";
+import { AwsApiStyle, AwsSource } from "./general";
 import { IWrapperContext } from "./wrapper-context";
 
 export type IQueryParameters = IDictionary<scalar>;
@@ -78,7 +78,7 @@ export interface IApiGatewayRequestState<B, Q extends object, P extends object> 
   query: Q;
   verb: RestMethod;
   claims?: IDictionary;
-  caller: AwsResource;
+  caller: AwsSource;
   api: AwsApiStyle;
 }
 
@@ -93,7 +93,7 @@ export interface IBasicRequestState<B> {
   query: undefined;
   verb: undefined;
   claims: undefined;
-  caller: AwsResource;
+  caller: AwsSource;
 }
 
 /**
@@ -113,7 +113,7 @@ export interface IHeaderBodyRequestState<B> {
   query: undefined;
   verb: undefined;
   claims: undefined;
-  caller: AwsResource.LambdaWithHeader;
+  caller: AwsSource.LambdaWithHeader;
 }
 
 export type IRequestState<B, Q extends object, P extends object> =

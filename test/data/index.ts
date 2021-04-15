@@ -2,11 +2,12 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 04:07 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 11:03 AM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: test-events.
+// files: test-arns, test-events.
 
 // local file exports
+export * from "./test-arns";
 export * from "./test-events";
 
 // Note:

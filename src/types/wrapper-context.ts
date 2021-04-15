@@ -11,7 +11,7 @@ import { InvocationResponse, UnconstrainedHttpHeaders } from "~/invoke";
 import type { ErrorMeta } from "~/wrapper-fn/util/ErrorMeta";
 import { setContentType, addCookie, setUserHeaders } from "~/wrapper-fn/util/headers";
 import { getSecrets } from "~/wrapper-fn/util/secrets";
-import { AwsApiStyle, AwsResource } from "./general";
+import { AwsApiStyle, AwsSource } from "./general";
 import { IWrapperIdentity, IWrapperIdentityDetails } from "./wrapper-types";
 
 /**
@@ -152,7 +152,7 @@ export interface IWrapperContextCommonProps {
  */
 export type IWrapperHeaderAndBodyContext = IWrapperContextCommonProps &
   IHasHeaderContext & {
-    caller: AwsResource.LambdaWithHeader;
+    caller: AwsSource.LambdaWithHeader;
     headers: IHttpRequestHeaders | {};
   };
 
@@ -160,7 +160,7 @@ export type IWrapperHeaderAndBodyContext = IWrapperContextCommonProps &
  * Context provided when the caller is a Lambda caller
  */
 export type IWrapperLambdaContext = IWrapperContextCommonProps & {
-  caller: AwsResource.Lambda;
+  caller: AwsSource.Lambda;
   headers: {};
 };
 
@@ -169,7 +169,7 @@ export type IWrapperLambdaContext = IWrapperContextCommonProps & {
  */
 export type IWrapperApiGatewayContext<Q, P> = IWrapperContextCommonProps &
   IHasHeaderContext & {
-    caller: AwsResource.ApiGateway;
+    caller: AwsSource.ApiGateway;
     /**
      * Distinguishes between the various API styles that API Gateway offers.
      */

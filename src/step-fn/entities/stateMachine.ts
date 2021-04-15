@@ -8,7 +8,7 @@ import {
 } from "common-types";
 import { dump } from "js-yaml";
 import { hash } from "native-dash";
-import { parseArn } from "~/invoke";
+import { parseArn } from "~/shared";
 import {
   ErrDefn,
   Finalized,

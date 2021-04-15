@@ -6,7 +6,7 @@ import {
 } from "common-types";
 import {
   AwsApiStyle,
-  AwsResource,
+  AwsSource,
   DeviceType,
   IRequestState,
   isHeaderBodyRequest,
@@ -70,7 +70,7 @@ export function extractRequestState<I, Q extends object, P extends object>(
       verb: isProxyRequestContextV2(event) ? event.requestContext.http.method : event.requestContext.httpMethod,
       claims: isProxyRequestContextV2(event) ? undefined : event.requestContext.authorizer.claims,
       api: isProxyRequestContextV2(event) ? AwsApiStyle.HttpApi : AwsApiStyle.RestApi,
-      caller: AwsResource.ApiGateway,
+      caller: AwsSource.ApiGateway,
     };
   }
 
@@ -90,7 +90,7 @@ export function extractRequestState<I, Q extends object, P extends object>(
         query: undefined,
         verb: undefined,
         claims: undefined,
-        caller: AwsResource.LambdaWithHeader,
+        caller: AwsSource.LambdaWithHeader,
       }
     : {
         kind: "basic",
@@ -103,6 +103,6 @@ export function extractRequestState<I, Q extends object, P extends object>(
         query: undefined,
         verb: undefined,
         claims: undefined,
-        caller: AwsResource.Lambda,
+        caller: AwsSource.Lambda,
       };
 }

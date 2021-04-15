@@ -1,4 +1,4 @@
-import { parseArn } from "~/invoke/parseArn";
+import { parseArn } from "~/shared";
 import { Finalized, IConfigurableStepFn, IStore, ITask, ITaskOptions } from "~/types";
 
 // TODO: You had a generic type defined here but it was unused. It was: <T extends ITask | Finalized<ITask>>

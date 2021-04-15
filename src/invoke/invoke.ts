@@ -1,6 +1,7 @@
 import { IDictionary } from "common-types";
 import { logger } from "aws-log";
-import { buildInvocationRequest, parseArn } from "..";
+import { buildInvocationRequest } from "..";
+import { parseArn } from "~/shared";
 
 export type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
 

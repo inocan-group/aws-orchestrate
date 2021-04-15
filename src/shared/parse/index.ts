@@ -2,15 +2,21 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 06:03 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 04:04 PM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: buildInvocationRequest, buildStepFunctionRequest, invoke, invokeStepFn.
+// files: extractAccount, extractPartition, extractRegion, extractResource, extractService, extractStage, getArnComponentsFromEnv, parseFullyQualifiedArn, parsePartiallyQualifiedArn, resourceLookup.
 
 // local file exports
-export * from "./buildInvocationRequest";
-export * from "./buildStepFunctionRequest";
-export * from "./invoke";
-export * from "./invokeStepFn";
+export * from "./extractAccount";
+export * from "./extractPartition";
+export * from "./extractRegion";
+export * from "./extractResource";
+export * from "./extractService";
+export * from "./extractStage";
+export * from "./getArnComponentsFromEnv";
+export * from "./parseFullyQualifiedArn";
+export * from "./parsePartiallyQualifiedArn";
+export * from "./resourceLookup";
 
 // Note:
 // -----
