@@ -13,7 +13,7 @@ export function extractAccount(arn: string): { pre: string; account: AwsAccountI
     `Failed to extract an "account" from the ARN string "${arn}"`,
     "arn/missing-account"
   );
-  const re = /(.*:)(\d{4,20})(:.*)/;
+  const re = /(.*:)(\d{4,20}|aws)(:.*)/;
   if (!re.test(arn)) {
     throw error;
   }

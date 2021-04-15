@@ -17,7 +17,6 @@ function stripSeparatorsAtExtremes(input: string) {
 
 function findAppNameAtStartOfRest(input: string, stage: AwsStage | false) {
   const re = new RegExp(`(.+)-${stage}-`);
-  console.log({ input, stage, test: re.test(input), re });
 
   if (stage && re.test(input)) {
     const [_ignore, appName] = input.match(re) as [string, string];

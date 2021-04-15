@@ -13,15 +13,56 @@ export type IArnTestData = {
 
 export const IamArns: IArnTestData[] = [
   {
-    name: "IAM Role with stage",
+    name: "IAM Role with stage (rel to step fn)",
     expected: {
       resource: "role",
       service: "iam",
       appName: "teepee-services",
       stage: "dev",
+      account: DEFAULT_ACCOUNT,
       rest: "TeepeeDashservicesDashke-9RYW4W0C9X16",
     },
     arn: `arn:aws:iam::${DEFAULT_ACCOUNT}:role/teepee-services-dev-TeepeeDashservicesDashke-9RYW4W0C9X16` as AwsArn,
+  },
+  {
+    name: "IAM Role without stage (more typical)",
+    expected: {
+      resource: "role",
+      service: "iam",
+      account: DEFAULT_ACCOUNT,
+      rest: "super-powers",
+    },
+    arn: `arn:aws:iam::${DEFAULT_ACCOUNT}:role/super-powers` as AwsArn,
+  },
+  {
+    name: "IAM User",
+    expected: {
+      service: "iam",
+      resource: "user",
+      account: DEFAULT_ACCOUNT,
+      rest: "bob",
+    },
+    arn: `arn:aws:iam::${DEFAULT_ACCOUNT}:user/bob` as AwsArn,
+  },
+  {
+    name: "IAM Group",
+    expected: {
+      service: "iam",
+      resource: "group",
+      account: DEFAULT_ACCOUNT,
+      rest: "developers",
+    },
+    arn: `arn:aws:iam::${DEFAULT_ACCOUNT}:group/developers` as AwsArn,
+  },
+  {
+    name: "IAM Policy (owned by AWS)",
+    expected: {
+      service: "iam",
+      resource: "policy",
+      rest: "aws-service-role/AccessAnalyzerServiceRolePolicy",
+      account: "aws",
+    },
+    arn: "arn:aws:iam::aws:policy/aws-service-role/AccessAnalyzerServiceRolePolicy",
   },
 ];
 

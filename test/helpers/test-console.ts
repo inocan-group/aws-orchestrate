@@ -1,11 +1,11 @@
-interface IAsyncStreamCallback {
+export interface IAsyncStreamCallback {
   output: string[];
   restore(): void;
 }
 
-type AsyncIgnoreCallback = () => void;
+export type AsyncIgnoreCallback = () => void;
 
-interface ITestStream {
+export interface ITestStream {
   inspect(): IAsyncStreamCallback;
   ignore(): AsyncIgnoreCallback;
   inspectSync(): string[];
