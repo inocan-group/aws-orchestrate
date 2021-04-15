@@ -87,6 +87,7 @@ export function parseFullyQualifiedArn(arn: AwsArn): IParsedArn {
   parsed.region = region;
   parsed.stage = stage ? stage : undefined;
   const found = findAppNameAtStartOfRest(stripSeparatorsAtExtremes(rest), stage);
+
   parsed.appName = found.appName;
 
   const knownDictionary = knownResources.includes(resource)
