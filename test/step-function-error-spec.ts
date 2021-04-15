@@ -11,8 +11,9 @@ describe("Step Function Builder Error Handler", () => {
   });
 
   it("Definig error step function should start with first state finalized", () => {
+    const catchConfig = CatchConfig((e) => e.allErrors((s) => s.task("foo")));
     const fooStepFn = StepFunction({
-      catch: CatchConfig(e => e.allErrors({selector: s => s.task("foo")})),
+      catch: catchConfig,
     }).task("task1");
 
     const action = () => StateMachine("foo", { stepFunction: fooStepFn }).toJSON();
@@ -29,7 +30,7 @@ describe("Step Function Builder Error Handler", () => {
 
     const stateMachine = StateMachine("fooStateMachine", {
       stepFunction: fooStepFn,
-      catch: CatchConfig(c => c.allErrors({selector: finalizedStepFn})),
+      catch: CatchConfig((c) => c.allErrors(finalizedStepFn, "foo")),
     }).toJSON();
 
     const resultStates = Object.values(stateMachine.definition.States);
@@ -55,7 +56,7 @@ describe("Step Function Builder Error Handler", () => {
       .succeed("foo3");
 
     const fooStepFn = StepFunction({
-      catch: CatchConfig((c) => c.allErrors({ selector: finalizedStepFn })),
+      catch: CatchConfig((c) => c.allErrors(finalizedStepFn)),
     }).task("task1");
 
     const stateMachine = StateMachine("fooStateMachine", {
@@ -90,9 +91,9 @@ describe("Step Function Builder Error Handler", () => {
       .finalize();
 
     const fooStepFn = StepFunction({
-      catch: CatchConfig((c) => c.allErrors({selector: finalizedStepFn})),
+      catch: CatchConfig((c) => c.allErrors(finalizedStepFn)),
     }).task("task1", {
-      catch: CatchConfig((c) => c.allErrors({selector: finalizedStepFn2}))
+      catch: CatchConfig((c) => c.allErrors(finalizedStepFn2)),
     });
 
     const stateMachine = StateMachine("fooStateMachine", {
@@ -105,7 +106,7 @@ describe("Step Function Builder Error Handler", () => {
       resultStates
         .filter((r) => r.Type === "Task" && r.Catch !== undefined)
         .every((r) => {
-          const task = r as unknown as IStepFunctionTask;
+          const task = (r as unknown) as IStepFunctionTask;
           const [defaultHandler] = task.Catch || [];
           return defaultHandler.Next !== "foo1";
         })
@@ -123,3 +124,12 @@ describe("Step Function Builder Error Handler", () => {
     );
   });
 });
+
+// TODO:
+/**
+ * RetryConfig -> Retry()
+ *
+ * CatchConfig -> Catch()
+ *
+ * safer typing for resultPath and other opts that follow its pattern. (string literal)
+ */

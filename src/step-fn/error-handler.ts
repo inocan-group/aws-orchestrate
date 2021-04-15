@@ -5,6 +5,7 @@ import {
   ErrDefn,
   Finalized,
   IConfigurableStepFn,
+  IErrorHandlerPointer,
   IErrorType,
   IFinalizedStepFn,
   IGoTo,
@@ -48,14 +49,13 @@ export type IRetryConfig = {
   [errorTypes.runtime]?: RetryOptions;
   [errorTypes.taskFailed]?: RetryOptions;
   [errorTypes.timeout]?: RetryOptions;
-} & { [key: string]: RetryOptions};
+} & { [key: string]: RetryOptions };
 
 export type IRetryConfigurator<E extends string, T extends string = ""> = (opts: RetryOptions) => IRetryApi<E | T>;
 export type IRetryCustomConfigurator<E extends string, T extends string = ""> = (
   customError: string,
   opts: RetryOptions
 ) => IRetryApi<E | T>;
-
 
 export type IRetryApi<E extends string> = Omit<
   {
@@ -99,10 +99,14 @@ function retryApi<T extends string = "state">(state: Record<string, RetryOptions
   };
 }
 
-export type ICatchConfigurator<E extends string, T extends string = ""> = (opts: ErrDefn) => ICatchApi<E | T>;
+export type ICatchConfigurator<E extends string, T extends string = ""> = (
+  selector: IErrorHandlerPointer,
+  resultPath?: string
+) => ICatchApi<E | T>;
 export type ICatchCustomConfigurator<E extends string, T extends string = ""> = (
   customError: string,
-  opts: ErrDefn
+  selector: IErrorHandlerPointer,
+  resultPath?: string
 ) => ICatchApi<E | T>;
 
 export type ICatchApi<E extends string> = Omit<
@@ -133,32 +137,32 @@ export type ICatchConfig = {
   [errorTypes.runtime]?: ErrDefn;
   [errorTypes.taskFailed]?: ErrDefn;
   [errorTypes.timeout]?: ErrDefn;
-} & { [key: string]: ErrDefn};
+} & { [key: string]: ErrDefn };
 
 function catchApi<T extends string = "state">(state: Record<string, ErrDefn>) {
   const config = catchWrapper<T>(state);
   return {
     state,
-    allErrors(opts: ErrDefn) {
-      return config<"allErrors">(opts, errorTypes.all);
+    allErrors(selector: IErrorHandlerPointer, resultPath?: string) {
+      return config<"allErrors">({selector, resultPath}, errorTypes.all);
     },
-    runtime(opts: ErrDefn) {
-      return config<"runtime">(opts, errorTypes.runtime);
+    runtime(selector: IErrorHandlerPointer, resultPath?: string) {
+      return config<"runtime">({selector, resultPath}, errorTypes.runtime);
     },
-    timeout(opts: ErrDefn) {
-      return config<"timeout">(opts, errorTypes.timeout);
+    timeout(selector: IErrorHandlerPointer, resultPath?: string) {
+      return config<"timeout">({selector, resultPath}, errorTypes.timeout);
     },
-    dataLimitExceeded(opts: ErrDefn) {
-      return config<"dataLimitExceeded">(opts, errorTypes.dataLimitExceeded);
+    dataLimitExceeded(selector: IErrorHandlerPointer, resultPath?: string) {
+      return config<"dataLimitExceeded">({selector, resultPath}, errorTypes.dataLimitExceeded);
     },
-    taskFailed(opts: ErrDefn) {
-      return config<"taskFailed">(opts, errorTypes.taskFailed);
+    taskFailed(selector: IErrorHandlerPointer, resultPath?: string) {
+      return config<"taskFailed">({selector, resultPath}, errorTypes.taskFailed);
     },
-    permissions(opts: ErrDefn) {
-      return config<"permissions">(opts, errorTypes.permissions);
+    permissions(selector: IErrorHandlerPointer, resultPath?: string) {
+      return config<"permissions">({selector, resultPath}, errorTypes.permissions);
     },
-    custom<C extends string>(customError: C, opts: ErrDefn) {
-      return config(opts, customError);
+    custom<C extends string>(customError: C, selector: IErrorHandlerPointer, resultPath?: string) {
+      return config({selector, resultPath}, customError);
     },
   };
 }
@@ -183,11 +187,6 @@ function retryWrapper<T extends string>(state: IRetryConfig) {
     return retryApi<T | E>(newState);
   };
 }
-
-
-
-
-
 
 function isState(object: Finalized<IState> | IFinalizedStepFn): object is Finalized<IState> {
   return "type" in object;
