@@ -39,7 +39,7 @@ export interface IParsedDynamoTableArn extends IBaseParsedArn {
   region: AwsRegion;
   stage?: AwsStage;
   appName?: string;
-  rest?: undefined;
+  rest: string;
 }
 
 export interface IParsedRegional extends IBaseParsedArn {
@@ -52,7 +52,7 @@ export interface IParsedRegional extends IBaseParsedArn {
   rest: string;
 }
 export interface IParsedGlobal extends IBaseParsedArn {
-  region: undefined;
+  region: false;
   stage?: AwsStage;
   appName?: string;
   /**

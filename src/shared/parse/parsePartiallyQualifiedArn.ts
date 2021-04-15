@@ -1,12 +1,10 @@
 import {
   AwsAccountId,
   AwsArn,
-  AwsPartition,
   AwsRegion,
-  AwsResource,
-  AwsService,
-  AwsStage,
   IDictionary,
+  isArnService,
+  isAwsAccountId,
   isAwsRegion,
   isAwsStage,
 } from "common-types";
@@ -20,7 +18,7 @@ import {
   resourceLookup,
   parseFullyQualifiedArn,
   getArnComponentsFromEnv,
-} from ".";
+} from "./index";
 import { buildArn } from "../buildArn";
 
 /**
@@ -36,95 +34,67 @@ export function parsePartiallyQualifiedArn(partial: string, lookup?: IDictionary
     return parseFullyQualifiedArn(lookup[partial as keyof typeof lookup]);
   }
 
-  let partition: AwsPartition;
-  let service: AwsService | undefined;
-  let resource: AwsResource | undefined;
-  let stage: AwsStage | undefined;
-  let account: AwsAccountId | undefined;
-  let region: AwsRegion | undefined;
-  let appName: string | undefined;
-  let fn: string | undefined;
+  const arn: Partial<IParsedArn> = {};
+
+  // let partition: AwsPartition;
+  // let service: AwsService | undefined;
+  // let resource: AwsResource | undefined;
+  // let stage: AwsStage | undefined;
+  // let account: AwsAccountId | undefined;
+  // let region: AwsRegion | undefined;
+  // let appName: string | undefined;
+  // let fn: string | undefined;
 
   const requested = partial;
 
   const env = getArnComponentsFromEnv();
   if (env.stage && isAwsStage(env.stage)) {
-    stage = env.stage;
+    arn.stage = env.stage;
   }
 
   try {
-    if (env.service) {
-      service = env.service;
+    if (isArnService(env.service || "")) {
+      arn.service = env.service;
     } else {
-      const [pre, found, post] = extractService(partial);
-      partial = pre + post;
-      service = found;
+      const { service } = extractService(partial);
+      arn.service = service;
     }
-    resource = resourceLookup(service);
+    arn.resource = resourceLookup(arn.service);
   } catch {
-    service = "lambda";
-    resource = "function";
+    arn.service = "lambda";
+    arn.resource = "function";
   }
 
-  try {
-    const [pre, found, post] = extractStage(partial);
-    partial = pre + post;
-    stage = env.stage && isAwsStage(env.stage) ? env.stage : found;
-  } catch {
-    if (!env.stage || !isAwsStage(env.stage)) {
-      throw new ServerlessError(
-        500,
-        `Could not determine the AWS stage from the partial ARN of "${requested}". Try setting the AWS_STAGE env variable to address this.`,
-        "arn/no-stage"
-      );
-    }
+  const { stage } = extractStage(partial);
+  if (isAwsStage(env.stage) || stage) {
+    arn.stage = stage ? stage : env.stage;
   }
 
-  if (env.account && /\d{1,20}/.test(env.account)) {
-    account = env.account as AwsAccountId;
+  if (isAwsAccountId(env.account)) {
+    arn.account = env.account;
   }
 
-  if (env.region && isAwsRegion(env.region)) {
-    region = env.region;
+  if (isAwsRegion(env.region)) {
+    arn.region = env.region;
   }
+
   if (env.appName) {
-    appName = env.appName;
+    arn.appName = env.appName;
   }
 
   try {
-    const [pre, found, post] = extractRegion(partial);
-    partial = pre + post;
-    region = found;
+    const r = extractRegion(partial);
+    arn.region = r.region;
   } catch {
-    if (!region) {
-      throw new ServerlessError(
-        500,
-        `Couldn't determine region of ARN based on the following partial: "${requested}"`,
-        "parseArn/missing-region"
-      );
-    }
+    arn.region = false;
   }
 
-  try {
-    const [pre, found, post] = extractPartition(partial);
-    partial = pre + post;
-    partition = found;
-  } catch {
-    partition = "aws";
-  }
+  arn.partition = env.partition || "aws";
 
-  if (partition && account && service && resource && stage && appName && fn && region !== undefined) {
-    return {
-      partition,
-      service,
-      region,
-      stage,
-      account,
-      resource,
-      appName,
-      fn,
-      arn: buildArn({ partition, service, region, account, stage, resource, appName, fn }),
-    };
+  if (arn.partition && arn.account && arn.service && arn.resource && arn.stage && arn.appName) {
+    arn.arn = buildArn(arn as Omit<IParsedArn, "arn">);
+    //TODO: investigate as we may be covering up some typing gaps here
+    return arn as IParsedArn;
   } else {
     throw new ServerlessError(
       500,

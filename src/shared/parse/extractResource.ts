@@ -13,7 +13,7 @@ export function extractResource(arn: string): { pre: string; resource: AwsResour
     `Failed to extract a "resource" from the ARN string "${arn}"`,
     "arn/missing-resource"
   );
-  const re = /(.*)(function|logs|states|user|group|stateMachine|event-bus|table)(.*)/;
+  const re = /(.*)(function|logs|states|user|group|stateMachine|event-bus|table|role)(.*)/;
   if (!re.test(arn)) {
     throw error;
   }

@@ -1,13 +1,16 @@
 import { parseFullyQualifiedArn } from "~/shared/parse";
 import { IamArns, StateMachineArns } from "../data/index";
 
-describe("Parsing full ARNs", () => {
+describe("Parsing full ARNs:", () => {
   // IAM
   for (const i of IamArns) {
     const parsed = parseFullyQualifiedArn(i.arn);
     it(`IAM Arn: ${i.name}`, () => {
       expect(parsed.arn).toBe(i.arn);
+      console.log({ parsed });
       for (const key of Object.keys(i.expected)) {
+        console.log(`[${key}]: ${parsed[key]} === ${JSON.stringify(i.expected)}`);
+
         expect(parsed[key as keyof typeof parsed]).toBe(i.expected[key]);
       }
     });

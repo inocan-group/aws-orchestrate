@@ -6,6 +6,7 @@ import { ServerlessError } from "~/errors";
  * Looks for aspects of the ARN in environment variables
  */
 export function getArnComponentsFromEnv() {
+  const partition = process.env.AWS_PARTITION;
   const region = (process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION) as AwsRegion | undefined;
   const account = (process.env.AWS_ACCOUNT || process.env.AWS_ACCOUNT_ID) as AwsAccountId | undefined;
   const service = process.env.AWS_DEFAULT_SERVICE;
@@ -24,5 +25,5 @@ export function getArnComponentsFromEnv() {
     );
   }
 
-  return { region, account, stage, appName, service };
+  return { partition, region, account, stage, appName, service };
 }

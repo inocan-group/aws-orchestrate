@@ -97,12 +97,15 @@ describe("extractRegion()", () => {
 });
 
 describe("extractResource()", () => {
+  // eslint-disable-next-line unicorn/consistent-function-scoping
   const arnGen = (resource: string) => `aws:lambda:2342141234:us-east-1:${resource}:the rest`;
   it("a valid resource is correctly detected", () => {
     const e1 = extractResource(arnGen("function"));
     const e2 = extractResource(arnGen("stateMachine"));
+    const e3 = extractResource(arnGen("role"));
     expect(e1.resource).toBe("function");
     expect(e2.resource).toBe("stateMachine");
+    expect(e3.resource).toBe("role");
   });
 
   it("an invalid resource throws an error", () => {
@@ -131,7 +134,7 @@ describe("extractStage()", () => {
     expect(extracted.stage).toBe("sb-bob");
   });
 
-  test("function with invalid stage name throws error due to 'missing' stage name", () => {
+  it("function with invalid stage name throws error due to 'missing' stage name", () => {
     console.log(arnGen("function", "invalid"));
 
     try {
@@ -142,9 +145,14 @@ describe("extractStage()", () => {
     }
   });
 
-  test("IAM role with invalid stage name throws returns false instead of error", () => {
+  it("IAM role with invalid stage name throws returns false instead of error", () => {
     const extracted = extractStage(arnGen("role", "invalid"));
     expect(extracted.stage).toBe(false);
+  });
+
+  it("IAM role with valid stage name is correctly extracted", () => {
+    const extracted = extractStage(arnGen("role", "dev"));
+    expect(extracted.stage).toBe("dev");
   });
 });
 
@@ -156,7 +164,10 @@ describe("extractService()", () => {
     expect(extracted.service).toBe("lambda");
   });
   it("invalid service name throws an error", () => {
-    const extracted = extractService(arnGen("popcorn"));
-    expect(extracted.service).toBe("lambda");
+    try {
+      extractService(arnGen("popcorn"));
+    } catch (error) {
+      expect(error).toBeInstanceOf(ServerlessError);
+    }
   });
 });

@@ -1,4 +1,4 @@
-import { AwsArn } from "common-types";
+import { AwsArn, AwsStage } from "common-types";
 import { IParsedArn } from "~/types";
 
 import {
@@ -9,8 +9,29 @@ import {
   extractResource,
   extractAccount,
 } from "./index";
-import { buildArn } from "~/shared";
 import { ServerlessError } from "~/errors";
+
+function stripSeparatorsAtExtremes(input: string) {
+  return input.replace(/^[/:-]/, "").replace(/[/:-]$/, "");
+}
+
+function findAppNameAtStartOfRest(input: string, stage: AwsStage | false) {
+  const re = new RegExp(`(.+)-${stage}-`);
+  console.log({ input, stage, test: re.test(input), re });
+
+  if (stage && re.test(input)) {
+    const [_ignore, appName] = input.match(re) as [string, string];
+    return {
+      appName,
+      rest: input.replace(re, ""),
+    };
+  }
+
+  return {
+    appName: undefined,
+    rest: input,
+  };
+}
 
 /**
  * Takes a "fully qualified" ARN and decomposes it into its constituant parts:
@@ -33,26 +54,19 @@ export function parseFullyQualifiedArn(arn: AwsArn): IParsedArn {
   // Once extracting all core AWS components we need to then
   // to tease out how to think of the remaining content
   const parts = stage
-    ? rest.replace(/$(:\\)/, "").split(stage)
+    ? rest
+        .replace(/$(:\\)/, "")
+        .split(stage)
+        .map((i) => stripSeparatorsAtExtremes(i))
     : rest
         .replace(/$(:\\)/, "")
         .split(/:\//)
-        .map((i) => {
-          if (["/", ":"].includes(i.slice(0, 1))) {
-            return i.slice(1);
-          }
-          return i;
-        });
+        .map((i) => stripSeparatorsAtExtremes(i));
 
   const appName = parts[0];
-  const fn = parts[1];
-  const stepFunction = parts[1];
+  const fn = resource === "function" ? parts[1] : undefined;
+  const stepFunction = resource === "stateMachine" ? parts[1] : undefined;
   const knownResources = ["function", "stateMachine"];
-
-  const knownDictionary = {
-    ...(resource === "function" ? { fn, appName } : {}),
-    ...(resource === "stateMachine" ? { stepFunction, appName } : {}),
-  };
 
   if (["function", "stateMachine"].includes(resource) && !stage) {
     throw new ServerlessError(
@@ -62,25 +76,27 @@ export function parseFullyQualifiedArn(arn: AwsArn): IParsedArn {
     );
   }
 
-  return knownResources.includes(resource)
+  let parsed: Partial<IParsedArn> = {
+    partition,
+    service,
+    resource,
+    account,
+    arn,
+  };
+
+  parsed.region = region;
+  parsed.stage = stage ? stage : undefined;
+  const found = findAppNameAtStartOfRest(stripSeparatorsAtExtremes(rest), stage);
+  parsed.appName = found.appName;
+
+  const knownDictionary = knownResources.includes(resource)
     ? {
-        partition,
-        service,
-        resource,
-        account,
-        ...(region ? { region } : {}),
-        ...(stage ? { stage } : {}),
-        ...knownDictionary,
-        arn: buildArn({ partition, service, region, account, stage, resource, appName, fn }),
+        ...(resource === "function" ? { fn, appName } : {}),
+        ...(resource === "stateMachine" ? { stepFunction, appName } : {}),
       }
-    : {
-        partition,
-        service,
-        resource,
-        account,
-        ...(region ? { region } : {}),
-        ...(stage ? { stage } : {}),
-        rest,
-        arn: buildArn({ partition, service, region, account, stage, resource, appName, fn }),
-      };
+    : { rest: found.rest };
+
+  parsed = { ...parsed, ...knownDictionary };
+
+  return parsed as IParsedArn;
 }
