@@ -3,15 +3,11 @@ import { hash } from "native-dash";
 import { ServerlessError } from "~/errors";
 import {
   ErrDefn,
-  IErrHandlerApi,
-  IErrorHandlerPointer,
-  IErrorTypeSelector,
   Finalized,
   IConfigurableStepFn,
   IErrorType,
   IFinalizedStepFn,
   IGoTo,
-  IRetryHandlerApi,
   IState,
   IStore,
   RetryOptions,
@@ -34,33 +30,11 @@ export const errorTypes: IErrorType = {
   },
 };
 
-const defaultRetryHandler = (state: Record<string, RetryOptions>) => (options: RetryOptions) => {
-  return {
-    ...state,
-    [errorTypes.all]: { ...options },
-  };
-};
-
-const defaultHandler = (state: Record<string, ErrDefn>) => (selector: IErrorHandlerPointer, resultPath = "$.error") => {
-  return {
-    ...state,
-    [errorTypes.all]: { selector, resultPath },
-  };
-};
-
-// const foo = permissions({}).dataLimitExceeded({}).allErrors({});
-
-// const f = RetryConfig(api => api.allErrors({}).runtime({}).dataLimitExceeded({}).custom("", {}))
-
 export function RetryConfig<T extends string = never>(api: (api: IRetryApi<"">) => IRetryApi<T>) {
   const result = (api(retryApi({})) as unknown) as IRetryApi<"">;
   return result.state;
 }
 
-// type PropType<TObj, TProp extends keyof TObj = keyof TObj> = TObj[TProp]
-
-// type xxx = PropType<IErrorType>
-// type sss = Partial<Record<string, RetryOptions>> | Record<string, RetryOptions>
 export type IRetryConfig = {
   [errorTypes.all]?: RetryOptions;
   [errorTypes.dataLimitExceeded]?: RetryOptions;
@@ -68,8 +42,8 @@ export type IRetryConfig = {
   [errorTypes.runtime]?: RetryOptions;
   [errorTypes.taskFailed]?: RetryOptions;
   [errorTypes.timeout]?: RetryOptions;
-  // [custom: PropType<IErrorType>]: RetryOptions;
-};
+} & { [key: string]: RetryOptions};
+
 export type IRetryConfigurator<E extends string, T extends string = ""> = (opts: RetryOptions) => IRetryApi<E | T>;
 export type IRetryCustomConfigurator<E extends string, T extends string = ""> = (
   customError: string,
@@ -90,8 +64,8 @@ export type IRetryApi<E extends string> = Omit<
   E
 >;
 
-function retryApi<TExclude extends string = "state">(state: Record<string, RetryOptions>) {
-  const config = retryWrapper<TExclude>(state);
+function retryApi<T extends string = "state">(state: Record<string, RetryOptions>) {
+  const config = retryWrapper<T>(state);
   return {
     state,
     allErrors(opts: RetryOptions) {
@@ -152,10 +126,10 @@ export type ICatchConfig = {
   [errorTypes.runtime]?: ErrDefn;
   [errorTypes.taskFailed]?: ErrDefn;
   [errorTypes.timeout]?: ErrDefn;
-};
+} & { [key: string]: ErrDefn};;
 
-function catchApi<TExclude extends string = "state">(state: Record<string, ErrDefn>) {
-  const config = catchWrapper<TExclude>(state);
+function catchApi<T extends string = "state">(state: Record<string, ErrDefn>) {
+  const config = catchWrapper<T>(state);
   return {
     state,
     allErrors(opts: ErrDefn) {
@@ -182,12 +156,13 @@ function catchApi<TExclude extends string = "state">(state: Record<string, ErrDe
   };
 }
 
-export function CatchConfig<T extends string = never>(api: (api: ICatchApi<"">) => ICatchApi<T>) {
+export type ICatchFluentApi<T extends string = never> = (api: ICatchApi<"">) => ICatchApi<T>;
+export type IRetryFluentApi<T extends string = never> = (api: IRetryApi<"">) => IRetryApi<T>;
+
+export function CatchConfig(api: ICatchFluentApi) {
   const result = (api(catchApi({})) as unknown) as ICatchApi<"">;
   return result.state;
 }
-
-CatchConfig(c => c.allErrors({selector: s => s.wait()}));
 
 function retryWrapper<T extends string>(state: IRetryConfig) {
   return <E extends string = "">(opts: RetryOptions, offset: string): IRetryApi<T | E> => {
@@ -196,50 +171,13 @@ function retryWrapper<T extends string>(state: IRetryConfig) {
   };
 }
 
-const conditionalRetryHandler = (state: Record<string, RetryOptions>) => (
-  errorType: IErrorTypeSelector,
-  options: RetryOptions
-) => {
-  const newState = { ...state, [errorType(errorTypes)]: { ...options } };
-  return {
-    default: defaultRetryHandler(newState),
-    handle: conditionalRetryHandler(newState),
-    withoutDefault() {
-      return newState;
-    },
-  };
-};
-
 /**
  * Define how step function's errors or lambda fn execution errors are going to be handled with a fluent API syntax
  * Allows to configure options to make our state to be executed again.
  *
  * @param handlerFn a callback that exposes methods to be used to defined an error retry handler.
  */
-export function retryHandler(handlerFunction: (r: IRetryHandlerApi) => Record<string, RetryOptions>) {
-  const state: Record<string, RetryOptions> = {};
-  const api: IRetryHandlerApi = {
-    default: defaultRetryHandler(state),
-    handle: conditionalRetryHandler(state),
-  };
 
-  return handlerFunction(api);
-}
-
-const conditionalHandler = (state: Record<string, ErrDefn>) => (
-  errorType: IErrorTypeSelector,
-  selector: IErrorHandlerPointer,
-  resultPath = "$.error"
-) => {
-  const newState = { ...state, [errorType(errorTypes)]: { selector, resultPath } };
-  return {
-    default: defaultHandler(newState),
-    handle: conditionalHandler(newState),
-    withoutDefault() {
-      return newState;
-    },
-  };
-};
 
 /**
  * Define how step function's errors or lambda fn execution errors are going to be handled with a fluent API syntax
@@ -247,15 +185,6 @@ const conditionalHandler = (state: Record<string, ErrDefn>) => (
  *
  * @param handlerFn a callback that exposes methods to be used to defined an error handler.
  */
-export function errorHandler(handlerFunction: (e: IErrHandlerApi) => Record<string, ErrDefn>) {
-  const state: Record<string, ErrDefn> = {};
-  const api: IErrHandlerApi = {
-    default: defaultHandler(state),
-    handle: conditionalHandler(state),
-  };
-
-  return handlerFunction(api);
-}
 
 function isState(object: Finalized<IState> | IFinalizedStepFn): object is Finalized<IState> {
   return "type" in object;
@@ -277,9 +206,9 @@ export function goToConfiguration(finalizedState: Finalized<IState> | IFinalized
   const next =
     typeof finalizedState === "string" // is next state name
       ? finalizedState
-      : isState(finalizedState) // is next state object
+      : (isState(finalizedState) // is next state object
       ? finalizedState.name
-      : getFirstState(finalizedState); // is finalized StepFn which has first state finalized
+      : getFirstState(finalizedState)); // is finalized StepFn which has first state finalized
 
   return {
     type: "GoTo",
