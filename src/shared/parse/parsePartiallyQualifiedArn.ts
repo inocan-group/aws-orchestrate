@@ -1,7 +1,6 @@
 import {
   ArnResource,
   ArnService,
-  AwsAccountId,
   AwsArn,
   IDictionary,
   isArnService,
@@ -22,7 +21,6 @@ import {
 } from "./index";
 import { buildArn } from "../buildArn";
 import { ServerlessError } from "~/errors";
-import { env } from "node:process";
 
 export interface IPartialParseOptions {
   /**
@@ -89,17 +87,18 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
   // partition will always fall back to "aws"
   arn.partition = env.partition || "aws";
 
+  if (service || isArnService(env.service || "")) {
+    arn.service = service || env.service;
+    console.log({ arn: arn.service, env: env.service, service });
+  }
+
   try {
-    if (service || isArnService(env.service || "")) {
-      arn.service = service || env.service;
-    } else {
+    if (!arn.service) {
       const { service } = extractService(partial);
       arn.service = service;
     }
-    arn.resource = resourceLookup(arn.service);
   } catch {
     arn.service = "lambda";
-    arn.resource = "function";
   }
 
   if (isAwsStage(env.stage)) {
@@ -160,7 +159,6 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
     : [undefined, undefined, tail];
 
   if (env.appName && (env.appName || appCandidate)) {
-    console.log(env.appName, appCandidate);
     arn.appName = env.appName || appCandidate;
   }
 
@@ -175,7 +173,7 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
       (arn as IParsedGlobal | IParsedRegional).rest = fnCandidate;
   }
 
-  const globalServices = ["aim"];
+  const globalServices = ["iam"];
   if (isAwsRegion(env.region)) {
     arn.region = env.region;
   } else {

@@ -206,7 +206,15 @@ describe("Partial ARN parsing", () => {
   });
 
   describe("Edge Cases", () => {
-    //
+    it("excluding AWS_REGION from a IAM conversion is fine because it's a global resource", () => {
+      clearAllEnvs();
+      setAllEnvs(["region"]);
+      const parsed = parsePartiallyQualifiedArn("ken", {
+        service: "iam",
+        resource: "user",
+      });
+      expect(parsed.arn).toBe(`arn:aws:iam::${DEFAULT_ACCOUNT}:user/ken`);
+    });
   });
 
   describe("Negative Tests", () => {

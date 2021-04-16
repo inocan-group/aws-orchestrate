@@ -1,4 +1,4 @@
-import { AwsArn, isArn } from "common-types";
+import { AwsArn, isArn, AwsArnService } from "common-types";
 import { ServerlessError } from "~/errors";
 import { IParsedArn } from "~/types";
 /**
@@ -9,9 +9,33 @@ import { IParsedArn } from "~/types";
  */
 export function buildArn(parts: Omit<IParsedArn, "arn">): AwsArn {
   const { partition, service, region, account, resource, appName, stage, fn, stepFunction, rest } = parts;
-  const arn = `arn:${partition}:${service}${region ? ":" + region : ""}:${account}:${resource}:${appName}-${stage}-${
-    fn || stepFunction || rest
-  }`;
+  let separator: string;
+  let hasAppName: boolean;
+  switch (resource) {
+    case "function":
+    case "stateMachine":
+    case "log-group":
+      separator = ":";
+      hasAppName = true;
+      break;
+    case "role":
+    case "user":
+    case "group":
+    case "policy":
+    case "event-bus":
+      separator = "/";
+      hasAppName = false;
+      break;
+    default:
+      separator = ":";
+      hasAppName = false;
+  }
+
+  const tail = hasAppName
+    ? `${separator}${appName}-${stage}${fn || stepFunction || rest}`
+    : `${separator}${fn || stepFunction || rest}`;
+
+  const arn = `arn:${partition}:${service}${region ? ":" + region : ":"}:${account}:${resource}${tail}`;
   if (isArn(arn)) {
     return arn;
   } else {
