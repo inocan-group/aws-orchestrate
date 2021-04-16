@@ -9,6 +9,7 @@ import {
   IErrorType,
   IFinalizedStepFn,
   IGoTo,
+  IResultPath,
   IState,
   IStore,
   RetryOptions,
@@ -37,7 +38,7 @@ export const errorTypes: IErrorType = {
  *
  * @param api a callback that exposes methods to be used to defined an error retry handler.
  */
-export function RetryConfig<T extends string = never>(api: (api: IRetryApi<"">) => IRetryApi<T>) {
+export function Retry<T extends string = never>(api: (api: IRetryApi<"">) => IRetryApi<T>) {
   const result = (api(retryApi({})) as unknown) as IRetryApi<"">;
   return result.state;
 }
@@ -101,12 +102,12 @@ function retryApi<T extends string = "state">(state: Record<string, RetryOptions
 
 export type ICatchConfigurator<E extends string, T extends string = ""> = (
   selector: IErrorHandlerPointer,
-  resultPath?: string
+  resultPath?: Partial<IResultPath>
 ) => ICatchApi<E | T>;
 export type ICatchCustomConfigurator<E extends string, T extends string = ""> = (
   customError: string,
   selector: IErrorHandlerPointer,
-  resultPath?: string
+  resultPath?: Partial<IResultPath>
 ) => ICatchApi<E | T>;
 
 export type ICatchApi<E extends string> = Omit<
@@ -143,25 +144,25 @@ function catchApi<T extends string = "state">(state: Record<string, ErrDefn>) {
   const config = catchWrapper<T>(state);
   return {
     state,
-    allErrors(selector: IErrorHandlerPointer, resultPath?: string) {
+    allErrors(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
       return config<"allErrors">({selector, resultPath}, errorTypes.all);
     },
-    runtime(selector: IErrorHandlerPointer, resultPath?: string) {
+    runtime(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
       return config<"runtime">({selector, resultPath}, errorTypes.runtime);
     },
-    timeout(selector: IErrorHandlerPointer, resultPath?: string) {
+    timeout(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
       return config<"timeout">({selector, resultPath}, errorTypes.timeout);
     },
-    dataLimitExceeded(selector: IErrorHandlerPointer, resultPath?: string) {
+    dataLimitExceeded(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
       return config<"dataLimitExceeded">({selector, resultPath}, errorTypes.dataLimitExceeded);
     },
-    taskFailed(selector: IErrorHandlerPointer, resultPath?: string) {
+    taskFailed(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
       return config<"taskFailed">({selector, resultPath}, errorTypes.taskFailed);
     },
-    permissions(selector: IErrorHandlerPointer, resultPath?: string) {
+    permissions(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
       return config<"permissions">({selector, resultPath}, errorTypes.permissions);
     },
-    custom<C extends string>(customError: C, selector: IErrorHandlerPointer, resultPath?: string) {
+    custom<C extends string>(customError: C, selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
       return config({selector, resultPath}, customError);
     },
   };
@@ -176,7 +177,7 @@ export type IRetryFluentApi<T extends string = never> = (api: IRetryApi<"">) => 
  *
  * @param api a callback that exposes methods to be used to defined an error handler.
  */
-export function CatchConfig<T extends string = never>(api: ICatchFluentApi<T>) {
+export function Catch<T extends string = never>(api: ICatchFluentApi<T>) {
   const result = (api(catchApi({})) as unknown) as ICatchApi<"">;
   return result.state;
 }

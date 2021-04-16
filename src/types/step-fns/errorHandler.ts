@@ -49,6 +49,8 @@ export interface IErrorType {
   custom(error: string): string;
 }
 
+export type IResultPath =  `\$.${string}`;
+
 export interface IErrorTypeSelector {
   (e: IErrorType): string;
 }
@@ -57,17 +59,18 @@ export type IErrorHandlerPointer = IFluentApi | IStepFnShorthand | IFinalizedSte
 
 export interface ErrDefn {
   selector: IErrorHandlerPointer;
-  resultPath?: string;
+  resultPath?: Partial<IResultPath>;
 }
 
+
 export interface IErrHandlerApi {
-  default(selector: IErrorHandlerPointer, resultPath?: string): Record<string, ErrDefn>;
+  default(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>): Record<string, ErrDefn>;
   handle(errorType: IErrorTypeSelector, selector: IErrorHandlerPointer, resultPath?: string): IErrHandlerApiExtension;
 }
 
 export interface IErrHandlerApiExtension {
-  default(selector: IErrorHandlerPointer, resultPath?: string): Record<string, ErrDefn>;
-  handle(errorType: IErrorTypeSelector, selector: IErrorHandlerPointer, resultPath?: string): IErrHandlerApiExtension;
+  default(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>): Record<string, ErrDefn>;
+  handle(errorType: IErrorTypeSelector, selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>): IErrHandlerApiExtension;
   withoutDefault(): Record<string, ErrDefn>;
 }
 

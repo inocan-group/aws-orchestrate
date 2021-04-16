@@ -1,5 +1,5 @@
 import { IStepFunctionStep, IStepFunctionTask } from "common-types";
-import { CatchConfig, RetryConfig, State, StateMachine, StepFunction } from "~/step-fn";
+import { Catch, Retry, State, StateMachine, StepFunction } from "~/step-fn";
 import { RetryOptions } from "~/types";
 
 describe("Step Function Builder Error Handler", () => {
@@ -11,7 +11,7 @@ describe("Step Function Builder Error Handler", () => {
   });
 
   it("Definig error step function should start with first state finalized", () => {
-    const catchConfig = CatchConfig((e) => e.allErrors((s) => s.task("foo")));
+    const catchConfig = Catch((e) => e.allErrors((s) => s.task("foo")));
     const fooStepFn = StepFunction({
       catch: catchConfig,
     }).task("task1");
@@ -30,7 +30,7 @@ describe("Step Function Builder Error Handler", () => {
 
     const stateMachine = StateMachine("fooStateMachine", {
       stepFunction: fooStepFn,
-      catch: CatchConfig((c) => c.allErrors(finalizedStepFn, "foo")),
+      catch: Catch((c) => c.allErrors(finalizedStepFn, "$.foo")),
     }).toJSON();
 
     const resultStates = Object.values(stateMachine.definition.States);
@@ -56,7 +56,7 @@ describe("Step Function Builder Error Handler", () => {
       .succeed("foo3");
 
     const fooStepFn = StepFunction({
-      catch: CatchConfig((c) => c.allErrors(finalizedStepFn)),
+      catch: Catch((c) => c.allErrors(finalizedStepFn)),
     }).task("task1");
 
     const stateMachine = StateMachine("fooStateMachine", {
@@ -91,9 +91,9 @@ describe("Step Function Builder Error Handler", () => {
       .finalize();
 
     const fooStepFn = StepFunction({
-      catch: CatchConfig((c) => c.allErrors(finalizedStepFn)),
+      catch: Catch((c) => c.allErrors(finalizedStepFn)),
     }).task("task1", {
-      catch: CatchConfig((c) => c.allErrors(finalizedStepFn2)),
+      catch: Catch((c) => c.allErrors(finalizedStepFn2)),
     });
 
     const stateMachine = StateMachine("fooStateMachine", {
@@ -115,7 +115,7 @@ describe("Step Function Builder Error Handler", () => {
 
   it("Defining state `retry` error handler should be populated to the output state definition", () => {
     const retryOptions: RetryOptions = { maxAttempts: 5 };
-    const fooTask = State((s) => s.task("fooTask", { retry: RetryConfig((api) => api.allErrors(retryOptions)) }));
+    const fooTask = State((s) => s.task("fooTask", { retry: Retry((api) => api.allErrors(retryOptions)) }));
 
     const myStateMachine = StateMachine("fooStateMachine", { stepFunction: StepFunction(fooTask) }).toJSON();
 
@@ -124,12 +124,3 @@ describe("Step Function Builder Error Handler", () => {
     );
   });
 });
-
-// TODO:
-/**
- * RetryConfig -> Retry()
- *
- * CatchConfig -> Catch()
- *
- * safer typing for resultPath and other opts that follow its pattern. (string literal)
- */

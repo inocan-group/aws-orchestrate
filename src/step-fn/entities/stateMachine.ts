@@ -29,7 +29,7 @@ import {
 } from "~/types";
 import { isFinalizedStepFn, parseStepFnSelector } from "~/step-fn";
 import { ServerlessError } from "~/errors";
-import { CatchConfig, ICatchConfig, ICatchFluentApi, IRetryConfig, IRetryFluentApi, RetryConfig } from "../error-handler";
+import { Catch, ICatchConfig, ICatchFluentApi, IRetryConfig, IRetryFluentApi, Retry } from "../error-handler";
 
 export const isFinalizedState = <T extends IState>(obj: T | Finalized<T>): obj is Finalized<T> =>
   "name" in obj && obj.name !== undefined;
@@ -62,11 +62,11 @@ function toCamelCase(object: any, skip = false) {
 }
 
 function getCatchConfig(obj: ICatchConfig | ICatchFluentApi) {
-  return typeof obj === "function" ? CatchConfig(obj) : obj;
+  return typeof obj === "function" ? Catch(obj) : obj;
 }
 
 function getRetryConfig(obj: IRetryConfig | IRetryFluentApi) {
-  return typeof obj === "function" ? RetryConfig(obj) : obj;
+  return typeof obj === "function" ? Retry(obj) : obj;
 }
 
 interface IStepFunctionParseContext {
