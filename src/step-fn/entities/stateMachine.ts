@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/consistent-function-scoping */
 import {
   IDictionary,
   IStepFunctionStep,
@@ -28,18 +29,19 @@ import {
 } from "~/types";
 import { isFinalizedStepFn, parseStepFnSelector } from "~/step-fn";
 import { ServerlessError } from "~/errors";
+import { Catch, ICatchConfig, ICatchFluentApi, IRetryConfig, IRetryFluentApi, Retry } from "../error-handler";
 
 export const isFinalizedState = <T extends IState>(obj: T | Finalized<T>): obj is Finalized<T> =>
   "name" in obj && obj.name !== undefined;
-const notAllowedKeys = ["Name", "IsFinalized", "IsTerminalState"];
-const defaultExcluding = ["parameters"];
+const notAllowedKeys = new Set(["Name", "IsFinalized", "IsTerminalState"]);
+const defaultExcluding = new Set(["parameters"]);
 
 function toCamelCase(object: any, skip = false) {
   const result = Object.keys(object).reduce((acc, key) => {
     let val = object[key];
-    if (typeof val === "object" && !defaultExcluding.includes(key)) {
+    if (typeof val === "object" && !defaultExcluding.has(key)) {
       val = toCamelCase(val);
-    } else if (typeof val === "object" && defaultExcluding.includes(key)) {
+    } else if (typeof val === "object" && defaultExcluding.has(key)) {
       val = toCamelCase(val, true);
     }
 
@@ -47,7 +49,7 @@ function toCamelCase(object: any, skip = false) {
       const [firstLetter, ...rest] = key;
       const cammelCase = `${firstLetter.toUpperCase()}${rest.join("")}`;
 
-      if (!notAllowedKeys.includes(cammelCase)) {
+      if (!notAllowedKeys.has(cammelCase)) {
         acc[cammelCase] = val;
       }
     } else {
@@ -59,6 +61,14 @@ function toCamelCase(object: any, skip = false) {
   return result;
 }
 
+function getCatchConfig(obj: ICatchConfig | ICatchFluentApi) {
+  return typeof obj === "function" ? Catch(obj) : obj;
+}
+
+function getRetryConfig(obj: IRetryConfig | IRetryFluentApi) {
+  return typeof obj === "function" ? Retry(obj) : obj;
+}
+
 interface IStepFunctionParseContext {
   definitionStates: [string, IStepFunctionStep][];
   errorHandlerStates: [string, IStepFunctionStep][];
@@ -67,7 +77,7 @@ interface IStepFunctionParseContext {
 }
 
 export const StateMachine: IStateMachineFactory = (stateMachineName, params): IStateMachineApi => {
-  const { stepFunction, defaultErrorHandler, ...stateMachineOpts } = params;
+  const { stepFunction, catch: statemachineCatchConfig, ...stateMachineOpts } = params;
   const finalizedStepFn = isFinalizedStepFn(stepFunction) ? stepFunction : stepFunction.finalize();
   const processingStepFns: any = {};
 
@@ -84,12 +94,13 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
         : ({ ...stateDefn, isFinalized: true, name } as Finalized<ITask>);
 
     const { catch: stateErrorHandler, retry, ...rest } = finalizedState;
-
-    const errorHandler = stateErrorHandler || options.defaultErrorHandler;
-    let errorHandlerResult: IStepFunctionCatcher[] | undefined = undefined;
+    const retryconfig = retry ? getRetryConfig(retry) : undefined;
+    const errorHandler = stateErrorHandler || options.catch;
+    let errorHandlerResult: IStepFunctionCatcher[] | undefined;
 
     if (errorHandler !== undefined) {
-      const aggregate = Object.keys(errorHandler).map((k) => parseErrorHandler(ctx)(k, errorHandler[k]));
+      const catchConfig = getCatchConfig(errorHandler);
+      const aggregate = Object.keys(catchConfig).map((k) => parseErrorHandler(ctx)(k, catchConfig[k]));
       const errorStatesTuple: [string, IStepFunctionStep][] = aggregate.reduce((acc, curr) => {
         const k = Object.keys(curr[1]).map((c) => [c, curr[1][c]] as [string, IStepFunctionStep]);
         acc = [...acc, ...k];
@@ -107,9 +118,9 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       {
         ...toCamelCase(rest),
         Catch: errorHandlerResult,
-        Retry: retry
-          ? Object.keys(retry).reduce((acc: IStepFunctionStep[], curr) => {
-              acc = [...acc, { ErrorEquals: [curr], ...toCamelCase(retry[curr]) }];
+        Retry: retryconfig
+          ? Object.keys(retryconfig).reduce((acc: IStepFunctionStep[], curr) => {
+              acc = [...acc, { ErrorEquals: [curr], ...toCamelCase(retryconfig[curr]) }];
               return acc;
             }, [])
           : undefined,
@@ -121,6 +132,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
     ctx.definitionStates.push(state);
   };
 
+  // eslint-disable-next-line unicorn/consistent-function-scoping
   const parseSucceed = (ctx: IStepFunctionParseContext) => (stateDefn: Result<ISucceed>, options: IStepFnOptions) => {
     const finalizedState =
       stateDefn.isFinalized === true && "name" in stateDefn
@@ -203,7 +215,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       finalizedStepFn.getState(),
       {
         ...finalizedStepFn.getOptions(),
-        defaultErrorHandler: undefined,
+        catch: undefined,
       },
       `errorHandler-${ctx.hashState}`
     );
@@ -227,6 +239,8 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
         : ({ ...parallelDefinition, isFinalized: true, name: `Parallel-${ctx.hashState}` } as Finalized<IParallel>);
 
     const { catch: stateErrorHandler, branches, name: _, retry, ...rest } = finalizedState;
+    const retryconfig = retry ? getRetryConfig(retry) : undefined;
+    // eslint-disable-next-line unicorn/consistent-destructuring
     const stateName = `${options.namePrefix || ""}${finalizedState.name}`;
 
     // TODO: Why is index passed in and then not used?
@@ -244,11 +258,12 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       );
     });
 
-    const errorHandler = stateErrorHandler || options.defaultErrorHandler;
-    let errorHandlerResult: IStepFunctionCatcher[] | undefined = undefined;
+    const errorHandler = stateErrorHandler || options.catch;
+    let errorHandlerResult: IStepFunctionCatcher[] | undefined;
 
     if (errorHandler !== undefined) {
-      const aggregate = Object.keys(errorHandler).map((k) => parseErrorHandler(ctx)(k, errorHandler[k]));
+      const catchConfig = getCatchConfig(errorHandler);
+      const aggregate = Object.keys(catchConfig).map((k) => parseErrorHandler(ctx)(k, catchConfig[k]));
       const errorStatesTuple: [string, IStepFunctionStep][] = aggregate.reduce((acc, curr) => {
         const k = Object.keys(curr[1]).map((c) => [c, curr[1][c]] as [string, IStepFunctionStep]);
         acc = [...acc, ...k];
@@ -267,9 +282,9 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       {
         ...toCamelCase(rest),
         Branches,
-        Retry: retry
-          ? Object.keys(retry).reduce((acc: IStepFunctionStep[], curr) => {
-              acc = [...acc, { ErrorEquals: [curr], ...toCamelCase(retry[curr]) }];
+        Retry: retryconfig
+          ? Object.keys(retryconfig).reduce((acc: IStepFunctionStep[], curr) => {
+              acc = [...acc, { ErrorEquals: [curr], ...toCamelCase(retryconfig[curr]) }];
               return acc;
             }, [])
           : undefined,
@@ -289,7 +304,8 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
 
     // TODO: why are you pulling `stepFn` off of finalized state if you are not using it?
     const { catch: stateErrorHandler, deployable: _stepFn, name: _, retry, ...rest } = finalizedState;
-
+    const retryconfig = retry ? getRetryConfig(retry) : undefined;
+    // eslint-disable-next-line unicorn/consistent-destructuring
     const stateName = `${options.namePrefix || ""}${finalizedState.name}`;
     const Iterator = parseStepFunction(
       mapDefinition.deployable.getState(),
@@ -299,11 +315,12 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       },
       `map-${ctx.hashState}`
     );
-    const errorHandler = stateErrorHandler || options.defaultErrorHandler;
-    let errorHandlerResult: IStepFunctionCatcher[] | undefined = undefined;
+    const errorHandler = stateErrorHandler || options.catch;
+    let errorHandlerResult: IStepFunctionCatcher[] | undefined;
 
     if (errorHandler !== undefined) {
-      const aggregate = Object.keys(errorHandler).map((k) => parseErrorHandler(ctx)(k, errorHandler[k]));
+      const catchConfig = getCatchConfig(errorHandler);
+      const aggregate = Object.keys(catchConfig).map((k) => parseErrorHandler(ctx)(k, catchConfig[k]));
       const errorStatesTuple: [string, IStepFunctionStep][] = aggregate.reduce((acc, curr) => {
         const k = Object.keys(curr[1]).map((c) => [c, curr[1][c]] as [string, IStepFunctionStep]);
         acc = [...acc, ...k];
@@ -322,9 +339,9 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       {
         ...toCamelCase(rest),
         Iterator,
-        Retry: retry
-          ? Object.keys(retry).reduce((acc: IStepFunctionStep[], curr) => {
-              acc = [...acc, { ErrorEquals: [curr], ...toCamelCase(retry[curr]) }];
+        Retry: retryconfig
+          ? Object.keys(retryconfig).reduce((acc: IStepFunctionStep[], curr) => {
+              acc = [...acc, { ErrorEquals: [curr], ...toCamelCase(retryconfig[curr]) }];
               return acc;
             }, [])
           : undefined,
@@ -346,6 +363,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
         : ({ ...choiceDefinition, isFinalized: true, name: `Choice-${ctx.hashState}` } as Finalized<IChoice>);
 
     // TODO: why is `_index` here? it is not used
+    // eslint-disable-next-line unicorn/no-array-for-each
     finalizedState.choices?.forEach((c, _index) => {
       const { finalizedStepFn, ...rest } = c;
 
@@ -453,6 +471,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
     }
 
     const ctx = { definitionStates, errorHandlerStates, stepFnId };
+    // eslint-disable-next-line unicorn/no-array-for-each
     state.forEach(
       (stateDefn, index) => {
         const call = (fn: Function) =>
@@ -476,7 +495,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       } as IStepFunction
     );
 
-    const terminalStates = ["Choice", "Succeed", "Fail"];
+    const terminalStates = new Set(["Choice", "Succeed", "Fail"]);
 
     const stepFunctionDefn = definitionStates.reduce((acc: IDictionary<IStepFunctionStep>, curr, index) => {
       const [stateName, stateDefn] = curr;
@@ -484,7 +503,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
       const hasNextState = index + 1 in definitionStates;
 
       if (
-        !terminalStates.includes(stateDefn.Type) &&
+        !terminalStates.has(stateDefn.Type) &&
         !("Next" in stateDefn && stateDefn.Next !== "") &&
         hasNextState &&
         !("End" in stateDefn && stateDefn.End)
@@ -515,7 +534,7 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
   }
 
   const definition = parseStepFunction(finalizedStepFn.getState(), {
-    defaultErrorHandler,
+    catch: statemachineCatchConfig,
     ...finalizedStepFn.getOptions(),
   });
 

@@ -37,13 +37,13 @@ export function StepFunction(...params: (IState | Finalized<IState> | IStepFnOpt
   };
 
   let options: IStepFnOptions = {};
-  params.forEach((param) => {
+  for (const param of params) {
     if (isStateDefn(param)) {
       commit(param);
     } else {
       options = param;
     }
-  });
+  }
 
   const getOptions = () => {
     return options;

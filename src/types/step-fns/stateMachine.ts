@@ -1,5 +1,5 @@
 import { IStateMachine } from "common-types";
-import { ErrDefn } from "./errorHandler";
+import { ICatchConfig, ICatchFluentApi } from "~/step-fn";
 import { IStepFn } from "./stepFunction";
 
 /**
@@ -25,7 +25,7 @@ export interface IStateMachineParams extends Omit<IStateMachine, "definition" | 
   /**
    * Error handler used for all children states unless their overrites this one using `catch` option explicitely
    */
-  defaultErrorHandler?: Record<string, ErrDefn>;
+  catch?: ICatchConfig | ICatchFluentApi;
   /**
    * The root step function desired to be the start point for our sÍtate machine
    */

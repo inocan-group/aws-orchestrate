@@ -65,12 +65,21 @@ describe("Choice State", () => {
   });
 
   it("Defining choice conditions variables without '$.' preffix should throw StepFunctionError", () => {
-    const sendGreatNews = State((s) => s.task("sendEmailNotification"));
-    const action = () => condition((c) => c.numericEquals(20), [sendGreatNews], "score");
+    const sendGreatNews = State(s => s.task("sendEmailNotification"))
+    const action = () => condition(c => c.numericEquals(20), [sendGreatNews], "score")
 
-    expect(action).toThrowError({
-      name: "ServerlessError",
-      message: 'variable score is not allowed. It must start with "$."',
-    });
-  });
-});
+    expect(action).toThrowError({ name: "ServerlessError", message: 'variable score is not allowed. It must start with "$."'})
+  })
+})
+
+// TODO: new conditional fn implementation api
+export interface IConditionalStatement {
+  kind: 'conditional-statement';
+  operation: 'stringEquals' | 'numberEquals';
+  path?: `\$.${string}`;
+  value: unknown;
+}
+
+export function isConditionalStatement(obj: unknown): obj is IConditionalStatement {
+  return typeof obj === 'object' && (obj as IConditionalStatement).kind === 'conditional-statement' ? true : false;
+}

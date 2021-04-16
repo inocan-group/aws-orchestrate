@@ -1,11 +1,10 @@
+import { ICatchConfig, ICatchFluentApi, IRetryConfig, IRetryFluentApi } from "~/step-fn";
 import {
   IBaseOptions,
   IBaseState,
   IConfigurableStepFn,
   IStepFnSelector,
   IFinalizedStepFn,
-  ErrDefn,
-  RetryOptions,
 } from "~/types";
 
 export interface IParallelCallable {
@@ -16,9 +15,9 @@ export interface IParallelConfiguration {
 }
 
 export interface IParallelOptions extends IBaseOptions {
-  catch?: Record<string, ErrDefn>;
+  catch?: ICatchConfig | ICatchFluentApi;
   /** An array of objects, called Retriers that define a retry policy in case the state encounters runtime errors. */
-  retry?: Record<string, RetryOptions>;
+  retry?: IRetryConfig | IRetryFluentApi;
 }
 
 export type IParallelBranchOptions = IStepFnSelector;

@@ -1,13 +1,12 @@
 import { IDictionary } from "common-types";
+import { ICatchConfig, ICatchFluentApi, IRetryConfig, IRetryFluentApi } from "~/step-fn";
 import type {
-  ErrDefn,
   IBaseState,
   IConfigurableStepFn,
   IFinalizedStepFn,
   IFluentApi,
   IOptionsWithInput,
   IStepFnShorthand,
-  RetryOptions,
 } from "~/types";
 
 export type IMapUseParams = IFluentApi | IStepFnShorthand;
@@ -25,8 +24,8 @@ export interface IMapOptions extends IOptionsWithInput {
   /** The `MaxConcurrency`field’s value is an integer that provides an upper bound on how many invocations of the Iterator may run in parallel. For instance, a `MaxConcurrency` value of 10 will limit your Map state to 10 concurrent iterations running at one time. */
   maxConcurrency?: number;
   /** An array of objects, called Retriers that define a retry policy in case the state encounters runtime errors. */
-  retry?: Record<string, RetryOptions>;
-  catch?: Record<string, ErrDefn>;
+  retry?: IRetryConfig | IRetryFluentApi;
+  catch?: ICatchConfig | ICatchFluentApi;
 }
 
 export interface IMapUseConfiguration<T> {

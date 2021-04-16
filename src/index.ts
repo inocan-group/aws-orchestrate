@@ -12,7 +12,6 @@ export * from "./invoke/index";
 export * from "./shared/index";
 export * from "./step-fn/index";
 export * from "./types/index";
-export * from "./wrapper-fn/index";
 
 // Note:
 // -----
