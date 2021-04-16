@@ -86,6 +86,7 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
     arn.stage = env.stage;
   }
 
+  // partition will always fall back to "aws"
   arn.partition = env.partition || "aws";
 
   try {
@@ -128,6 +129,11 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
       error.underlyingError = underlyingError;
     }
   }
+
+  if (!arn.account) {
+    throw new ServerlessError(500, missingMessage("account", partial, "AWS_ACCOUNT", env), "arn/missing-account");
+  }
+
   // Resource
   const resLookup: Record<ArnService, ArnResource | undefined> = {
     lambda: "function",
@@ -169,11 +175,16 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
       (arn as IParsedGlobal | IParsedRegional).rest = fnCandidate;
   }
 
-  try {
-    const r = extractRegion(partial);
-    arn.region = isAwsRegion(env.region) ? env.region : r.region;
-  } catch {
-    arn.region = isAwsRegion(env.region) ? env.region : false;
+  const globalServices = ["aim"];
+  if (isAwsRegion(env.region)) {
+    arn.region = env.region;
+  } else {
+    const { region } = extractRegion(partial);
+    arn.region = region ? region : undefined;
+  }
+
+  if (!arn.region && !globalServices.includes(arn.service)) {
+    throw new ServerlessError(500, missingMessage("region", partial, "AWS_ACCOUNT", env), "arn/missing-region");
   }
 
   const errMessage = `The attempt to build a full ARN from a partial ARN ["${partial}"] failed.\n\nNote: relevant ENV variables detected included:\n${JSON.stringify(
