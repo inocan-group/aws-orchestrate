@@ -36,7 +36,7 @@ export class ServerlessError<EH extends Error = Error> extends Error implements 
    * If error occurred as a "secondary error" during the
    * wrapper function's callback handler
    */
-  public errorHandlingError?: EH;
+  public underlyingError?: EH;
 
   /**
    * **Constructor**
@@ -49,6 +49,7 @@ export class ServerlessError<EH extends Error = Error> extends Error implements 
   constructor(errorCode: HttpStatusCodes | number, message: string, classification: string) {
     super(message);
     this.name = "ServerlessError";
+    this.message = message;
 
     if (isTypeSubtype(classification)) {
       this.classification = classification;
@@ -60,5 +61,11 @@ export class ServerlessError<EH extends Error = Error> extends Error implements 
     }
     this.code = this.classification.split("/")[1];
     this.httpStatus = errorCode;
+  }
+
+  toString() {
+    return `${this.message}\n\nclassification: ${this.classification}\nhttpStatus: ${
+      this.httpStatus
+    }\n\nStack Trace:\n\n${this.stack ? this.stack.replace(this.message, "") : "not found"}`;
   }
 }

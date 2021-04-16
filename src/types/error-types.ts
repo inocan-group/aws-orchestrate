@@ -85,6 +85,7 @@ export interface IExtendedError {
 }
 
 export interface IServerlessError extends IExtendedError {
+  message: string;
   /**
    * The handler function' name
    */

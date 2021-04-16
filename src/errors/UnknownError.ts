@@ -14,7 +14,7 @@ export class UnknownError<T extends Error = Error, EH extends Error = Error> ext
    * If error occurred as a "secondary error" during the
    * wrapper function's callback handler
    */
-  public errorHandlingError?: EH;
+  public underlyingError?: EH;
 
   constructor(public originatingError: T, context: IWrapperContext<any, any>, classification?: string) {
     super();

@@ -8,8 +8,8 @@ import { IParsedArn } from "~/types";
  * fully qualified ARN in the right format.
  */
 export function buildArn(parts: Omit<IParsedArn, "arn">): AwsArn {
-  const { partition, service, region, account, resource, appName, fn, stepFunction, rest } = parts;
-  const arn = `arn:${partition}:${service}${region ? ":" + region : ""}:${account}:${resource}:${appName}/${
+  const { partition, service, region, account, resource, appName, stage, fn, stepFunction, rest } = parts;
+  const arn = `arn:${partition}:${service}${region ? ":" + region : ""}:${account}:${resource}:${appName}-${stage}-${
     fn || stepFunction || rest
   }`;
   if (isArn(arn)) {

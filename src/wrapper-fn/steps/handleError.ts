@@ -35,15 +35,15 @@ export async function handleError<
 
       return handleOtherErrors<I, O, P, Q>(error, context.errorMgmt, request, context);
     }
-  } catch (errorHandlingError) {
-    log.warn("There was an error which occurred during error handling", { originalError: error, errorHandlingError });
+  } catch (underlyingError) {
+    log.warn("There was an error which occurred during error handling", { originalError: error, underlyingError });
     const classification =
       typeof (error as IDictionary).classification === "string" &&
       isTypeSubtype(((error as unknown) as IServerlessError).classification)
         ? (error as IDictionary).classification
         : "wrapper-fn/unknown-error";
     const err = isServerlessError(error) ? error : new UnknownError(error, context, classification);
-    err.errorHandlingError = errorHandlingError;
+    err.underlyingError = underlyingError;
     if (context.isApiGatewayRequest) {
       return convertToApiGatewayError(err);
     } else {
