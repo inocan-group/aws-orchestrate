@@ -1,4 +1,5 @@
-import { AwsResource } from "common-types";
+/* eslint-disable unicorn/consistent-function-scoping */
+import { AwsArnResource } from "common-types";
 import { isServerlessError, ServerlessError } from "~/errors";
 import {
   extractPartition,
@@ -12,25 +13,29 @@ import { StateMachineArns, DEFAULT_ACCOUNT, IamArns } from "../data";
 
 describe("extractPartition()", () => {
   it("extractPartition able to extract with aws partition", () => {
-    const arn = "arn:aws:iam::888955399055:role/teepee-services-dev-TeepeeDashservicesDashke-9RYW4W0C9X16";
+    const arn =
+      "arn:aws:iam::888955399055:role/teepee-services-dev-TeepeeDashservicesDashke-9RYW4W0C9X16";
     const extracted = extractPartition(arn);
     expect(extracted.partition).toBe("aws");
   });
 
   it("extractPartition able to extract with aws-cn partition", () => {
-    const arn = "arn:aws-cn:iam::888955399055:role/teepee-services-dev-TeepeeDashservicesDashke-9RYW4W0C9X16";
+    const arn =
+      "arn:aws-cn:iam::888955399055:role/teepee-services-dev-TeepeeDashservicesDashke-9RYW4W0C9X16";
     const extracted = extractPartition(arn);
     expect(extracted.partition).toBe("aws-cn");
   });
 
   it("extractPartition able to extract with aws-us-gov partition", () => {
-    const arn = "arn:aws-us-gov:iam::888955399055:role/teepee-services-dev-TeepeeDashservicesDashke-9RYW4W0C9X16";
+    const arn =
+      "arn:aws-us-gov:iam::888955399055:role/teepee-services-dev-TeepeeDashservicesDashke-9RYW4W0C9X16";
     const extracted = extractPartition(arn);
     expect(extracted.partition).toBe("aws-us-gov");
   });
 
   it("extractPartition fails with invalid partition name", () => {
-    const arn = "arn:aws-uk:iam::888955399055:role/teepee-services-dev-TeepeeDashservicesDashke-9RYW4W0C9X16";
+    const arn =
+      "arn:aws-uk:iam::888955399055:role/teepee-services-dev-TeepeeDashservicesDashke-9RYW4W0C9X16";
     try {
       extractPartition(arn);
       throw new Error("extraction should have thrown error");
@@ -121,7 +126,7 @@ describe("extractResource()", () => {
 
 describe("extractStage()", () => {
   // eslint-disable-next-line unicorn/consistent-function-scoping
-  const arnGen = (resource: AwsResource, stage: string) =>
+  const arnGen = (resource: AwsArnResource, stage: string) =>
     `aws:lambda:2342141234:us-east-1:${resource}:service-name-${stage}-rest`;
 
   it("function with 'dev' stage extracted", () => {
