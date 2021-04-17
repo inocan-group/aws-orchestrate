@@ -34,7 +34,7 @@ export class KnownError<I, O, E extends Error = Error> extends Error implements 
           ? `aws-orchestrate/${classification}`
           : `${parts[0]}/${parts[1]}`) as TypeSubtype;
         const code = (originatingError as any).code ? ((originatingError as any).code as string) : undefined;
-        this.code = code ? code : parts.length === 1 ? classification : "known-error";
+        this.code = code ? code : (parts.length === 1 ? classification : "known-error");
       }
     } else {
       this.classification = "wrapper-fn/known-error";

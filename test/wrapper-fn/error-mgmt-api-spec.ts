@@ -1,7 +1,7 @@
 /* eslint-disable unicorn/consistent-function-scoping */
 import * as helpers from "../helpers/helpers";
 
-import { isServerlessError, isUnknownError, ServerlessError, UnknownError } from "~/errors";
+import { isUnknownError, ServerlessError, UnknownError } from "~/errors";
 import { wrapper } from "~/wrapper-fn";
 import { IErrorHandlerFunction, IHandlerFunction } from "~/types";
 import {
@@ -20,7 +20,7 @@ const handlerFnWithServerlessError: IHandlerFunction<void, void> = async (_req, 
 
 const genHandlerWithDefaultErrorHandling: (
   c?: number,
-  handler?: IErrorHandlerFunction
+  handler?: IErrorHandlerFunction<string>
 ) => IHandlerFunction<void, string> = (errCode, handler) => (_req, ctx) => {
   ctx.errorMgmt.setDefaultErrorCode(errCode || 500);
   if (handler) {
@@ -83,7 +83,7 @@ describe("Handling errors => ", () => {
 
     try {
       await wrapped(req, ctx);
-      throw new Error("Wrapper should have thrown error");
+      throw new Error("Wrapper should have thrown error; avoiding this error");
     } catch (error) {
       expect(error).toBeInstanceOf(UnknownError);
       if (isUnknownError(error)) {

@@ -1,5 +1,4 @@
 import {
-  epochWithMilliseconds,
   IAwsLambdaProxyIntegrationRequest,
   IAwsLambdaContext,
   IAwsApiGatewayResponse,
