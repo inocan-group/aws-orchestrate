@@ -1,13 +1,7 @@
 import { IAwsApiGatewayResponse } from "common-types";
+import { IError, IServerlessError } from "./error-types";
 
-export type IErrorHandlerFunction = (error: Error) => Promise<boolean> | boolean;
-
-export interface IErrorClass extends Error {
-  type?: string;
-  code?: string;
-  errorCode?: number;
-  httpStatus?: number;
-}
+export type IErrorHandlerFunction<O, E extends IServerlessError = IServerlessError> = (error: E) => Promise<O | false>;
 
 export function isApiGatewayResponse(response: unknown): response is IAwsApiGatewayResponse {
   return response !== null && typeof response === "object" && Object.keys(response as object).includes("statusCode");
@@ -26,20 +20,20 @@ export interface IDefaultHandlingForwarding extends IDefaultHandlingBase {
 
 export interface IDefaultHandlingError extends IDefaultHandlingBase {
   type: "default-error";
-  error: IErrorClass;
+  error: IError;
 }
 
-export interface IDefaultHandlingCallback extends IDefaultHandlingBase {
+export interface IDefaultHandlingCallback<O> extends IDefaultHandlingBase {
   type: "handler-fn";
-  defaultHandlerFn: IErrorHandlerFunction;
+  defaultHandlerFn: IErrorHandlerFunction<O>;
 }
 
 export interface IDefaultHandlingDefault extends IDefaultHandlingBase {
   type: "default";
 }
 
-export type IDefaultHandling =
+export type IDefaultHandling<O> =
   | IDefaultHandlingForwarding
   | IDefaultHandlingError
-  | IDefaultHandlingCallback
+  | IDefaultHandlingCallback<O>
   | IDefaultHandlingDefault;

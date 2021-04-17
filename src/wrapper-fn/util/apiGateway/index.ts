@@ -2,21 +2,13 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 01:48 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 02:25 PM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: ErrorMeta, extractRequestState, findError, headers, secrets, statusCode.
-// directories: apiGateway.
+// files: apiGatewayFailure, apiGatewaySuccess.
 
 // local file exports
-export * from "./ErrorMeta";
-export * from "./extractRequestState";
-export * from "./findError";
-export * from "./headers";
-export * from "./secrets";
-export * from "./statusCode";
-
-// directory exports
-export * from "./apiGateway/index";
+export * from "./apiGatewayFailure";
+export * from "./apiGatewaySuccess";
 
 // Note:
 // -----

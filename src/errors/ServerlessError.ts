@@ -2,7 +2,7 @@ import { HttpStatusCodes, isTypeSubtype, TypeSubtype } from "common-types";
 import { IServerlessError } from "~/types";
 
 export class ServerlessError<EH extends Error = Error> extends Error implements IServerlessError {
-  public kind = "ServerlessError";
+  public readonly kind = "ServerlessError";
   public name = "ServerlessError";
 
   public code: string;

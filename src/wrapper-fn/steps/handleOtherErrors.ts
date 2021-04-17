@@ -1,7 +1,14 @@
 import { IAwsApiGatewayResponse } from "common-types";
 import { KnownError, UnknownError } from "~/errors";
-import { IError, IPathParameters, IQueryParameters, IWrapperContext } from "~/types";
-import { findError, ErrorMeta, convertToApiGatewayError, getStatusCode, getResponseHeaders } from "../util";
+import {
+  IError,
+  IPathParameters,
+  IQueryParameters,
+  IWrapperContext,
+  IWrapperMetricsClosure,
+  IWrapperMetricsPreClosure,
+} from "~/types";
+import { findError, ErrorMeta, apiGatewayFailure, apiGatewaySuccess } from "../util";
 
 /**
  * Handles _non_-`ServerlessError` thrown during execution of the handler
@@ -24,16 +31,47 @@ export async function handleOtherErrors<
   originatingError: T,
   errorMeta: ErrorMeta<I, O>,
   request: I,
-  context: IWrapperContext<I, O, Q, P>
+  context: IWrapperContext<I, O, Q, P>,
+  metrics: IWrapperMetricsPreClosure | IWrapperMetricsClosure
 ): Promise<IAwsApiGatewayResponse | O> {
   const { log, isApiGatewayRequest } = context;
   const found = findError<I, O>(originatingError, errorMeta);
+  const { errorMgmt } = context;
+
   let error: KnownError<I, O> | UnknownError;
 
   if (found) {
     error = new KnownError<I, O>(originatingError, found, context);
+
     if (originatingError.code) {
       error.code = originatingError.code;
+    }
+
+    // User has registered callback fn for known error
+    if (found.handling && found.handling.callback) {
+      log.info("Calling handler function's error handler callback", { error });
+
+      const result: O | false = await found.handling.callback(originatingError, found, request, context);
+      if (result !== false) {
+        // Error handled and converted to a success!
+        log.info("handler had a successful result; error will abandoned", {
+          kind: "error-handler-handled",
+          response: result,
+        });
+        metrics = {
+          ...metrics,
+          kind: "wrapper-metrics",
+          errorType: "known",
+          errorCode: error.httpStatus,
+          handlerForwarding: false,
+          handlerFunction: true,
+          handlerResolved: true,
+          closureDuration: Date.now() - (metrics.startTime + metrics.duration),
+        };
+        return isApiGatewayRequest ? apiGatewaySuccess(result) : result;
+      } else {
+        log.info("handler function was executed but error was not corrected", { kind: "error-handler-failed" });
+      }
     }
 
     // User has requested error to be forwarded
@@ -42,149 +80,78 @@ export async function handleOtherErrors<
       await context.invoke(found.handling.forwardTo, error);
     }
 
-    // User has registered callback
-    if (found.handling && found.handling.callback) {
-      log.info("Calling handler function's error handler callback", { error });
-      const result: O | false = await found.handling.callback(originatingError, found, request, context);
-      log.info(
-        `Callback returned ${
-          result
-            ? "successful result; error will abandoned"
-            : "without fixing the error; will continue with error processing"
-        }`,
-        { callback: result }
-      );
-
-      if (isApiGatewayRequest) {
-        return result
-          ? {
-              headers: getResponseHeaders(),
-              statusCode: getStatusCode(),
-              body: JSON.stringify(result),
-            }
-          : convertToApiGatewayError(error);
-      }
-
-      if (result) {
-        return result;
-      } else {
-        throw error;
-      }
-    }
+    metrics = {
+      ...metrics,
+      kind: "wrapper-metrics",
+      errorType: "known",
+      errorCode: error.httpStatus,
+      handlerForwarding: found.handling.forwardTo ? true : false,
+      handlerFunction: found.handling.callback ? true : false,
+      handlerResolved: false,
+      closureDuration: Date.now() - (metrics.startTime + metrics.duration),
+    };
+    log.info("wrapper-metrics", metrics);
 
     if (isApiGatewayRequest) {
-      return convertToApiGatewayError(error);
+      return apiGatewayFailure(error);
     } else {
       throw error;
     }
   }
 
-  error = new UnknownError(originatingError, context);
-  error.httpStatus = errorMeta.defaultErrorCode;
-  if (originatingError.code) {
-    error.code = originatingError.code;
+  // UNKNOWN ERRORS
+  error = new UnknownError(originatingError, context, originatingError.classification || "wrapper-fn/unknown-error");
+  metrics = {
+    ...metrics,
+    kind: "wrapper-metrics",
+    errorType: "unknown",
+    errorCode: error.httpStatus,
+    handlerForwarding: false,
+    handlerFunction: false,
+    handlerResolved: false,
+    closureDuration: Date.now() - (metrics.startTime + metrics.duration),
+  };
+  // use default handler if available
+  if (errorMgmt.defaultHandler) {
+    // forwarding to a Lambda
+    if (typeof errorMgmt.defaultHandler === "string") {
+      try {
+        metrics.handlerFunction = true;
+        await context.invoke(errorMgmt.defaultHandler, request, context);
+      } catch (errhandlerError) {
+        metrics.underlyingError = true;
+        error.underlyingError = errhandlerError;
+        log.warn("The default error handler was invoked but it threw an error during invocation!", {
+          error: errhandlerError,
+          kind: "error-handler-error",
+        });
+      }
+    } else {
+      // default handler was a callback; which provides opportunity to actually convert
+      // an error to a successful outcome.
+      metrics.handlerFunction = true;
+      const result = await errorMgmt.defaultHandler(error);
+      if (result !== false) {
+        metrics = {
+          ...metrics,
+          handlerResolved: true,
+          closureDuration: Date.now() - (metrics.startTime + metrics.duration),
+        };
+        log.info("wrapper-metrics", metrics);
+        return isApiGatewayRequest ? apiGatewaySuccess(result) : result;
+      }
+    }
   }
 
+  metrics = {
+    ...metrics,
+    closureDuration: Date.now() - (metrics.startTime + metrics.duration),
+  };
+  log.info("wrapper-metrics", metrics);
+
   if (isApiGatewayRequest) {
-    return convertToApiGatewayError(error);
+    return apiGatewayFailure(error);
   } else {
     throw error;
   }
-
-  // switch (handling.type) {
-  //   case "handler-fn":
-  //     // #region handle-fn
-  //     /**
-  //      * results are broadly three things:
-  //      *
-  //      * 1. handler throws an error
-  //      * 2. handler returns `true` which means that result should be considered successful
-  //      * 3. handler returns _falsy_ which means that the default error should be thrown
-  //      */
-  //     try {
-  //       const passed = await handling.defaultHandlerFn(errorPayload);
-  //       if (passed === true) {
-  //         log.debug(
-  //           `The error was fully handled by this function's handling function/callback; resulting in a successful condition [ ${
-  //             response ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent
-  //           } ].`
-  //         );
-  //         return isApiGatewayRequest
-  //           ? {
-  //               statusCode: response ? HttpStatusCodes.Accepted : HttpStatusCodes.NoContent,
-  //               headers: getResponseHeaders() as IDictionary,
-  //               body: response ? JSON.stringify(response) : "",
-  //             }
-  //           : response;
-  //       } else {
-  //         log.debug(
-  //           "The error was passed to the callback/handler function but it did NOT resolve the error condition."
-  //         );
-  //       }
-  //     } catch {
-  //       // handler threw an error
-  //       if (isApiGatewayRequest) {
-  //         return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, error));
-  //       } else {
-  //         throw new UnhandledError(errorMeta.defaultErrorCode, error);
-  //       }
-  //     }
-  //     break;
-  //   // #endregion
-
-  //   case "error-forwarding":
-  //     // #region error-forwarding
-  //     log.debug("The error will be forwarded to another function for handling", { arn: handling.arn });
-  //     await invokeLambda(handling.arn, errorPayload);
-  //     break;
-  //   // #endregion
-
-  //   case "default-error":
-  //     // #region default-error
-  //     /**
-  //      * This handles situations where the user stated that if an
-  //      * "unknown" error occurred that _this_ error should be thrown
-  //      * in it's place.
-  //      */
-  //     handling.error.message = handling.error.message || error.message;
-  //     handling.error.stack = error.stack;
-  //     handling.error.type = "default-error";
-  //     if (isApiGatewayRequest) {
-  //       return convertToApiGatewayError(handling.error);
-  //     } else {
-  //       throw handling.error;
-  //     }
-
-  //     break;
-  //   // #endregion
-
-  //   case "default":
-  //     // #region default
-  //     // log.debug(`Error handled by default policy`, {
-  //     //   code: errorMeta.defaultErrorCode,
-  //     //   message: e.message,
-  //     //   stack: e.stack
-  //     // });
-  //     log.info(`the default error code is ${errorMeta.defaultErrorCode}`);
-  //     log.warn(
-  //       "the error response will look like:",
-  //       convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, error))
-  //     );
-
-  //     if (isApiGatewayRequest) {
-  //       return convertToApiGatewayError(new UnhandledError(errorMeta.defaultErrorCode, error));
-  //     } else {
-  //       throw new UnhandledError(errorMeta.defaultErrorCode, error);
-  //     }
-
-  //     break;
-  //   // #endregion
-
-  //   default:
-  //     log.debug("Unknown handling technique for unhandled error", {
-  //       type: (handling as any).type,
-  //       errorMessage: error.message,
-  //     });
-  //     throw new UnhandledError(errorMeta.defaultErrorCode, error);
-  // }
 }

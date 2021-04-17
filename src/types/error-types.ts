@@ -51,11 +51,6 @@ export interface IErrorHandlingDefault {
   defaultHandling: true;
 }
 
-export interface IError extends Error {
-  code?: string;
-  httpStatus?: number;
-}
-
 export interface IExtendedError {
   /** uniquely identifies the error type */
   kind: string;
@@ -100,4 +95,33 @@ export interface IServerlessError extends IExtendedError {
    * The specific AWS request ID used for this function's execution
    */
   awsRequestId: string;
+}
+
+/**
+ * Provides the interface of the base `Error` plus adds a number of
+ * common properties for this library to encounter in an error as _optional_ props
+ */
+export interface IError extends Error {
+  type?: string;
+  code?: string;
+  classification?: string;
+  httpStatus?: number;
+}
+export interface IErrorMessageControl<T extends IError = Error> {
+  (error: T): string | string;
+}
+
+export interface IExpectedErrorOptions<T extends IError = Error> {
+  error?: new <T extends IError>() => T;
+  /**
+   * You can _prepend_ a static string to the error message's
+   * "message" or instead have the error passed into a function
+   * to generate the message.
+   */
+  message?: IErrorMessageControl<T>;
+  /**
+   * Set to true if this error should be thrown in the event of
+   * and unhandled error.
+   */
+  isDefault?: boolean;
 }

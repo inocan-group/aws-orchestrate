@@ -1,32 +1,10 @@
 import { ErrorHandler } from "../../errors/ErrorHandler";
-import { IErrorIdentification, IErrorHandling, IErrorHandlerFunction, IErrorClass, IDefaultHandling } from "~/types";
+import { IErrorIdentification, IErrorHandling, IErrorHandlerFunction, IDefaultHandling, IError } from "~/types";
+import { arn, AwsArnLambda, isLambdaFunctionArn } from "common-types";
+import { parseArn } from "~/shared";
+import { isServerlessError, ServerlessError } from "~/errors";
+
 export const DEFAULT_ERROR_CODE = 500;
-
-export interface IError {
-  message?: string;
-  name?: string;
-  code?: string;
-  stack?: string;
-}
-
-export interface IErrorMessageControl<T extends IError = Error> {
-  (error: T): string | string;
-}
-
-export interface IExpectedErrorOptions<T extends IError = Error> {
-  error?: new <T extends IError>() => T;
-  /**
-   * You can _prepend_ a static string to the error message's
-   * "message" or instead have the error passed into a function
-   * to generate the message.
-   */
-  message?: IErrorMessageControl<T>;
-  /**
-   * Set to true if this error should be thrown in the event of
-   * and unhandled error.
-   */
-  isDefault?: boolean;
-}
 
 /**
  * Is a container for a serverless function that
@@ -44,8 +22,8 @@ export class ErrorMeta<I, O> {
   private _errors: ErrorHandler<I, O>[] = [];
   private _defaultErrorCode: number = DEFAULT_ERROR_CODE;
   private _arn?: string;
-  private _defaultHandlerFn?: IErrorHandlerFunction;
-  private _defaultError?: IErrorClass;
+  private _defaultHandler?: AwsArnLambda<"function"> | IErrorHandlerFunction<O>;
+  private _defaultError?: IError;
 
   /**
    * Add an error handler for a known/expected error
@@ -73,68 +51,58 @@ export class ErrorMeta<I, O> {
 
   /**
    * Allows you to set a default code for unhandled errors; the default is
-   * `500`. This method follows the _fluent_ conventions and returns and instance
-   * of itself as a return value.
+   * `500`.
    *
-   * Note: if an unhandled error has the property of `httpStatus` set and is a number
-   * then it will be respected over the default.
+   * Note: if an unhandled error _has_ the property `httpStatus` this will be
+   * used over the value set here.
    */
   setDefaultErrorCode(code: number) {
     this._defaultErrorCode = code;
     return this;
   }
-
-  setDefaultHandler(function_: IErrorHandlerFunction): ErrorMeta<I, O>;
-  setDefaultHandler(error: Error): ErrorMeta<I, O>;
   /**
    * **setDefaultHandler**
    *
-   * @param err if you want to shift the error to a particular static error then you
-   * can just pass it in:
-   *
-   * ```typescript
-   * context.errors.setDefaultHandler(new Error('my message'))
-   * ```
-   *
-   * At the time of the error it will evaluate if your default error already has a _message_
-   * and if it _does not_ then it will inject the runtime's error message into the error class
-   * you provided.
-   *
-   * In all cases, it will replace the runtime error's stack with what was passed in.
+   * If you pass in an AWS arn, any _unhandled_ errors will asynchronously invoke the ARN
+   * and then exit with the error wrapped in an `UnknownError`.
    */
-  setDefaultHandler(function_: (error: Error) => Promise<boolean> | boolean): ErrorMeta<I, O>;
+  setDefaultHandler(arn: arn): ErrorMeta<I, O>;
   /**
    * **setDefaultHandler**
    *
-   * @param arn the function's arn (this can be the abbreviated variety so long as
-   * proper ENV variables are set)
+   * When passing in a callback, you are ensuring that when unhandled errors are encountered
+   * this callback will be executed. If it can "recover" it may pass back a return value of
+   * `<O>`, otherwise it may instead return _false_.
+   *
+   * Note: this function is asynchronous and it's understood that in many cases this callback
+   * will be involved in side effects to notify or log certain events.
    */
-  setDefaultHandler(arn: string): ErrorMeta<I, O>;
-  setDefaultHandler(parameter: string | Error | IErrorHandlerFunction): ErrorMeta<I, O> {
-    switch (typeof parameter) {
-      case "string":
-        this._arn = parameter;
-        this._defaultHandlerFn = undefined;
-        this._defaultError = undefined;
-        break;
-      case "function":
-        this._defaultHandlerFn = parameter;
-        this._arn = undefined;
-        this._defaultError = undefined;
-        break;
-      default:
-        if (parameter instanceof Error) {
-          this._defaultError = parameter;
-          this._arn = undefined;
-          this._defaultHandlerFn = undefined;
+  setDefaultHandler(callback: IErrorHandlerFunction<O>): ErrorMeta<I, O>;
+  setDefaultHandler(arg: arn | IErrorHandlerFunction<O>): ErrorMeta<I, O> {
+    if (typeof arg === "string") {
+      // appears to be a ARN
+      try {
+        this._defaultHandler = isLambdaFunctionArn(arg)
+          ? (arg as AwsArnLambda<"function">)
+          : (parseArn(arg, { service: "lambda", resource: "function" }).arn as AwsArnLambda<"function">);
+      } catch (parseError) {
+        const message = `While attempting to parse the passed in ARN [${arg}] for default error handling, an error occurred: ${parseError.message}`;
+        if (isServerlessError(parseError)) {
+          parseError.message = message;
+          throw parseError;
         } else {
-          console.log({
-            message: `The passed in setDefaultHandler param was of an unknown type ${typeof parameter}; the action has been ignored`,
-          });
+          throw new ServerlessError(500, message, "arn/parsing-error");
         }
+      }
+    } else {
+      this._defaultHandler = arg;
     }
 
     return this;
+  }
+
+  public get defaultHandler() {
+    return this._defaultHandler;
   }
 
   /**
@@ -151,11 +119,11 @@ export class ErrorMeta<I, O> {
       };
     }
 
-    if (this._defaultHandlerFn) {
+    if (this._defaultHandler) {
       return {
         type: "handler-fn",
         code: this.defaultErrorCode,
-        defaultHandlerFn: this._defaultHandlerFn,
+        defaultHandlerFn: this._defaultHandler,
         prop: "_defaultHandlerFn",
       };
     }
@@ -178,9 +146,6 @@ export class ErrorMeta<I, O> {
 
   /**
    * The default code for unhandled errors.
-   *
-   * Note: if an unhandled error has the property of `httpStatus` set and is a number
-   * then it will be respected over the default.
    */
   get defaultErrorCode() {
     return this._defaultErrorCode;

@@ -1,4 +1,4 @@
-import { AwsResource } from "common-types";
+import { AwsArnResource } from "common-types";
 import { ServerlessError } from "~/errors";
 
 /**
@@ -7,7 +7,7 @@ import { ServerlessError } from "~/errors";
  * Extracts the AWS _resource_ from a ARN string, returning
  * the _pre_ and _post_ string values along with the resource value.
  */
-export function extractResource(arn: string): { pre: string; resource: AwsResource; post: string } {
+export function extractResource(arn: string): { pre: string; resource: AwsArnResource; post: string } {
   const error = new ServerlessError(
     500,
     `Failed to extract a "resource" from the ARN string "${arn}"`,
@@ -17,7 +17,7 @@ export function extractResource(arn: string): { pre: string; resource: AwsResour
   if (!re.test(arn)) {
     throw error;
   }
-  const [_, pre, resource, post] = arn.match(re) as [string, string, AwsResource, string];
+  const [_, pre, resource, post] = arn.match(re) as [string, string, AwsArnResource, string];
 
   return { pre, resource, post };
 }

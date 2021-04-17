@@ -1,6 +1,6 @@
 import { ILoggerApi } from "aws-log";
 import { IAwsLambdaContext } from "common-types";
-import { convertToApiGatewayError } from "../util";
+import { apiGatewayFailure } from "../util";
 import { ServerlessError } from "~/errors";
 
 export function handlePrepError<T extends Error>(
@@ -24,7 +24,7 @@ export function handlePrepError<T extends Error>(
   if (isApiGatway) {
     // dummy down message for outside callers
     err.message = "unexpected error, try back later";
-    return convertToApiGatewayError(err);
+    return apiGatewayFailure(err);
   } else {
     throw err;
   }

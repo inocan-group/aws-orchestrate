@@ -2,8 +2,8 @@ import { isTypeSubtype, TypeSubtype } from "common-types";
 import { IServerlessError, IWrapperContext } from "~/types";
 import { ErrorHandler } from "./ErrorHandler";
 
-export class KnownError<I, O, T extends Error = Error> extends Error implements IServerlessError {
-  public kind = "KnownError";
+export class KnownError<I, O, E extends Error = Error> extends Error implements IServerlessError {
+  public readonly kind = "KnownError";
   public name = "KnownError";
   public httpStatus;
   public functionName;
@@ -13,7 +13,7 @@ export class KnownError<I, O, T extends Error = Error> extends Error implements 
   public code;
 
   constructor(
-    public originatingError: T,
+    public originatingError: E,
     handler: ErrorHandler<I, O>,
     context: IWrapperContext<any, any>,
     classification?: string
@@ -34,7 +34,7 @@ export class KnownError<I, O, T extends Error = Error> extends Error implements 
           ? `aws-orchestrate/${classification}`
           : `${parts[0]}/${parts[1]}`) as TypeSubtype;
         const code = (originatingError as any).code ? ((originatingError as any).code as string) : undefined;
-        this.code = code ? code : (parts.length === 1 ? classification : "known-error");
+        this.code = code ? code : parts.length === 1 ? classification : "known-error";
       }
     } else {
       this.classification = "wrapper-fn/known-error";

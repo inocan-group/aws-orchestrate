@@ -1,4 +1,4 @@
-import { AwsArn, isArn, AwsArnService } from "common-types";
+import { AwsArn, isArn } from "common-types";
 import { ServerlessError } from "~/errors";
 import { IParsedArn } from "~/types";
 /**
@@ -32,7 +32,7 @@ export function buildArn(parts: Omit<IParsedArn, "arn">): AwsArn {
   }
 
   const tail = hasAppName
-    ? `${separator}${appName}-${stage}${fn || stepFunction || rest}`
+    ? `${separator}${appName}-${stage}-${fn || stepFunction || rest}`
     : `${separator}${fn || stepFunction || rest}`;
 
   const arn = `arn:${partition}:${service}${region ? ":" + region : ":"}:${account}:${resource}${tail}`;

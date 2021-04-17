@@ -1,30 +1,34 @@
 import { ServerlessError } from "~/errors";
 import { IWrapperContext } from "~/types";
-import { convertToApiGatewayError } from "../util";
+import { IWrapperMetricsClosure, IWrapperMetricsPreClosure } from "~/types/timing";
+import { apiGatewayFailure } from "../util";
 
 export function handleServerlessError<Q, P>(
   error: ServerlessError,
   context: IWrapperContext<Q, P>,
-  duration: number,
-  prepTime: number
+  metrics: IWrapperMetricsPreClosure | IWrapperMetricsClosure
 ) {
-  const log = context.log;
-
-  // if a handler function throws a serverless error we just keep as is
-  // as this was an intentional error being thrown by handler
-  log.info("Done. Returning a ServerlessError error thrown by handler function", {
-    success: false,
-    duration,
-    prepTime,
-  });
+  const { log, isApiGatewayRequest, functionName, correlationId, awsRequestId } = context;
   // enhance the error with meta attributes
-  error.functionName = context.functionName;
-  error.correlationId = context.correlationId;
-  error.awsRequestId = context.awsRequestId;
+  error.functionName = functionName;
+  error.correlationId = correlationId;
+  error.awsRequestId = awsRequestId;
 
-  // respond based on whether caller is API Gateway
-  if (context.isApiGatewayRequest) {
-    return convertToApiGatewayError(error);
+  metrics = {
+    ...metrics,
+    kind: "wrapper-metrics",
+    errorType: "known",
+    errorCode: error.httpStatus,
+    handlerForwarding: false,
+    handlerFunction: false,
+    handlerResolved: false,
+    closureDuration: Date.now() - (metrics.startTime + metrics.duration),
+  };
+
+  log.info("wrapper-metrics", metrics);
+
+  if (isApiGatewayRequest) {
+    return apiGatewayFailure(error);
   } else {
     throw error;
   }

@@ -10,6 +10,7 @@ import { logger } from "aws-log";
 import { IPathParameters, IQueryParameters, IWrapperContext, IWrapperOptions } from "~/types";
 import { ErrorMeta, extractRequestState } from "./util";
 import { handleError, handlePrepError, handleReturn, prepForHandler } from "./steps";
+import { IWrapperMetrics } from "~/types/timing";
 
 /**
  * **wrapper**
@@ -34,7 +35,7 @@ export const wrapper = function <
     event: I | IAwsLambdaProxyIntegrationRequest,
     context: IAwsLambdaContext
   ): Promise<O | IAwsApiGatewayResponse> {
-    const t0: epochWithMilliseconds = Date.now();
+    let metrics: IWrapperMetrics = { kind: "start", startTime: Date.now() };
     const log = logger(options.loggerConfig).lambda(event, context);
     log.info(`Starting wrapper function for "${context.functionName}"`, { event, context });
     const state = extractRequestState<I, Q, P>(event, context);
@@ -51,15 +52,14 @@ export const wrapper = function <
     }
 
     // FN EXECUTION and ERROR HANDLING
-    const t1 = Date.now();
-    const prepTime = t1 - t0;
+    metrics = { ...metrics, kind: "prepped", ...{ prepTime: Date.now() - metrics.startTime } };
     try {
       response = await fn(state.request, wrapperContext);
-      const duration = Date.now() - t0;
-      return handleReturn<O, Q, P>(response, wrapperContext, duration, prepTime);
+      metrics = { ...metrics, kind: "pre-closure", success: true, duration: Date.now() - metrics.startTime };
+      return handleReturn<O, Q, P>(response, wrapperContext, metrics);
     } catch (handlerFnError) {
-      const duration = Date.now() - t0;
-      return handleError<I, O, P, Q>(handlerFnError, state.request, wrapperContext, duration, prepTime);
+      metrics = { ...metrics, kind: "pre-closure", success: false, duration: Date.now() - metrics.startTime };
+      return handleError<I, O, P, Q>(handlerFnError, state.request, wrapperContext, metrics);
     }
   };
 };

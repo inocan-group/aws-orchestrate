@@ -2,7 +2,7 @@ import { IDictionary, isTypeSubtype, TypeSubtype } from "common-types";
 import { IServerlessError, IWrapperContext } from "~/types";
 
 export class UnknownError<T extends Error = Error, EH extends Error = Error> extends Error implements IServerlessError {
-  public kind = "UnknownError";
+  public readonly kind = "UnknownError";
   public name = "UnknownError";
   public httpStatus;
   public functionName;

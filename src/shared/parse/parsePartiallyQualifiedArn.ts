@@ -1,7 +1,7 @@
 import {
-  ArnResource,
-  ArnService,
   AwsArn,
+  AwsArnResource,
+  AwsArnService,
   IDictionary,
   isArnService,
   isAwsAccountId,
@@ -14,7 +14,6 @@ import {
   extractRegion,
   extractStage,
   extractService,
-  resourceLookup,
   parseFullyQualifiedArn,
   getArnComponentsFromEnv,
   extractAccount,
@@ -29,18 +28,19 @@ export interface IPartialParseOptions {
    * used prior to any other matching techniques
    */
   lookup?: IDictionary<AwsArn>;
+
   /**
    * While we use the `DEFAULT_SERVICE` environment variable to determine
    * service, sometimes it's easier to just pass this in programatically.
    */
-  service?: ArnService;
+  service?: AwsArnService;
 
   /**
    * By default we lookup a reasonable default for the "resource" once we've
    * established the "service" but you can pass in an explicit resource if you
    * like.
    */
-  resource?: ArnResource;
+  resource?: AwsArnResource;
 }
 
 function missingMessage(prop: string, partial: string, envVar: string | string[], all: IDictionary) {
@@ -134,7 +134,7 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
   }
 
   // Resource
-  const resLookup: Record<ArnService, ArnResource | undefined> = {
+  const resLookup: Record<AwsArnService, AwsArnResource | undefined> = {
     lambda: "function",
     states: "stateMachine",
     dynamodb: "table",
@@ -144,7 +144,7 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
     sns: undefined,
     sqs: undefined,
   };
-  function findResource(service: ArnService) {
+  function findResource(service: AwsArnService) {
     return Object.keys(resLookup).includes(service) ? resLookup[service] : undefined;
   }
 
@@ -162,7 +162,7 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
     arn.appName = env.appName || appCandidate;
   }
 
-  switch (arn.resource as ArnResource) {
+  switch (arn.resource as AwsArnResource) {
     case "function":
       (arn as IParsedFunctionArn).fn = fnCandidate;
       break;
@@ -194,7 +194,6 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
   // if (arn.partition && arn.account && arn.service && arn.resource && arn.stage && arn.appName) {
   try {
     arn.arn = buildArn(arn as Omit<IParsedArn, "arn">);
-    console.log(arn.arn);
   } catch (buildError) {
     buildError.message = errMessage;
     throw buildError;
