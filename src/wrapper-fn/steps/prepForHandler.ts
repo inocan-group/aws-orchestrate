@@ -8,6 +8,7 @@ import {
   IWrapperContext,
   IWrapperContextFunctions,
   IWrapperContextProps,
+  IWrapperOptions,
 } from "~/types";
 import {
   getLocalSecrets,
@@ -20,7 +21,7 @@ import {
   setStatusCode,
   ErrorMeta,
 } from "../util";
-import { invoke } from "~/invoke";
+import { configureLambda, configureStepFn } from "~/wrapper-fn/util/invoke";
 
 export function prepForHandler<
   I,
@@ -31,7 +32,8 @@ export function prepForHandler<
   state: IRequestState<I, Q, P>,
   context: IAwsLambdaContext,
   errorMeta: ErrorMeta<I, O>,
-  log: ILoggerApi
+  log: ILoggerApi,
+  options: IWrapperOptions
 ): IWrapperContext<I, O, Q, P> {
   const correlationId = log.getCorrelationId();
 
@@ -49,15 +51,18 @@ export function prepForHandler<
     getSecrets,
     setSuccessCode: setStatusCode,
     errorMgmt: errorMeta,
-    invoke,
     setHeaders: setUserHeaders,
     setContentType,
     addCookie,
+    // calling into AWS features requires passing in proper symbols
+    // to `IWrapperOptions` at runtime
+    invoke: configureLambda(options.Lambda),
+    invokeStepFn: configureStepFn(options.StepFunctions),
   };
 
   const contextProps: IWrapperContextProps<Q, P> = {
     correlationId,
-    isApiGatewayRequest: state.isApiGateway,
+    isApiGateway: state.isApiGateway,
     identity: state.identity,
     api: state.api,
     headers: state.headers,

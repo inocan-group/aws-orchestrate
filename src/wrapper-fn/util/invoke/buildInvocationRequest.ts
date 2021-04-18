@@ -25,7 +25,9 @@ export function buildInvocationRequest<
     "x-calling-request-id": getContext().requestId,
   };
 
-  request.headers = request.headers ? { ...correlationHeaders, ...request.headers } : correlationHeaders;
+  request.headers = request.headers
+    ? { ...correlationHeaders, ...request.headers }
+    : correlationHeaders;
   const Payload = JSON.stringify(request);
 
   return {

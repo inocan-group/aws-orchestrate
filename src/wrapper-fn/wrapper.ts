@@ -52,7 +52,7 @@ export const wrapper = function <
 
     // PREP
     try {
-      wrapperContext = prepForHandler<I, O, Q, P>(state, context, errorMeta, log);
+      wrapperContext = prepForHandler<I, O, Q, P>(state, context, errorMeta, log, options);
     } catch (prepError) {
       return handlePrepError(prepError, context, isLambdaProxyRequest(event), log);
     }

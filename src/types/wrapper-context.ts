@@ -7,11 +7,11 @@ import {
   IHttpRequestHeaders,
   RestMethod,
 } from "common-types";
-import type { InvocationResponse } from "~/types";
 import type { ErrorMeta } from "~/wrapper-fn/util/ErrorMeta";
 import { setContentType, addCookie, setUserHeaders } from "~/wrapper-fn/util/headers";
 import { getSecrets } from "~/wrapper-fn/util/secrets";
 import { AwsApiStyle, AwsSource } from "./general";
+import { IInvokeLambda, IInvokeStepFunction } from "./invocation-types";
 import { IWrapperIdentityDetails, IWrapperIdentityEssentials } from "./wrapper-types";
 
 /**
@@ -104,13 +104,9 @@ export interface IWrapperContextFunctions<I, O> {
    * **Note:** you may only use this endpoint if you're passed in AWS's `Lambda`
    * class into the wrapper's option hash.
    */
-  invoke: <T = IDictionary, H = IHttpRequestHeaders>(
-    functionArn: string,
-    request: T,
-    additionalHeaders?: H
-  ) => Promise<InvocationResponse>;
+  invoke: IInvokeLambda;
 
-  invokeStepFn: <SI extends any>(arn: string, request: SI) => Promise<void>;
+  invokeStepFn: IInvokeStepFunction;
 }
 
 /**
@@ -127,7 +123,7 @@ export interface IWrapperContextCommonProps {
    * A boolean flag which indicates whether the current execution was started by an API Gateway
    * event.
    */
-  isApiGatewayRequest: boolean;
+  isApiGateway: boolean;
 }
 
 /**
@@ -137,7 +133,6 @@ export interface IWrapperContextCommonProps {
 export type IWrapperHeaderAndBodyContext = IWrapperContextCommonProps & {
   caller: AwsSource.LambdaWithHeader;
   identity: IWrapperIdentityEssentials;
-  isApiGateway: false;
 
   /**
    * The HTTP headers variables passed by caller
@@ -162,7 +157,6 @@ export type IWrapperHeaderAndBodyContext = IWrapperContextCommonProps & {
 export type IWrapperLambdaContext = IWrapperContextCommonProps & {
   caller: AwsSource.Lambda;
   identity: IWrapperIdentityEssentials;
-  isApiGateway: false;
 
   headers: undefined;
   api: undefined;
@@ -179,7 +173,6 @@ export type IWrapperLambdaContext = IWrapperContextCommonProps & {
  */
 export type IWrapperApiGatewayContext<Q, P> = IWrapperContextCommonProps & {
   caller: AwsSource.ApiGateway;
-  isApiGateway: true;
   /**
    * A collection of attributes that help to identify the source/caller.
    * This helps to abstract variations that might exist between REST and HTTP

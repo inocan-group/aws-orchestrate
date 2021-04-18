@@ -51,7 +51,12 @@ export async function handleOtherErrors<
     if (found.handling && found.handling.callback) {
       log.info("Calling handler function's error handler callback", { error });
 
-      const result: O | false = await found.handling.callback(originatingError, found, request, context);
+      const result: O | false = await found.handling.callback(
+        originatingError,
+        found,
+        request,
+        context
+      );
       if (result !== false) {
         // Error handled and converted to a success!
         log.info("handler had a successful result; error will abandoned", {
@@ -70,13 +75,18 @@ export async function handleOtherErrors<
         };
         return isApiGatewayRequest ? apiGatewaySuccess(result) : result;
       } else {
-        log.info("handler function was executed but error was not corrected", { kind: "error-handler-failed" });
+        log.info("handler function was executed but error was not corrected", {
+          kind: "error-handler-failed",
+        });
       }
     }
 
     // User has requested error to be forwarded
     if (found.handling && found.handling.forwardTo) {
-      log.info(`forwarding error to ${found.handling.forwardTo}`, { error, arn: found.handling.forwardTo });
+      log.info(`forwarding error to ${found.handling.forwardTo}`, {
+        error,
+        arn: found.handling.forwardTo,
+      });
       await context.invoke(found.handling.forwardTo, error);
     }
 
@@ -100,7 +110,11 @@ export async function handleOtherErrors<
   }
 
   // UNKNOWN ERRORS
-  error = new UnknownError(originatingError, context, originatingError.classification || "wrapper-fn/unknown-error");
+  error = new UnknownError(
+    originatingError,
+    context,
+    originatingError.classification || "wrapper-fn/unknown-error"
+  );
   metrics = {
     ...metrics,
     kind: "wrapper-metrics",
@@ -117,7 +131,7 @@ export async function handleOtherErrors<
     if (typeof errorMgmt.defaultHandler === "string") {
       try {
         metrics.handlerFunction = true;
-        await context.invoke(errorMgmt.defaultHandler, request, context);
+        await context.invoke(errorMgmt.defaultHandler, request);
       } catch (errhandlerError) {
         metrics.underlyingError = true;
         error.underlyingError = errhandlerError;

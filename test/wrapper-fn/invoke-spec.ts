@@ -1,5 +1,5 @@
 import { isLambdaFunctionArn } from "common-types";
-import { buildInvocationRequest } from "~/invoke";
+import { buildInvocationRequest } from "~/wrapper-fn/util/invoke";
 import { parseArn } from "~/shared";
 import { getStage } from "aws-log";
 
