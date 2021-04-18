@@ -4,12 +4,16 @@ import {
   IAwsApiGatewayResponse,
   isLambdaProxyRequest,
 } from "common-types";
-
 import { logger } from "aws-log";
-import { IPathParameters, IQueryParameters, IWrapperContext, IWrapperOptions } from "~/types";
+import {
+  IPathParameters,
+  IQueryParameters,
+  IWrapperContext,
+  IWrapperOptions,
+  IWrapperMetrics,
+} from "~/types";
 import { ErrorMeta, extractRequestState } from "./util";
 import { handleError, handlePrepError, handleReturn, prepForHandler } from "./steps";
-import { IWrapperMetrics } from "~/types/timing";
 
 /**
  * **wrapper**
@@ -28,7 +32,10 @@ export const wrapper = function <
   O extends any,
   Q extends object = IQueryParameters,
   P extends object = IPathParameters
->(fn: (request: I, context: IWrapperContext<I, O, Q, P>) => Promise<O>, options: IWrapperOptions = {}) {
+>(
+  fn: (request: I, context: IWrapperContext<I, O, Q, P>) => Promise<O>,
+  options: IWrapperOptions = {}
+) {
   /** this is the core Lambda event which the wrapper takes as an input */
   return async function (
     event: I | IAwsLambdaProxyIntegrationRequest,
@@ -54,10 +61,20 @@ export const wrapper = function <
     metrics = { ...metrics, kind: "prepped", ...{ prepTime: Date.now() - metrics.startTime } };
     try {
       response = await fn(state.request, wrapperContext);
-      metrics = { ...metrics, kind: "pre-closure", success: true, duration: Date.now() - metrics.startTime };
+      metrics = {
+        ...metrics,
+        kind: "pre-closure",
+        success: true,
+        duration: Date.now() - metrics.startTime,
+      };
       return handleReturn<O, Q, P>(response, wrapperContext, metrics);
     } catch (handlerFnError) {
-      metrics = { ...metrics, kind: "pre-closure", success: false, duration: Date.now() - metrics.startTime };
+      metrics = {
+        ...metrics,
+        kind: "pre-closure",
+        success: false,
+        duration: Date.now() - metrics.startTime,
+      };
       return handleError<I, O, P, Q>(handlerFnError, state.request, wrapperContext, metrics);
     }
   };

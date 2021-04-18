@@ -17,7 +17,9 @@ export const simpleEvent: IRequest = {
   bar: 456,
 };
 
-export const SimpleApiGatewayEvent_V2: (body: any) => IAwsLambdaProxyIntegrationRequestV2 = (body = SimpleEvent) => ({
+export const SimpleApiGatewayEvent_V2: (body: any) => IAwsLambdaProxyIntegrationRequestV2 = (
+  body = simpleEvent
+) => ({
   version: "2.0",
   body: JSON.stringify(body),
   headers: {

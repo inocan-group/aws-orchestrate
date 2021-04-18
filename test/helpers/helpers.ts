@@ -2,7 +2,6 @@ import { IAwsLambdaProxyIntegrationRequestV2, IDictionary, RestMethod } from "co
 import * as fs from "fs";
 import * as yaml from "js-yaml";
 import * as process from "process";
-import "./test-console"; // TS declaration
 import { stdout, stderr } from "test-console";
 
 // tslint:disable-next-line
@@ -22,7 +21,10 @@ interface Console {
 
 declare var console: Console;
 
-export function fakeApiGatewayRequest<T>(request: T, method: RestMethod = "POST"): IAwsLambdaProxyIntegrationRequestV2 {
+export function fakeApiGatewayRequest<T>(
+  request: T,
+  method: RestMethod = "POST"
+): IAwsLambdaProxyIntegrationRequestV2 {
   return ({
     cookies: [],
     version: "2.0",
@@ -111,22 +113,22 @@ export function ignoreStdout() {
 }
 
 export function captureStdout(): () => any {
-  const rStdout: IAsyncStreamCallback = stdout.inspect();
+  const rStdout = stdout.inspect();
   const restore = (): string[] => {
     rStdout.restore();
     console._restored = true;
-    return rStdout.output;
+    return rStdout.output as string[];
   };
 
   return restore;
 }
 
 export function captureStderr(): () => any {
-  const rStderr: IAsyncStreamCallback = stderr.inspect();
+  const rStderr = stderr.inspect();
   const restore = (): string[] => {
     rStderr.restore();
     console._restored = true;
-    return rStderr.output;
+    return rStderr.output as string[];
   };
 
   return restore;

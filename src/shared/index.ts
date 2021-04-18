@@ -2,16 +2,13 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 04:04 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 06:04 PM ( GMT-7 )
 // export: named; exclusions: parse, index, private.
-// files: buildArn, decrypt, encrypt, ensureFunctionName, parseArn.
+// files: parseArn, parseLambdaFunctionArn.
 
 // local file exports
-export * from "./buildArn";
-export * from "./decrypt";
-export * from "./encrypt";
-export * from "./ensureFunctionName";
 export * from "./parseArn";
+export * from "./parseLambdaFunctionArn";
 
 // Note:
 // -----

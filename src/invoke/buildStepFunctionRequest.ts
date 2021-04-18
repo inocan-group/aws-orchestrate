@@ -2,7 +2,7 @@ import { IDictionary } from "common-types";
 import { IParsedArn } from "~/types";
 
 /**
- * buildRequest
+ * **buildStepFunctionRequest**
  *
  * Builds a request object for the AWS StepFunctions start() method
  * parameters

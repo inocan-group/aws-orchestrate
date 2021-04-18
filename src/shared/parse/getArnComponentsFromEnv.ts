@@ -1,5 +1,4 @@
-import { getStage } from "aws-log";
-import { AwsAccountId, AwsRegion, AwsStage, isAwsRegion } from "common-types";
+import { AwsAccountId, AwsRegion, isAwsRegion } from "common-types";
 import { ServerlessError } from "~/errors";
 
 /**
@@ -7,10 +6,15 @@ import { ServerlessError } from "~/errors";
  */
 export function getArnComponentsFromEnv() {
   const partition = process.env.AWS_PARTITION;
-  const region = (process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION) as AwsRegion | undefined;
-  const account = (process.env.AWS_ACCOUNT || process.env.AWS_ACCOUNT_ID) as AwsAccountId | undefined;
+  const region = (process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION) as
+    | AwsRegion
+    | undefined;
+  const account = (process.env.AWS_ACCOUNT || process.env.AWS_ACCOUNT_ID) as
+    | AwsAccountId
+    | undefined;
   const service = process.env.AWS_DEFAULT_SERVICE;
-  const stage = process.env.AWS_STAGE || process.env.ENVIRONMENT || process.env.STAGE || process.env.NODE_ENV;
+  const stage =
+    process.env.AWS_STAGE || process.env.ENVIRONMENT || process.env.STAGE || process.env.NODE_ENV;
   const appName = process.env.SERVICE_NAME || process.env.APP_NAME;
 
   if (region && !isAwsRegion(region)) {

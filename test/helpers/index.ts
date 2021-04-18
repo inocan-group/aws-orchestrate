@@ -2,15 +2,14 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 11:02 AM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 05:06 PM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: catchErr, helpers, itif, test-console.
+// files: catchErr, helpers, itif.
 
 // local file exports
 export * from "./catchErr";
 export * from "./helpers";
 export * from "./itif";
-export * from "./test-console";
 
 // Note:
 // -----

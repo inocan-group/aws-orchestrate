@@ -1,17 +1,13 @@
-// #autoindex:named, exclude: steps
+// #autoindex:named, exclude: steps, util
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 10:52 AM ( GMT-7 )
-// export: named; exclusions: steps, index, private.
+// index last changed at: 4th Apr, 2021, 04:54 PM ( GMT-7 )
+// export: named; exclusions: steps, util, index, private.
 // files: wrapper.
-// directories: util.
 
 // local file exports
 export * from "./wrapper";
-
-// directory exports
-export * from "./util/index";
 
 // Note:
 // -----

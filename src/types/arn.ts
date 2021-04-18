@@ -1,14 +1,22 @@
-import { AwsRegion, AwsAccountId, AwsStage, AwsPartition, AwsService, AwsResource, AwsArn } from "common-types";
+import {
+  AwsRegion,
+  AwsAccountId,
+  AwsStage,
+  AwsArn,
+  AwsArnLambda,
+  AwsArnPartition,
+  AwsArnService,
+  AwsArnResource,
+  AwsGlobalArn,
+  AwsArnDynamoDb,
+  AwsArnStepFunction,
+} from "common-types";
 
 export interface IBaseParsedArn {
-  partition: AwsPartition;
-  service: AwsService;
-  resource: AwsResource;
+  partition: AwsArnPartition;
+  service: AwsArnService;
+  resource: AwsArnResource;
   account: AwsAccountId;
-  /**
-   * The fully qualified ARN string
-   */
-  arn: AwsArn;
 }
 
 export interface IParsedFunctionArn extends IBaseParsedArn {
@@ -22,6 +30,9 @@ export interface IParsedFunctionArn extends IBaseParsedArn {
   stage: AwsStage;
   appName: string;
   fn: string;
+  stepFunction: undefined;
+  rest: undefined;
+  arn: AwsArnLambda;
 }
 
 export interface IParsedStepFunctionArn extends IBaseParsedArn {
@@ -31,6 +42,9 @@ export interface IParsedStepFunctionArn extends IBaseParsedArn {
   stage: AwsStage;
   appName: string;
   stepFunction: string;
+  fn: undefined;
+  rest: undefined;
+  arn: AwsArnStepFunction;
 }
 
 export interface IParsedDynamoTableArn extends IBaseParsedArn {
@@ -39,17 +53,26 @@ export interface IParsedDynamoTableArn extends IBaseParsedArn {
   region: AwsRegion;
   stage?: AwsStage;
   appName?: string;
+  fn: undefined;
+  stepFunction: undefined;
+  /**
+   * The unparsed part of the ARN
+   */
   rest: string;
+  arn: AwsArnDynamoDb;
 }
 
 export interface IParsedRegional extends IBaseParsedArn {
   region: AwsRegion;
   stage?: AwsStage;
   appName?: string;
+  fn: undefined;
+  stepFunction: undefined;
   /**
    * The unparsed part of the ARN
    */
   rest: string;
+  arn: AwsArn;
 }
 export interface IParsedGlobal extends IBaseParsedArn {
   region: false;
@@ -59,10 +82,17 @@ export interface IParsedGlobal extends IBaseParsedArn {
    * The unparsed part of the ARN
    */
   rest: string;
+  fn: undefined;
+  stepFunction: undefined;
+  arn: AwsGlobalArn;
 }
 
 /**
  * Provides both a fully qualified ARN string but also breaks out each
  * component part of the ARN into a dictionary.
  */
-export type IParsedArn = IParsedFunctionArn | IParsedStepFunctionArn | IParsedRegional | IParsedGlobal;
+export type IParsedArn =
+  | IParsedFunctionArn
+  | IParsedStepFunctionArn
+  | IParsedRegional
+  | IParsedGlobal;

@@ -1,14 +1,14 @@
 /* eslint-disable unicorn/consistent-function-scoping */
-import * as helpers from "../helpers/helpers";
-
-import { isUnknownError, ServerlessError, UnknownError } from "~/errors";
-import { wrapper } from "~/wrapper-fn";
-import { IErrorHandlerFunction, IHandlerFunction } from "~/types";
 import {
   IAwsLambdaContext,
   IAwsLambdaProxyIntegrationRequest,
   IAwsLambdaProxyIntegrationRequestV2,
 } from "common-types";
+import * as helpers from "../helpers/helpers";
+
+import { isUnknownError, ServerlessError, UnknownError } from "~/errors";
+import { wrapper } from "~/wrapper-fn";
+import { IErrorHandlerFunction, IHandlerFunction } from "~/types";
 
 const CORRELATION_ID = "c-123";
 const AWS_REQUEST_ID = "1234";
@@ -53,7 +53,9 @@ describe("Handling errors => ", () => {
     const restore = helpers.captureStdout();
     const wrapped = wrapper(genHandlerWithDefaultErrorHandling());
     restore();
-    const req = { headers: { "X-Correlation-Id": CORRELATION_ID } } as IAwsLambdaProxyIntegrationRequestV2;
+    const req = {
+      headers: { "X-Correlation-Id": CORRELATION_ID },
+    } as IAwsLambdaProxyIntegrationRequestV2;
     const ctx = {
       awsRequestId: AWS_REQUEST_ID,
       functionName: FUNCTION_NAME,
@@ -75,7 +77,9 @@ describe("Handling errors => ", () => {
     const restore = helpers.captureStdout();
     const wrapped = wrapper(genHandlerWithDefaultErrorHandling(666));
     restore();
-    const req = { headers: { "X-Correlation-Id": CORRELATION_ID } } as IAwsLambdaProxyIntegrationRequestV2;
+    const req = {
+      headers: { "X-Correlation-Id": CORRELATION_ID },
+    } as IAwsLambdaProxyIntegrationRequestV2;
     const ctx = {
       awsRequestId: AWS_REQUEST_ID,
       functionName: FUNCTION_NAME,
@@ -98,7 +102,9 @@ describe("Handling errors => ", () => {
     const handler: IErrorHandlerFunction<string> = async () => "hello world";
     const wrapped = wrapper(genHandlerWithDefaultErrorHandling(400, handler));
     restore();
-    const req = { headers: { "X-Correlation-Id": CORRELATION_ID } } as IAwsLambdaProxyIntegrationRequestV2;
+    const req = {
+      headers: { "X-Correlation-Id": CORRELATION_ID },
+    } as IAwsLambdaProxyIntegrationRequestV2;
     const ctx = {
       awsRequestId: AWS_REQUEST_ID,
       functionName: FUNCTION_NAME,

@@ -1,6 +1,7 @@
 import { ILoggerApi } from "aws-log";
 import { IAwsLambdaContext } from "common-types";
 import {
+  AwsSource,
   IPathParameters,
   IQueryParameters,
   IRequestState,
@@ -21,7 +22,12 @@ import {
 } from "../util";
 import { invoke } from "~/invoke";
 
-export function prepForHandler<I, O, Q extends object = IQueryParameters, P extends object = IPathParameters>(
+export function prepForHandler<
+  I,
+  O,
+  Q extends object = IQueryParameters,
+  P extends object = IPathParameters
+>(
   state: IRequestState<I, Q, P>,
   context: IAwsLambdaContext,
   errorMeta: ErrorMeta<I, O>,
@@ -51,24 +57,17 @@ export function prepForHandler<I, O, Q extends object = IQueryParameters, P exte
 
   const contextProps: IWrapperContextProps<Q, P> = {
     correlationId,
-    headers: state.headers || {},
     isApiGatewayRequest: state.isApiGateway,
     identity: state.identity,
-    ...(state.isApiGateway
-      ? {
-          api: state.api,
-          caller: state.caller,
-          token: state.token,
-          claims: state.claims,
-          verb: state.verb,
-          apiGateway: state.apiGateway,
-          queryParameters: state.query,
-          pathParameters: state.path,
-        }
-      : {
-          caller: state.caller,
-          token: state.token,
-        }),
+    api: state.api,
+    headers: state.headers,
+    caller: AwsSource.ApiGateway,
+    token: state.token,
+    claims: state.claims,
+    verb: state.verb,
+    apiGateway: state.apiGateway,
+    queryParameters: state.query,
+    pathParameters: state.path,
   };
 
   // the handler's function is now ready for use

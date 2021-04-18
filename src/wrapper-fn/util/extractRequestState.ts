@@ -67,7 +67,9 @@ export function extractRequestState<I, Q extends object, P extends object>(
       token: event.headers.Authenticate as string,
       path: event.pathParameters as P,
       query: event.queryStringParameters as Q,
-      verb: isProxyRequestContextV2(event) ? event.requestContext.http.method : event.requestContext.httpMethod,
+      verb: isProxyRequestContextV2(event)
+        ? event.requestContext.http.method
+        : event.requestContext.httpMethod,
       claims: isProxyRequestContextV2(event) ? undefined : event.requestContext.authorizer.claims,
       api: isProxyRequestContextV2(event) ? AwsApiStyle.HttpApi : AwsApiStyle.RestApi,
       caller: AwsSource.ApiGateway,
@@ -81,21 +83,28 @@ export function extractRequestState<I, Q extends object, P extends object>(
   return isHeaderBodyRequest<I>(event)
     ? {
         kind: "header-body",
+        caller: AwsSource.LambdaWithHeader,
         request: event.body,
         isApiGateway: false,
+        identity,
         headers: event.headers,
         token: event.headers.Authenticate as string,
-        identity,
+
+        api: undefined,
+        apiGateway: undefined,
         path: undefined,
         query: undefined,
         verb: undefined,
         claims: undefined,
-        caller: AwsSource.LambdaWithHeader,
       }
     : {
         kind: "basic",
+        caller: AwsSource.Lambda,
         request: event as I,
         isApiGateway: false,
+
+        api: undefined,
+        apiGateway: undefined,
         headers: undefined,
         token: undefined,
         identity,
@@ -103,6 +112,5 @@ export function extractRequestState<I, Q extends object, P extends object>(
         query: undefined,
         verb: undefined,
         claims: undefined,
-        caller: AwsSource.Lambda,
       };
 }

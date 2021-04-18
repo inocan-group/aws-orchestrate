@@ -2,15 +2,7 @@ import { IDictionary } from "common-types";
 import { logger } from "aws-log";
 import { buildInvocationRequest } from "..";
 import { parseArn } from "~/shared";
-
-export type InvocationResponse = import("aws-sdk").Lambda.InvocationResponse;
-
-export type UnconstrainedHttpHeaders = IDictionary<string | number | boolean>;
-export type LambdaInvocation<T = IDictionary, H = UnconstrainedHttpHeaders> = (
-  functionArn: string,
-  request: T,
-  additionalHeaders?: H
-) => Promise<InvocationResponse>;
+import { InvocationResponse } from "~/types";
 
 /**
  * **invoke**

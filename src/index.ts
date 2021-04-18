@@ -1,17 +1,17 @@
-// #autoindex
+// #autoindex, exclude: shared
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 12:26 AM ( GMT-7 )
-// export: named; exclusions: index, private.
-// directories: errors, invoke, shared, step-fn, types, wrapper-fn.
+// index last changed at: 4th Apr, 2021, 04:57 PM ( GMT-7 )
+// export: named; exclusions: shared, index, private.
+// directories: errors, invoke, step-fn, types, wrapper-fn.
 
 // directory exports
 export * from "./errors/index";
 export * from "./invoke/index";
-export * from "./shared/index";
 export * from "./step-fn/index";
 export * from "./types/index";
+export * from "./wrapper-fn/index";
 
 // Note:
 // -----

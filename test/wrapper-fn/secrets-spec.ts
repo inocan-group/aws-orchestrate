@@ -1,5 +1,5 @@
 import { logger } from "aws-log";
-import { maskLoggingForSecrets } from "../../src/wrapper-fn";
+import { maskLoggingForSecrets } from "~/wrapper-fn/util";
 
 describe("Secrets => ", () => {
   it("Secrets must be masked with asterisk", () => {

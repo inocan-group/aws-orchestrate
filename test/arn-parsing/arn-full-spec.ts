@@ -15,10 +15,10 @@ describe("Parsing full ARNs:", () => {
         }
         expect(isRight(result)).toBe(true);
       });
-      const parsed: IParsedArn | undefined = right(result);
 
       itif(isRight(result))(`${i.name} has all expected values matched`, () => {
-        if (parsed) {
+        if (isRight(result)) {
+          const parsed: IParsedArn | undefined = right(result);
           expect(parsed.arn).toBe(i.arn);
           for (const key of Object.keys(i.expected)) {
             if (parsed[key as keyof typeof parsed] !== i.expected[key]) {

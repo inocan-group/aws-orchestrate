@@ -26,7 +26,8 @@
     "unicorn/prevent-abbreviations": "off",
     "unicorn/no-null": "off",
     "no-nested-ternary": "off",
-    "unicorn/no-nested-ternary": "warn",
+    // doesn't play well with prettier
+    "unicorn/no-nested-ternary": "off",
 
     // we need exceptions to be only "warn" because
     // there are valid use cases for generic variables being

@@ -2,6 +2,7 @@ import {
   IAwsLambdaProxyIntegrationRequest,
   IAwsLambdaProxyIntegrationRequestHeaders,
   IDictionary,
+  IHttpRequestHeaders,
   IServerlessFunction,
   RestMethod,
   scalar,
@@ -12,10 +13,12 @@ import { IWrapperContext } from "./wrapper-context";
 export type IQueryParameters = IDictionary<scalar>;
 export type IPathParameters = IDictionary<scalar>;
 
-export type IHandlerFunction<I, O, Q extends object = IQueryParameters, P extends object = IPathParameters> = (
-  event: I,
-  context: IWrapperContext<I, O, Q, P>
-) => Promise<O>;
+export type IHandlerFunction<
+  I,
+  O,
+  Q extends object = IQueryParameters,
+  P extends object = IPathParameters
+> = (event: I, context: IWrapperContext<I, O, Q, P>) => Promise<O>;
 
 /**
  * The _meta-data_ for a handler function. This can include a description,
@@ -67,33 +70,37 @@ export type IWrapperIdentity = IWrapperIdentityEssentials | IWrapperIdentityDeta
 
 export interface IApiGatewayRequestState<B, Q extends object, P extends object> {
   kind: "api-gateway";
+  caller: AwsSource;
   request: B;
   isApiGateway: true;
+  identity: IWrapperIdentityDetails;
+
+  api: AwsApiStyle;
   apiGateway: IAwsLambdaProxyIntegrationRequest;
   headers: IAwsLambdaProxyIntegrationRequestHeaders;
   /** the value of the `Authorization` header (if it exists) */
   token: string | undefined;
-  identity: IWrapperIdentityDetails;
   path: P;
   query: Q;
   verb: RestMethod;
   claims?: IDictionary;
-  caller: AwsSource;
-  api: AwsApiStyle;
 }
 
 export interface IBasicRequestState<B> {
   kind: "basic";
+  caller: AwsSource;
   request: B;
   isApiGateway: false;
+  identity: IWrapperIdentityEssentials;
+
   headers: undefined;
   token: undefined;
-  identity: IWrapperIdentityEssentials;
   path: undefined;
   query: undefined;
   verb: undefined;
   claims: undefined;
-  caller: AwsSource;
+  api: undefined;
+  apiGateway: undefined;
 }
 
 /**
@@ -103,17 +110,20 @@ export interface IBasicRequestState<B> {
  */
 export interface IHeaderBodyRequestState<B> {
   kind: "header-body";
+  caller: AwsSource.LambdaWithHeader;
   request: B;
   isApiGateway: false;
-  headers: IDictionary<scalar>;
+  identity: IWrapperIdentityEssentials;
+
+  headers: IHttpRequestHeaders;
   /** the value of the `Authorization` header (if it exists) */
   token: string | undefined;
-  identity: IWrapperIdentityEssentials;
   path: undefined;
   query: undefined;
   verb: undefined;
   claims: undefined;
-  caller: AwsSource.LambdaWithHeader;
+  api: undefined;
+  apiGateway: undefined;
 }
 
 export type IRequestState<B, Q extends object, P extends object> =

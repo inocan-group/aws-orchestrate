@@ -7,9 +7,16 @@ import {
   isAwsAccountId,
   isAwsRegion,
   isAwsStage,
+  isArnPartition,
 } from "common-types";
 
-import { IParsedArn, IParsedFunctionArn, IParsedGlobal, IParsedRegional, IParsedStepFunctionArn } from "~/types";
+import {
+  IParsedArn,
+  IParsedFunctionArn,
+  IParsedGlobal,
+  IParsedRegional,
+  IParsedStepFunctionArn,
+} from "~/types";
 import {
   extractRegion,
   extractStage,
@@ -18,7 +25,7 @@ import {
   getArnComponentsFromEnv,
   extractAccount,
 } from "./index";
-import { buildArn } from "../buildArn";
+import { buildArn } from "./buildArn";
 import { ServerlessError } from "~/errors";
 
 export interface IPartialParseOptions {
@@ -43,11 +50,20 @@ export interface IPartialParseOptions {
   resource?: AwsArnResource;
 }
 
-function missingMessage(prop: string, partial: string, envVar: string | string[], all: IDictionary) {
+function missingMessage(
+  prop: string,
+  partial: string,
+  envVar: string | string[],
+  all: IDictionary
+) {
   const ENV = Array.isArray(envVar) ? envVar : [envVar];
   return `While trying to convert the partial ARN ["${partial}"] to a full ARN, the ${prop} was not found, try setting the ${ENV.join(
     ", "
-  )} variable to fix this.\n\nRelevant ENV variables which were set:\n${JSON.stringify(all, null, 2)}`;
+  )} variable to fix this.\n\nRelevant ENV variables which were set:\n${JSON.stringify(
+    all,
+    null,
+    2
+  )}`;
 }
 
 /**
@@ -70,7 +86,10 @@ function missingMessage(prop: string, partial: string, envVar: string | string[]
  * While that's a lot of ENV variables, many Serverless setups will already setup most of these
  * and if you use the build system from `aws-orchestrate` they will ALL be set.
  */
-export function parsePartiallyQualifiedArn(partial: string, options: IPartialParseOptions = {}): IParsedArn {
+export function parsePartiallyQualifiedArn(
+  partial: string,
+  options: IPartialParseOptions = {}
+): IParsedArn {
   const { lookup, service, resource } = options;
   if (lookup && lookup[partial as keyof typeof lookup]) {
     return parseFullyQualifiedArn(lookup[partial as keyof typeof lookup]);
@@ -85,10 +104,10 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
   }
 
   // partition will always fall back to "aws"
-  arn.partition = env.partition || "aws";
+  arn.partition = isArnPartition(env.partition) ? env.partition : "aws";
 
   if (service || isArnService(env.service || "")) {
-    arn.service = service || env.service;
+    arn.service = service || (env.service as AwsArnService);
     console.log({ arn: arn.service, env: env.service, service });
   }
 
@@ -110,7 +129,11 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
   }
 
   if (!arn.stage) {
-    throw new ServerlessError(500, missingMessage("stage", partial, "AWS_STAGE", env), "arn/missing-stage");
+    throw new ServerlessError(
+      500,
+      missingMessage("stage", partial, "AWS_STAGE", env),
+      "arn/missing-stage"
+    );
   }
 
   if (isAwsAccountId(env.account)) {
@@ -130,7 +153,11 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
   }
 
   if (!arn.account) {
-    throw new ServerlessError(500, missingMessage("account", partial, "AWS_ACCOUNT", env), "arn/missing-account");
+    throw new ServerlessError(
+      500,
+      missingMessage("account", partial, "AWS_ACCOUNT", env),
+      "arn/missing-account"
+    );
   }
 
   // Resource
@@ -144,11 +171,15 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
     sns: undefined,
     sqs: undefined,
   };
-  function findResource(service: AwsArnService) {
-    return Object.keys(resLookup).includes(service) ? resLookup[service] : undefined;
+  function findResource(service?: AwsArnService) {
+    return service
+      ? Object.keys(resLookup).includes(service)
+        ? resLookup[service]
+        : undefined
+      : undefined;
   }
 
-  arn.resource = resource || findResource(arn.service);
+  arn.resource = resource || arn.service ? findResource(arn.service) : undefined;
 
   const parts = partial.split(":");
   const tail = parts.slice(-1).pop() || "";
@@ -181,8 +212,12 @@ export function parsePartiallyQualifiedArn(partial: string, options: IPartialPar
     arn.region = region ? region : undefined;
   }
 
-  if (!arn.region && !globalServices.includes(arn.service)) {
-    throw new ServerlessError(500, missingMessage("region", partial, "AWS_ACCOUNT", env), "arn/missing-region");
+  if (!arn.region && !globalServices.includes(arn.service || "invalid")) {
+    throw new ServerlessError(
+      500,
+      missingMessage("region", partial, "AWS_ACCOUNT", env),
+      "arn/missing-region"
+    );
   }
 
   const errMessage = `The attempt to build a full ARN from a partial ARN ["${partial}"] failed.\n\nNote: relevant ENV variables detected included:\n${JSON.stringify(

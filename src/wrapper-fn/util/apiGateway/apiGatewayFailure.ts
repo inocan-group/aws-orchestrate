@@ -1,7 +1,7 @@
-import { DEFAULT_ERROR_CODE } from "../ErrorMeta";
-import { IError } from "~/types";
-import { getResponseHeaders } from "~/wrapper-fn";
 import { IAwsApiGatewayResponse } from "common-types";
+import { IError } from "~/types";
+import { DEFAULT_ERROR_CODE } from "../ErrorMeta";
+import { getResponseHeaders } from "../headers";
 /**
  * **apiGatewayFailure**
  *

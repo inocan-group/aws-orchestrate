@@ -1,62 +1,13 @@
+import { isLambdaFunctionArn } from "common-types";
 import { buildInvocationRequest } from "~/invoke";
-import { ensureFunctionName, parseArn } from "~/shared";
+import { parseArn } from "~/shared";
 import { getStage } from "aws-log";
-
-describe("ensureFunctionName() →", () => {
-  it("name starting with invalid character fails", () => {
-    try {
-      ensureFunctionName("-abc");
-      throw new Error("should not have gotten here");
-    } catch (error) {
-      expect(error.name).toEqual("InvalidName");
-    }
-
-    try {
-      ensureFunctionName("1abc");
-      throw new Error("should not have gotten here");
-    } catch (error) {
-      expect(error.name).toEqual("InvalidName");
-    }
-
-    try {
-      ensureFunctionName("?abc");
-      throw new Error("should not have gotten here");
-    } catch (error) {
-      expect(error.name).toEqual("InvalidName");
-    }
-  });
-
-  it("name special characters in it fails", () => {
-    try {
-      ensureFunctionName("abc*");
-      throw new Error("should not have gotten here");
-    } catch (error) {
-      expect(error.name).toEqual("InvalidName");
-    }
-    try {
-      ensureFunctionName("abc&");
-      throw new Error("should not have gotten here");
-    } catch (error) {
-      expect(error.name).toEqual("InvalidName");
-    }
-    try {
-      ensureFunctionName("abc,");
-      throw new Error("should not have gotten here");
-    } catch (error) {
-      expect(error.name).toEqual("InvalidName");
-    }
-  });
-
-  it("valid name passes", () => {
-    const name = ensureFunctionName("abc");
-    expect(name).toEqual("abc");
-  });
-});
 
 describe("invoke :: ARN Parsing →", () => {
   it("fully qualified ARN is parsed", () => {
     const arn = "arn:aws:lambda:us-east-1:9378553667040:function:test-services-prod-sentinel";
     const results = parseArn(arn);
+    expect(isLambdaFunctionArn(results.arn)).toBe(true);
     expect(results.region).toEqual("us-east-1");
     expect(results.account).toEqual("9378553667040");
     expect(results.stage).toEqual("prod");

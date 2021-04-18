@@ -44,11 +44,11 @@
   "homepage": "https://github.com/inocan-group/aws-orchestrate#readme",
   "dependencies": {
     "inferred-types": "^0.3.0",
-    "lzutf8": "^0.6.0"
+    "lzutf8": "^0.6.0",
+    "aws-sdk": "2"
   },
   "peerDependencies": {
     "aws-log": "^0.11.0",
-    "aws-sdk": "2",
     "aws-ssm": "^0.3.13",
     "native-dash": "^1.11.0"
   },
@@ -62,6 +62,7 @@
     "@types/mermaid": "8",
     "@types/node": "14",
     "@types/rimraf": "^3.0.0",
+    "@types/test-console": "^1.1.0",
     "@typescript-eslint/parser": "^4.21.0",
     "@vuepress/plugin-back-to-top": "^1.8.2",
     "@vuepress/plugin-last-updated": "^1.8.2",
@@ -71,13 +72,13 @@
     "aws-log": "^0.11.0",
     "aws-sdk": "2",
     "aws-ssm": "^0.3.13",
-    "common-types": "^1.22.1",
+    "common-types": "^1.23.0",
     "do-devops": "^0.6.1",
     "eslint": "^7.23.0",
-    "eslint-config-prettier": "^8.1.0",
+    "eslint-config-prettier": "^8.2.0",
     "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-prettier": "^3.3.1",
-    "eslint-plugin-promise": "^4.3.1",
+    "eslint-plugin-prettier": "^3.4.0",
+    "eslint-plugin-promise": "^5.1.0",
     "eslint-plugin-unicorn": "^29.0.0",
     "jest": "^26.6.3",
     "jest-extended": "^0.11.5",

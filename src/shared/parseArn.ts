@@ -9,6 +9,6 @@ import { IPartialParseOptions } from "./parse/parsePartiallyQualifiedArn";
  * Takes a _partial_ or _fully qualified_ **ARN** string and attempts to build the
  * all the components that constitute a fully qualified ARN (aka., `IParsedArn`).
  */
-export function parseArn(arn: string, defaultValues: IPartialParseOptions): IParsedArn {
+export function parseArn(arn: string, defaultValues: IPartialParseOptions = {}): IParsedArn {
   return isArn(arn) ? parseFullyQualifiedArn(arn) : parsePartiallyQualifiedArn(arn, defaultValues);
 }

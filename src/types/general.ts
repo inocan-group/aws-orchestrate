@@ -1,5 +1,6 @@
 import { IAwsLambdaProxyIntegrationRequest, Omit, arn } from "common-types";
 import { IAwsLogConfig } from "aws-log";
+import type { Lambda, StepFunctions, XRay } from "aws-sdk";
 
 /**
  * The API Gateway's _proxy integration request_ structure with the
@@ -23,6 +24,51 @@ export interface IWrapperOptions {
   sequenceTracker?: arn;
 
   loggerConfig?: Partial<IAwsLogConfig>;
+
+  /**
+   * **StepFunctions**
+   *
+   * If you intend to kick off Step Functions from this lambda you should pass in the
+   * StepFunctions class from `aws-sdk`.
+   *
+   * This allows just the code needed to perform this action be included when you need
+   * it and none of it when you don't.
+   *
+   * ```ts
+   * import { StepFunctions } from "aws-sdk";
+   * ```
+   */
+  StepFunctions?: StepFunctions;
+
+  /**
+   * **Lambda**
+   *
+   * If you intend to asyncronously _invoking_ another Lambda function from this one
+   * you should pass in the `Lamda` class from `aws-sdk`.
+   *
+   * This allows just the code needed to perform this action be included when you need
+   * it and none of it when you don't.
+   *
+   * ```ts
+   * import { Lambda } from "aws-sdk";
+   * ```
+   */
+  Lambda?: Lambda;
+
+  /**
+   * **XRay**
+   *
+   * If you intend to use XRay tracing for this function, you should pass in the
+   * `XRay` class from `aws-sdk`.
+   *
+   * This allows just the code needed to perform this action be included when you need
+   * it and none of it when you don't.
+   *
+   * ```ts
+   * import { XRay } from "aws-sdk";
+   * ```
+   */
+  XRay?: XRay;
 }
 
 /**

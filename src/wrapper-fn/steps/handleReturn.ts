@@ -1,4 +1,4 @@
-import { HttpStatusCodes, IAwsApiGatewayResponse, IDictionary } from "common-types";
+import { HttpStatusCodes, IAwsApiGatewayResponse } from "common-types";
 import { IPathParameters, IQueryParameters, IWrapperContext } from "~/types";
 import { IWrapperMetricsClosure, IWrapperMetricsPreClosure } from "~/types/timing";
 import { apiGatewaySuccess, getStatusCode } from "../util";
@@ -8,7 +8,11 @@ import { apiGatewaySuccess, getStatusCode } from "../util";
  * this function is responsible for returning the appropriate response to
  * the caller.
  */
-export function handleReturn<O extends any, Q extends object = IQueryParameters, P extends object = IPathParameters>(
+export function handleReturn<
+  O extends any,
+  Q extends object = IQueryParameters,
+  P extends object = IPathParameters
+>(
   response: O,
   context: IWrapperContext<any, O, Q, P>,
   metrics: IWrapperMetricsPreClosure | IWrapperMetricsClosure
@@ -28,7 +32,7 @@ export function handleReturn<O extends any, Q extends object = IQueryParameters,
           kind: "wrapper-metrics",
           closureDuration: Date.now() - (metrics.startTime + metrics.duration),
           errorCode: statusCode,
-          knownError: "known",
+          errorType: "known",
           underlyingError: false,
           handlerForwarding: false,
           handlerFunction: false,
@@ -38,7 +42,7 @@ export function handleReturn<O extends any, Q extends object = IQueryParameters,
           kind: "wrapper-metrics",
           closureDuration: Date.now() - (metrics.startTime + metrics.duration),
           errorCode: statusCode,
-          knownError: "known",
+          errorType: "known",
           underlyingError: false,
           handlerForwarding: false,
           handlerFunction: false,

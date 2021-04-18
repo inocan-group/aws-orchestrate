@@ -2,11 +2,12 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 04:04 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 05:19 PM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: extractAccount, extractPartition, extractRegion, extractResource, extractService, extractStage, getArnComponentsFromEnv, parseFullyQualifiedArn, parsePartiallyQualifiedArn, resourceLookup.
+// files: buildArn, extractAccount, extractPartition, extractRegion, extractResource, extractService, extractStage, getArnComponentsFromEnv, parseFullyQualifiedArn, parsePartiallyQualifiedArn, resourceLookup.
 
 // local file exports
+export * from "./buildArn";
 export * from "./extractAccount";
 export * from "./extractPartition";
 export * from "./extractRegion";

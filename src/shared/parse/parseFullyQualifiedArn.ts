@@ -1,4 +1,4 @@
-import { AwsArn, AwsStage } from "common-types";
+import { AwsArn, AwsArnPartition, AwsArnService, AwsStage } from "common-types";
 import { IParsedArn } from "~/types";
 
 import {
@@ -43,7 +43,9 @@ function findAppNameAtStartOfRest(input: string, stage: AwsStage | false) {
  * - app name
  * - function name
  */
-export function parseFullyQualifiedArn(arn: AwsArn): IParsedArn {
+export function parseFullyQualifiedArn<S extends AwsArnService = AwsArnService>(
+  arn: AwsArn<string, AwsArnPartition, S>
+): IParsedArn {
   const { partition } = extractPartition(arn);
   const { service } = extractService(arn);
   const { resource, post: rest } = extractResource(arn);
@@ -75,7 +77,7 @@ export function parseFullyQualifiedArn(arn: AwsArn): IParsedArn {
     );
   }
 
-  let parsed: Partial<IParsedArn> = {
+  const parsed: Partial<IParsedArn> = {
     partition,
     service,
     resource,
@@ -83,7 +85,7 @@ export function parseFullyQualifiedArn(arn: AwsArn): IParsedArn {
     arn,
   };
 
-  parsed.region = region;
+  parsed.region = region ? region : undefined;
   parsed.stage = stage ? stage : undefined;
   const found = findAppNameAtStartOfRest(stripSeparatorsAtExtremes(rest), stage);
 
@@ -91,12 +93,14 @@ export function parseFullyQualifiedArn(arn: AwsArn): IParsedArn {
 
   const knownDictionary = knownResources.includes(resource)
     ? {
-        ...(resource === "function" ? { fn, appName } : {}),
-        ...(resource === "stateMachine" ? { stepFunction, appName } : {}),
+        ...(resource === "function"
+          ? { fn, appName, stepFunction: undefined, rest: undefined }
+          : {}),
+        ...(resource === "stateMachine"
+          ? { stepFunction, appName, fn: undefined, rest: undefined }
+          : {}),
       }
-    : { rest: found.rest };
+    : { rest: found.rest, fn: undefined, stepFunction: undefined };
 
-  parsed = { ...parsed, ...knownDictionary };
-
-  return parsed as IParsedArn;
+  return { ...parsed, ...knownDictionary } as IParsedArn;
 }

@@ -1,8 +1,8 @@
 import { ErrorHandler } from "../../errors/ErrorHandler";
-import { IErrorIdentification, IErrorHandling, IErrorHandlerFunction, IDefaultHandling, IError } from "~/types";
+import { IErrorIdentification, IErrorHandling, IErrorHandlerFunction } from "~/types";
 import { arn, AwsArnLambda, isLambdaFunctionArn } from "common-types";
-import { parseArn } from "~/shared";
 import { isServerlessError, ServerlessError } from "~/errors";
+import { parseLambdaFunctionArn } from "~/shared/parseLambdaFunctionArn";
 
 export const DEFAULT_ERROR_CODE = 500;
 
@@ -21,9 +21,7 @@ export const DEFAULT_ERROR_CODE = 500;
 export class ErrorMeta<I, O> {
   private _errors: ErrorHandler<I, O>[] = [];
   private _defaultErrorCode: number = DEFAULT_ERROR_CODE;
-  private _arn?: string;
-  private _defaultHandler?: AwsArnLambda<"function"> | IErrorHandlerFunction<O>;
-  private _defaultError?: IError;
+  private _defaultHandler?: IErrorHandlerFunction<O> | AwsArnLambda;
 
   /**
    * Add an error handler for a known/expected error
@@ -82,9 +80,7 @@ export class ErrorMeta<I, O> {
     if (typeof arg === "string") {
       // appears to be a ARN
       try {
-        this._defaultHandler = isLambdaFunctionArn(arg)
-          ? (arg as AwsArnLambda<"function">)
-          : (parseArn(arg, { service: "lambda", resource: "function" }).arn as AwsArnLambda<"function">);
+        this._defaultHandler = isLambdaFunctionArn(arg) ? arg : parseLambdaFunctionArn(arg).arn;
       } catch (parseError) {
         const message = `While attempting to parse the passed in ARN [${arg}] for default error handling, an error occurred: ${parseError.message}`;
         if (isServerlessError(parseError)) {
@@ -103,45 +99,6 @@ export class ErrorMeta<I, O> {
 
   public get defaultHandler() {
     return this._defaultHandler;
-  }
-
-  /**
-   * States how to deal with the default error handling. Default
-   * error handling is used once all "known errors" have been exhausted.
-   */
-  public get defaultHandling(): IDefaultHandling {
-    if (this._arn) {
-      return {
-        type: "error-forwarding",
-        code: this.defaultErrorCode,
-        arn: this._arn,
-        prop: "_arn",
-      };
-    }
-
-    if (this._defaultHandler) {
-      return {
-        type: "handler-fn",
-        code: this.defaultErrorCode,
-        defaultHandlerFn: this._defaultHandler,
-        prop: "_defaultHandlerFn",
-      };
-    }
-
-    if (this._defaultError) {
-      return {
-        type: "default-error",
-        code: this.defaultErrorCode,
-        error: this._defaultError,
-        prop: "_defaultError",
-      };
-    }
-
-    return {
-      type: "default",
-      code: this.defaultErrorCode,
-      prop: "_default",
-    };
   }
 
   /**

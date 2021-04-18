@@ -1,4 +1,12 @@
-import { ArnService, ArnResource, AwsRegion, AwsAccountId, ArnPartition, AwsStage, TypeSubtype } from "common-types";
+import {
+  AwsRegion,
+  AwsAccountId,
+  AwsStage,
+  TypeSubtype,
+  AwsArnPartition,
+  AwsArnService,
+  AwsArnResource,
+} from "common-types";
 
 import { parsePartiallyQualifiedArn } from "~/shared/parse";
 import { IParsedArn, IServerlessError } from "~/types";
@@ -13,12 +21,12 @@ const FN = "justDoIt";
  * Allows overriding values with both valid and invalid strings
  */
 interface IDefaultValues {
-  partition?: ArnPartition | string;
-  service?: ArnService | string;
-  resource?: ArnResource | string;
-  region?: AwsRegion | string;
-  account?: AwsAccountId | string;
-  stage?: AwsStage | string;
+  partition?: AwsArnPartition;
+  service?: AwsArnService;
+  resource?: AwsArnResource;
+  region?: AwsRegion;
+  account?: AwsAccountId;
+  stage?: AwsStage;
   appName?: string;
 }
 
@@ -51,19 +59,24 @@ function clearAllEnvs() {
 }
 
 interface IOptional {
-  partition?: string;
-  service?: string;
-  resource?: string;
-  stage?: string;
-  region?: string;
-  account?: string;
+  partition?: AwsArnPartition;
+  service?: AwsArnService;
+  resource?: AwsArnResource;
+  stage?: AwsStage;
+  region?: AwsRegion;
+  account?: AwsAccountId;
   appName?: string;
 }
 
 /**
  * Given a `fn` and the expected ARN, runs tests of partial completion
  */
-const TEST = (partial: string, expectation: string, exceptions: string[] = [], overrides: IOptional = {}) => {
+const TEST = (
+  partial: string,
+  expectation: string,
+  exceptions: string[] = [],
+  overrides: IOptional = {}
+) => {
   clearAllEnvs();
   setAllEnvs(exceptions, overrides);
 
@@ -102,9 +115,14 @@ const NEG_TEST = (
 
   const result = catchErr<IParsedArn, IServerlessError>(() => parsePartiallyQualifiedArn(partial));
 
-  it(`Parsing${process.env.AWS_SERVICE ? ` ${process.env.AWS_SERVICE}` : ""} fails ${reason}`, () => {
+  it(`Parsing${
+    process.env.AWS_SERVICE ? ` ${process.env.AWS_SERVICE}` : ""
+  } fails ${reason}`, () => {
     if (isRight(result)) {
-      console.log("Was supposed to fail but didn't; result is below:\n", JSON.stringify(right(result), null, 2));
+      console.log(
+        "Was supposed to fail but didn't; result is below:\n",
+        JSON.stringify(right(result), null, 2)
+      );
       console.log(`\nEnvironment variables were: ${JSON.stringify(process.env, null, 2)}`);
     }
     expect(isLeft(result)).toBe(true);
@@ -133,29 +151,54 @@ describe("Partial ARN parsing", () => {
       appName: APP1,
       stage: "sb_ken",
     });
-    TEST(FN, `arn:aws:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-feature_foo-bar-${FN}`, [], {
-      appName: APP1,
-      stage: "feature_foo-bar",
-    });
+    TEST(
+      FN,
+      `arn:aws:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-feature_foo-bar-${FN}`,
+      [],
+      {
+        appName: APP1,
+        stage: "feature_foo-bar",
+      }
+    );
   });
 
   describe("without AWS_PARTITION", () => {
-    TEST(FN, `arn:aws:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-dev-${FN}`, ["partition"], {
-      appName: APP1,
-      stage: "dev",
-    });
-    TEST(FN, `arn:aws:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP2}-prod-${FN}`, ["partition"], {
-      appName: APP2,
-      stage: "prod",
-    });
-    TEST(FN, `arn:aws:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-sb_ken-${FN}`, ["partition"], {
-      appName: APP1,
-      stage: "sb_ken",
-    });
-    TEST(FN, `arn:aws:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-feature_foo-bar-${FN}`, ["partition"], {
-      appName: APP1,
-      stage: "feature_foo-bar",
-    });
+    TEST(
+      FN,
+      `arn:aws:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-dev-${FN}`,
+      ["partition"],
+      {
+        appName: APP1,
+        stage: "dev",
+      }
+    );
+    TEST(
+      FN,
+      `arn:aws:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP2}-prod-${FN}`,
+      ["partition"],
+      {
+        appName: APP2,
+        stage: "prod",
+      }
+    );
+    TEST(
+      FN,
+      `arn:aws:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-sb_ken-${FN}`,
+      ["partition"],
+      {
+        appName: APP1,
+        stage: "sb_ken",
+      }
+    );
+    TEST(
+      FN,
+      `arn:aws:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-feature_foo-bar-${FN}`,
+      ["partition"],
+      {
+        appName: APP1,
+        stage: "feature_foo-bar",
+      }
+    );
   });
 
   describe("with AWS_PARTITION set to aws-us-gov", () => {
@@ -169,16 +212,26 @@ describe("Partial ARN parsing", () => {
       stage: "prod",
       partition: "aws-us-gov",
     });
-    TEST(FN, `arn:aws-us-gov:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-sb_ken-${FN}`, [], {
-      appName: APP1,
-      stage: "sb_ken",
-      partition: "aws-us-gov",
-    });
-    TEST(FN, `arn:aws-us-gov:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-feature_foo-bar-${FN}`, [], {
-      appName: APP1,
-      stage: "feature_foo-bar",
-      partition: "aws-us-gov",
-    });
+    TEST(
+      FN,
+      `arn:aws-us-gov:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-sb_ken-${FN}`,
+      [],
+      {
+        appName: APP1,
+        stage: "sb_ken",
+        partition: "aws-us-gov",
+      }
+    );
+    TEST(
+      FN,
+      `arn:aws-us-gov:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-feature_foo-bar-${FN}`,
+      [],
+      {
+        appName: APP1,
+        stage: "feature_foo-bar",
+        partition: "aws-us-gov",
+      }
+    );
   });
 
   describe("AWS_PARTITION and AWS_DEFAULT_SERVICE not set", () => {
@@ -195,10 +248,15 @@ describe("Partial ARN parsing", () => {
       appName: APP1,
       stage: "sb_ken",
     });
-    TEST(FN, `arn:aws:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-feature_foo-bar-${FN}`, exclude, {
-      appName: APP1,
-      stage: "feature_foo-bar",
-    });
+    TEST(
+      FN,
+      `arn:aws:lambda:us-east-1:${DEFAULT_ACCOUNT}:function:${APP1}-feature_foo-bar-${FN}`,
+      exclude,
+      {
+        appName: APP1,
+        stage: "feature_foo-bar",
+      }
+    );
   });
 
   describe("Exotics", () => {
@@ -220,6 +278,8 @@ describe("Partial ARN parsing", () => {
   describe("Negative Tests", () => {
     NEG_TEST(FN, "because STAGE can not be found", "arn/missing-stage", ["stage"]);
     NEG_TEST(FN, "because ACCOUNT can not be found", "arn/missing-account", ["account"]);
-    NEG_TEST(FN, "because REGION can not be found (and lambda is regional)", "arn/missing-region", ["region"]);
+    NEG_TEST(FN, "because REGION can not be found (and lambda is regional)", "arn/missing-region", [
+      "region",
+    ]);
   });
 });

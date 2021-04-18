@@ -1,8 +1,8 @@
+import { IAwsApiGatewayResponse } from "common-types";
 import { IHandlerFunction, isApiGatewayResponse } from "~/types";
 import { isServerlessError, ServerlessError, wrapper } from "~/index";
 import { DEFAULT_ERROR_CODE } from "~/wrapper-fn/util/ErrorMeta";
 import { IRequest, IResponse, SimpleApiGatewayEvent_V2, simpleEvent } from "../data/test-events";
-import { IAwsApiGatewayResponse } from "common-types";
 
 /** returns the sent in event and context */
 const handlerFn: IHandlerFunction<IRequest, IResponse> = async (request, context) => {
@@ -15,7 +15,11 @@ const handlerErrorFn: IHandlerFunction<IRequest, IResponse> = async (_event, _co
 };
 
 const handlerWithKnownErrors: IHandlerFunction<IRequest, IResponse> = async (_event, context) => {
-  context.errorMgmt.addHandler(404, { messageContains: "missing" }, { callback: async () => false });
+  context.errorMgmt.addHandler(
+    404,
+    { messageContains: "missing" },
+    { callback: async () => false }
+  );
   throw new Error("missing something");
 };
 
@@ -26,13 +30,20 @@ const handlerServerlessErrorFn: IHandlerFunction<IRequest, IResponse> = async (_
   throw new ServerlessError(404, "explicit throw of a ServerlessError", "test/serverless-error");
 };
 
-const handlerWithDefaultCodeChanged: IHandlerFunction<IRequest, IResponse> = async (_event, context) => {
+const handlerWithDefaultCodeChanged: IHandlerFunction<IRequest, IResponse> = async (
+  _event,
+  context
+) => {
   context.errorMgmt.setDefaultErrorCode(400);
   throw new Error("this is an error god dammit");
 };
 
 const handlerWithCallback: IHandlerFunction<IRequest, IResponse> = (_event, context) => {
-  context.errorMgmt.addHandler(401, { messageContains: "help me" }, { callback: async () => false });
+  context.errorMgmt.addHandler(
+    401,
+    { messageContains: "help me" },
+    { callback: async () => false }
+  );
   const e = new Error("help me") as Error & { code: string };
   e.code = "secret-code";
   e.name = "named and shamed";
@@ -73,9 +84,6 @@ describe("Handler Wrapper => ", () => {
 
     expect(results.request.foo).toBe(simpleEvent.foo);
     expect(results.request.bar).toBe(simpleEvent.bar);
-
-    expect(results.context.headers).toBeObject();
-    expect(Object.keys(results.context.headers)).toHaveLength(0);
   });
 
   it("A handler which throws a ServerlessError is accepted and thrown", async () => {
