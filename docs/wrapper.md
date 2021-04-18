@@ -1,12 +1,16 @@
-# Serverless Wrapper
+---
+sidebarDepth: 3
+---
+# Handler Wrapper
 
 This library exports a function `wrapper` which is intended to wrap all
-serverless functions. What it provides are the following:
+serverless handler functions. What it provides are the following:
 
 - strong **type safety** for your handler functions
 - a **consistency** abstraction to ensure your request parameters are always typed and where you expect them to be regardless of the caller
 - opinionated **logging** framework that ensures context while helping to block secrets slipping in
 - opinionated **error handling** which ensures that all errors are caught and appropriate handling can be put in place.
+- low friction ways to reach out to **secrets**, lambda and step function **invocation**, and XRay **tracing**
 
 ## Usage
 
@@ -17,7 +21,7 @@ file:
 import { wrapper, IHandlerFunction } from 'aws-orchestrate';
 
 const fn: IHandlerFunction<IRequest, IResponse> = async (request, context) => {
-  //
+  // your function goes here
 };
 
 export const handler = wrapper(fn);
@@ -40,7 +44,7 @@ When you use AWS Lambda "out of the box" you will get an event/request object th
 
 This variance can be dealt with but it is noisy and introduces complexity in terms of getting a strongly typed input in the event object. This nuisance is made even more complicated by functions which can be called by _both_ the API Gateway and other functions.
 
-> It is considered good practice for you handler functions to be neutral to the _caller_ of your function; this gives more utility/reuse.
+> Where possible, it is considered good practice for your handler functions to be neutral to the _caller_ of your function; this gives more utility/reuse.
 
 Fortunately, using the `wrapper` function makes all of this VERY easy. The `request` object passed into your handler function will ALLWAYS be a strongly typed message defined by the first _generic_ passed to the `IHandlerFunction` type. Let's take a look at how this might look before using the wrapper:
 
@@ -72,25 +76,49 @@ const fn: IHandlerFunction<IRequest, IResponse> = (request,context ) {
 export handler = wrapper(fn);
 ```
 
-This is obviously more compact but this is just the beginning.
+This expression of an _input_ and _output_ contract is a great way to start writing your function. Explain what it does and then describe precisely the data in and out. In most examples you'll only need this typing but if you want to go further you can also type the _query parameters_ and _path parameters_. The generics provided from `IHandlerFunction` are:
+
+```ts
+interface IHandlerFunction<I, O, Q, P> { ... }
+```
+
+where `Q` represents the query parameters, and `P` the path parameters. 
 
 ## Enhanced Context
 
 If you're used to AWS Lambda functions you'll be used to having both the "event" and some additional
-"context" being provided via the API. By using the `wrapper` function you still get this same two parameters but the _context_ will have a **superset** of what you get by default.
+"context" being provided via the API. By using the `wrapper` function you still get the same two parameters but the _context_ will have a **super set** of what you get by default.
 
 The wrapper object is fully typed (and therefore self-documenting) but here are some highlights:
 
-- `database()` - if you are using **Firebase** as your backend you can call this and it will connect you to the database automatically as well as cache the connection so all subsequent calls will used the cached connection. Since this cache reference is outside the handler function itself it then can sometimes remain connected between Lambda executions.
-- `getSecrets()` - provides a means to gain access to secrets; it will look through passed in header secrets and then go out to AWS's `SSM` for anything not found locally.
-- `sequence` - gives you a `LambdaSequence` object to interogate. You can test if the function is running within a sequence with `const isSequence = context.sequence.isSequence();`.
-- `headers` - regardless of how your function was called you will get a hash of header values
-- `errorMgmt` - provides a simple API surface to manage error handling in your function
-- `log` - provides a logging API for you to use in place of dropping `console.log()` statements througout. The logging API -- coming from `aws-log` library -- ensures your log messages are always a structured JSON object and that useful Lambda context is provided with every log event. In addition, and this is **super** important, it gives your logs a "correlationId" which is passed through every LambdaSequence you are in (ensuring you can trace logs across the full sequence instead of just function by function).
+### APIs
+
+- `getSecrets()` - integrates with AWS's `SSM` to provide a secure and cost effective way of managing secrets
+- `errorMgmt` - a simple API surface to manage error handling
+- `log` - provides a logging API for you to use in place of dropping `console.log()` statements throughout.
+- `invoke` - asynchronously call another Lambda function from your handler
+- `invokeStepFn` - asynchronously kick off a Step Function
+
+> All of the above API's will be covered in later sections in greater detail
+
+- `setSuccessCode` - by default we'll return a status code of 200/204 based on whether there is content but you can override to whatever you like.
+- `setHeaders` - when responding to API Gateway we will take care of most headers for you but you can add to those we've set for CORS, Content-Type, etc.
+- `setContentType` - we default to _application/json_ as the response format but you can change this as you see fit.
+
+
+### Additional Props
+- `headers` - the headers made in the request (if there were headers)
+- `isApiGateway` - a boolean flag to identify if the caller was API Gateway
+- `apiGateway` the API Gateway dictionary (with the body removed to dedup); this and several other props is only available when the caller is API Gateway
+- `token` - if a value was passed in in the `Authorization` header has a value it will be placed here
+- `verb` - the RESTful verb used in an API Gateway call
+- `queryParameter` - strongly typed dictionary of query parameters
+- `pathParameters` - strongly typed dictionary of path parameters
+
 
 ## Typed Returns
 
-Unlike traditional Lambda functions, your return types will be strongly typed. This means that if you state your return type to be:
+Unlike traditional Lambda functions, with the wrapper function your return types will be strongly typed. That means that if you state your return type to be:
 
 ```typescript
 export interface IResponse {
@@ -101,7 +129,7 @@ export interface IResponse {
 
 This will be enforced by Typescript when you return from your function. What about when you're returning to a API Gateway caller? No problem, there is zero difference, you just return the body and the `wrapper` function will ensure that the message will be prepared in an appropriate manner for API Gateway.
 
-So imaging that you have an API Gateway caller then you would return like this:
+So imagine that you have an API Gateway caller then you would return like this:
 
 ```typescript
 const fn: IHandlerFunction<void, IResponse> = (request, context) => {
@@ -133,7 +161,7 @@ As you can see, without doing anything it returns a valid API Gateway response w
 
 ## Logging
 
-The context object passed into handler function has a `log` property on it which give you access to a robust logging API provided by `aws-log`:
+The context object passed into handler function has a `log` property on it which give you access to a logging API provided by [`aws-log`](https://github.com/inocan-group/aws-log):
 
 ```typescript
 const { log } = context;
@@ -144,98 +172,112 @@ This logger should be used over `console.log` in 100% of cases. Not only does it
 
 - Ensures that any "secrets" are masked before they accidentally bleed into the logs. You _can_ manually mask values but all "secrets" brough in via the getSecrets() API surface are automatically masked for you.
 - Contextual information from the Lambda environment is automatically added to your log messages to give a richer information ecosystem to your logs
-- You can specify, on a per "stage" basis, which log levels are written to **stdout**. This flexibility includes "sampling" certain log levels so you can maintain rich information in production without overwhelming storage limits.
+- You can specify, on a _per stage_ basis, which log levels are written to **stdout**. This flexibility includes "sampling" certain log levels so you can maintain rich information in production without overwhelming storage limits.
 
-For more on this logging framework, check their own docs: [`aws-log`](https://github.com/inocan-group/aws-log).
+In order to configure the logging levels you want per stage, you will do this on the wrapper's "option hash". So for instance:
+
+```ts
+const handler = wrapper(fn, { logging: { 
+  debug: "none", info: "all", warn: "all", error: "all" 
+}});
+```
+
+Here we've stated which _levels_ of severity we want to publish and in this case we're being consistent for all development stages. Being this uniform is rarely what you want and as we'll see the options are not just _all_ or _none_.
+
+### Logging by Stage
+
+This is the most common thing to see in configuration. Typically you'll want all of your logs in development stages but in production, where volumes are much heavier, tracking everything will have a real world cost to them.
+
+### Sampling and Sampling Rates
+
+Beyond specifying _per stage_ what your configuration is, we can state that we'd like a random percentage of logs logged. This is very handy in production where we might be tempted to turn off something like the _debug_ level but in doing so we miss out on some of the richness in what is in fact our most important environment.
+
+### More Advanced Example
+
+In the following example we'll see both _stage_ based configuration as well as sampling:
+
+```ts
+const dev = { debug: "all", info: "all", warn: "all", error: "all"} ;
+const prod = { 
+  debug: "sample-by-session", 
+  info: "all", 
+  warn: "all",
+  error: "all", 
+  sampleRate: .25
+} ;
+
+const handler = wrapper(fn, logging: { dev, prod });
+```
+
+Here you'll see that we've got different configurations for the `dev` and `prod` stages but in production we're only taking 25% of the logs at the **debug** severity level. That's it for now but the API is fully typed and self-documented and you can also refer to the `aws-log` README for details as well.
 
 ## Secret Management
 
 It is all too common that "secrets" are stored in ENV variables and/or other sub-optimal solutions. This often leads to unintentional leaks, whether it be a larger audience viewing the variables than would be ideal or as we've seen too many times the accidental commit of ENV variables to a repo.
 
-This sub-optimal secret management is in large part due to the friction (and/or cost) of a more robust solution but fortunately AWS has a very cost effectly solution in [SSM Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-about-examples.html). With the `wrapper` function you get this cost-effective solution delivered to you in a very low-friction manner.
+This sub-optimal secret management is in large part due to the friction (and/or cost) of a more robust solution but fortunately AWS has a cost effect solution in [SSM Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-about-examples.html). With the `wrapper` function our aim is to reduce the friction of use as much as possible.
 
 First off you can access secrets in your handler functions with the use of the `getSecrets()` API surface. It allows you to state which "modules" of secrets you need. For instance, imagine that you want secrets relating to **Firebase** and **Sendgrid**:
 
 ```typescript
 const fn: IHandlerFunction<IRequest, IResponse> = async (request,context ) {
-  const secrets = await context.getSecrets('firebase', 'sendGrid');
+  const secrets = await context.getSecrets('supabase', 'sendGrid');
 }
 ```
 
-With this one line of code you are able to get all secrets associated with `firebase` and `sendGrid`. Further, these secrets are isolated to the "stage" that you are at. This ensures that your _development_ functions will go against your _development_ Firebase database rather than staging, production, etc.
+With this one line of code you are able to get all secrets associated with `supabase` and `sendGrid`. Further, these secrets are isolated to the "stage" that you are at. This ensures that your _development_ functions will go against your _development_ Firebase database rather than staging, production, etc.
+
+> Note: we use the [`aws-ssm`](https://github.com/inocan-group/aws-ssm) repo as a minor abstraction to both adhere to a opinioned convention around naming but also because we prefer the API surface than AWS's.
 
 ## Error Handling
 
 All errors encountered in your handler function will be trapped by the `wrapper` function and will report the error in a reasonable way without any configuration. If, however, you want to take a more active role than you can by leveraging one of two distinct mechanisms:
 
 1. the Error Management API at `context.errorMgmt`
-2. use or extend the `HandledError` class exposed by this library
+2. use or extend the `ServerlessError` class exposed by this library
 
-### Handled Errors
+In general, there are three error types you will get when using the wrapper function:
 
-The first concept to grok is the idea behind "handled" and "unhandled" errors. A "handled" error is where the consumer specifically/intentionally intends to throw errors given a certain set of circumstances. This is par for the course with two important exceptions:
+- `ServerlessError` - an explicitly thrown error which includes an HTTP status to handle the needs of all callers. This is the primary tool you'll use to throw errors you want to trap and the wrapper function uses this too for it's errors.
+- `KnownError` - you can use the error management API to define certain error conditions you may encounter and what to do with them. In these cases the errors will be wrapped up as `KnownError`s.
+- `UnknownError` - errors sometime occur unexpectedly and if aren't expressly throwing a **ServerlessError** or using the error API to setup for **KnownErrors** the remaining errors will be cast as **UnknownErrors**.
 
-1. The error which is thrown MUST have a valid HTTP status code (not part of the default Error from JS)
-2. The handler wraps all the code that consumers write to capture _unhandled_ error so it must be able to distinguish between an error that the handler author intended versus one that happened without real handling for it.
+### ServerlessErrors
 
-Both of the above conditions are met by either using or extending the `ServerlessError` symbol from this library:
+As has been discussed, the ServerlessError is available to you as the author of handler functions. It's signature is as follows:
 
-```typescript{6-7}
+```typescript
+throw ServerlessError(403, "your message", 'type/subtype');
+```
+
+The first parameter represents the HTTP error status code. The message is the message. And finally you're asked to provide a type/subtype classification of the error.
+
+> Note: if you want to wrap an _underlying_ error you can do so by assigning it to the `underlyingError` property of the ServerlessError.
+
+For most people, use of the `ServerlessError` provides a straightforward means of throwing errors which will be seen by the wrapper as intentional error which do not need error handling applied. As hopefully is already clear, you need not _catch_ your ServerlessErrors as the wrapper will do this and ensure that it is logged and then handled appropriately for the specific caller.
+
+### Error Management API
+
+The `errorMgmt` property on the **context** object provides you an openning to do more advanced things in error management. The first of which is defining _known errors_ and expressing how they should be handled.
+
+As an example, have a look at the following expression:
+
+```typescript{2}
 const fn: IHandlerFunction<IRequest, IResponse> = async (req, ctx) {
-  try {
-    // do something which may throw something you want to handle
-  } catch(e) {
-    if(e.message.includes('not allowed')) {
-      // Something you recognized might happen
-      throw ServerlessError(403, e.message, 'not-allowed');
-    }
-    // this is an unhandled error just throw it and let the wrapper manage this
-    throw e;
-  }
+  ctx.errorMgmt.addHandler(403, { messageContains: "not allowed" });
 }
 ```
 
-This is typically the best way to handle your expected error states but you can also use the built in error management API found at `context.errorMgmt`. An example of this could be:
+This states that any error thrown which contains "not allowed" in the message should be set to the HTTP status code of 403. Because it is now _known_ when this pattern presents it will be wrapped as a `KnownError`.
 
-```typescript{2-4}
-const fn: IHandlerFunction<IRequest, IResponse> = async (req, ctx) {
-  // any error which contains the text "not allowed" in it will be mapped to the
-  // **403** error code.
-  handlerContext.errorMgmt.addHandler(403, { messageContains: "not allowed" });
-}
-```
+Beyond simply changing the HTTP code, you can also take two other actions:
 
-### Un-Handled Errors
+1. Add a callback "handler"
+2. Forward the error to another Lambda
+
+In the case of a callback, you are given an asynchronous callback to do what you need _in process_ either to create a useful side effect like sending an email, etc. or you can actually attempt to _fix_ the problem. The callback's return type is `false` for "did not fix" and otherwise expects you to meet the response typing contract that you're operating under.
+
+### Unknown Errors
 
 Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
-## Working with Sequences
-
-There are two modes in which `LambdaSequence`'s play a role in handler functions:
-
-1. **Kick-off:** a "conductor" function may define and then kick-off a `LambdaSequence`
-2. **Operating:** a function may be operating within a `LambdaSequence` and therefore need to **invoke** the next function in the sequence.
-
-In both cases the `wrapper` function will help to make this process easier.
-
-We will start with the _operating_ mode first because it is so easy. How easy? Completely transparent. In this mode your function simply goes about its responsibilities and when the function returns, the `wrapper` will detect what function comes next (if any) and send the current function's output along to this function for you (along with any other information structured by the conductor). If, for whatever reason, your handler function wants to introspect the state of the sequence -- or lack thereof -- you are given access to a `LambdaSequence` off the `context` object. For example, you can validate that a given function _is not_ running in a sequence with this conditional branching:
-
-```typescript
-if (context.sequence.isSequence) {
-  // do something
-}
-```
-
-Just because you _can_ introspect whether you're running as part of a sequence or not, in most cases it will be best to have your function operate independantly of this knowledge and allow the `wrapper` to manage this for you.
-
-In the case of a **Conductor** function, this function would be expected to start its execution _not_ being part of a sequence but instead it's responsibility is to _create_ a sequence. Once it has defined the sequence, the only step the conductor must make is to _register_ it for execution. The example below illustrates this:
-
-```typescript
-import { LambdaSequence, registerSequence } from 'aws-orchestrate';
-// ...
-const sequence = LambdaSequence.add('fn1')
-  .add('fn2', { temperature: '75' })
-  .add('fn3');
-
-registerSequence(sequence);
-```

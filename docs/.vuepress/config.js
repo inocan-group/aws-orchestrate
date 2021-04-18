@@ -88,18 +88,18 @@ module.exports = {
     },
     nav: [
       {
-        text: "Handler Wrapper",
+        text: "Wrapper Fn",
         link: "/wrapper",
       },
       {
-        text: "Orchestration",
-        link: "/step-fns/",
+        text: "Step Function Builder",
+        link: "/step-fns",
       },
       {
         text: "Serverless Devops",
-        link: "/devops/",
+        link: "/devops",
       },
     ],
-    sidebar: ["/wrapper", "/sequence", "/devops"],
+    sidebar: ["/wrapper", "/step-fns", "/devops"],
   },
 };
