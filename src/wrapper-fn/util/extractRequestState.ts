@@ -8,6 +8,8 @@ import {
   AwsApiStyle,
   AwsSource,
   DeviceType,
+  IPathParameters,
+  IQueryParameters,
   IRequestState,
   isHeaderBodyRequest,
   IWrapperIdentityDetails,
@@ -27,7 +29,7 @@ import {
  * caller versus other callers and ensures that all "state" passed in by the caller
  * can be handed in a consistent and typed manner.
  */
-export function extractRequestState<I, Q extends object, P extends object>(
+export function extractRequestState<I, Q extends IQueryParameters, P extends IPathParameters>(
   event: I | IAwsLambdaProxyIntegrationRequest,
   context: IAwsLambdaContext
 ): IRequestState<I, Q, P> {
@@ -65,8 +67,8 @@ export function extractRequestState<I, Q extends object, P extends object>(
       apiGateway: event,
       headers: event.headers,
       token: event.headers.Authenticate as string,
-      path: event.pathParameters as P,
-      query: event.queryStringParameters as Q,
+      pathParameters: event.pathParameters as P,
+      queryParameters: event.queryStringParameters as Q,
       verb: isProxyRequestContextV2(event)
         ? event.requestContext.http.method
         : event.requestContext.httpMethod,
@@ -92,8 +94,8 @@ export function extractRequestState<I, Q extends object, P extends object>(
 
         api: undefined,
         apiGateway: undefined,
-        path: undefined,
-        query: undefined,
+        pathParameters: undefined,
+        queryParameters: undefined,
         verb: undefined,
         claims: undefined,
       }
@@ -108,8 +110,8 @@ export function extractRequestState<I, Q extends object, P extends object>(
         headers: undefined,
         token: undefined,
         identity,
-        path: undefined,
-        query: undefined,
+        pathParameters: undefined,
+        queryParameters: undefined,
         verb: undefined,
         claims: undefined,
       };

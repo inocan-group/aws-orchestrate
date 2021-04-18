@@ -3,7 +3,6 @@ import { KnownError, UnknownError } from "~/errors";
 import {
   IError,
   IPathParameters,
-  IQueryParameters,
   IWrapperContext,
   IWrapperMetricsClosure,
   IWrapperMetricsPreClosure,
@@ -24,8 +23,8 @@ import { findError, ErrorMeta, apiGatewayFailure, apiGatewaySuccess, XRay } from
 export async function handleOtherErrors<
   I,
   O,
-  Q extends object = IQueryParameters,
-  P extends object = IPathParameters,
+  Q extends IPathParameters = IPathParameters,
+  P extends IPathParameters = IPathParameters,
   T extends IError = IError
 >(
   originatingError: T,
@@ -64,6 +63,7 @@ export async function handleOtherErrors<
           kind: "error-handler-handled",
           response: result,
         });
+        xray.handlerFunctionCalled("known");
         metrics = {
           ...metrics,
           kind: "wrapper-metrics",
@@ -134,6 +134,7 @@ export async function handleOtherErrors<
     if (typeof errorMgmt.defaultHandler === "string") {
       try {
         metrics.handlerFunction = true;
+        xray.errorForwarded(errorMgmt.defaultHandler);
         await context.invoke(errorMgmt.defaultHandler, request);
       } catch (errhandlerError) {
         metrics.underlyingError = true;
@@ -147,6 +148,7 @@ export async function handleOtherErrors<
       // default handler was a callback; which provides opportunity to actually convert
       // an error to a successful outcome.
       metrics.handlerFunction = true;
+      xray.handlerFunctionCalled("default");
       const result = await errorMgmt.defaultHandler(error);
       if (result !== false) {
         metrics = {

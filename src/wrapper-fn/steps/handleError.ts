@@ -13,8 +13,8 @@ import { IWrapperMetricsClosure, IWrapperMetricsPreClosure } from "~/types/timin
 export async function handleError<
   I,
   O,
-  Q extends object = IQueryParameters,
-  P extends object = IPathParameters,
+  Q extends IQueryParameters = IQueryParameters,
+  P extends IPathParameters = IPathParameters,
   T extends Error = Error
 >(
   error: T,
@@ -39,7 +39,7 @@ export async function handleError<
         context,
       });
 
-      return handleOtherErrors<I, O, P, Q>(error, errorMgmt, request, context, metrics, xray);
+      return handleOtherErrors<I, O, Q, P>(error, errorMgmt, request, context, metrics, xray);
     }
   } catch (underlyingError) {
     log.warn("There was an error which occurred during error handling", {

@@ -10,8 +10,8 @@ import { IPathParameters, IQueryParameters } from "./wrapper-types";
 export type IErrorHandlingCallback<
   I,
   O,
-  Q extends object = IQueryParameters,
-  P extends object = IPathParameters,
+  Q extends IQueryParameters = IQueryParameters,
+  P extends IPathParameters = IPathParameters,
   T extends Error = Error
 > = (
   error: T,
@@ -30,8 +30,8 @@ export type IErrorHandlingCallback<
 export interface IErrorHandling<
   I,
   O,
-  Q extends object = IQueryParameters,
-  P extends object = IPathParameters
+  Q extends IQueryParameters = IQueryParameters,
+  P extends IPathParameters = IPathParameters
 > {
   /**
    * forward to another lambda function to report the error or take some other action.

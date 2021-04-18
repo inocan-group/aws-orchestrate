@@ -1,18 +1,10 @@
 import { ILoggerApi } from "aws-log";
-import {
-  IAwsLambdaContext,
-  IAwsLambdaProxyIntegrationRequest,
-  IAwsLambdaProxyIntegrationRequestHeaders,
-  IDictionary,
-  IHttpRequestHeaders,
-  RestMethod,
-} from "common-types";
-import type { ErrorMeta } from "~/wrapper-fn/util/ErrorMeta";
+import { IAwsLambdaContext } from "common-types";
+import type { ErrorMeta } from "~/wrapper-fn/util";
 import { setContentType, addCookie, setUserHeaders } from "~/wrapper-fn/util/headers";
 import { getSecrets } from "~/wrapper-fn/util/secrets";
-import { AwsApiStyle, AwsSource } from "./general";
 import { IInvokeLambda, IInvokeStepFunction } from "./invocation-types";
-import { IWrapperIdentityDetails, IWrapperIdentityEssentials } from "./wrapper-types";
+import { IPathParameters, IQueryParameters, IRequestState } from "./wrapper-types";
 
 /**
  * The _functions_ provided by the wrapper function that are provided
@@ -109,125 +101,11 @@ export interface IWrapperContextFunctions<I, O> {
   invokeStepFn: IInvokeStepFunction;
 }
 
-/**
- * Properties available across all caller types
- */
-export interface IWrapperContextCommonProps {
-  /**
-   * The unique `id` assigned to this function and any functions
-   * which are invoked downstream of this function
-   */
-  correlationId: string;
-
-  /**
-   * A boolean flag which indicates whether the current execution was started by an API Gateway
-   * event.
-   */
-  isApiGateway: boolean;
-}
-
-/**
- * Context when the caller is a Lambda which has the `headers`/`body`
- * props injected by `aws-orchestrate` when one function calls another
- */
-export type IWrapperHeaderAndBodyContext = IWrapperContextCommonProps & {
-  caller: AwsSource.LambdaWithHeader;
-  identity: IWrapperIdentityEssentials;
-
-  /**
-   * The HTTP headers variables passed by caller
-   */
-  headers: IHttpRequestHeaders;
-  /**
-   * If the caller sent in a value in the `Authenticate` header then it will be
-   * represented here.
-   */
-  token: string | undefined;
-  api: undefined;
-  claims: undefined;
-  verb: undefined;
-  apiGateway: undefined;
-  queryParameters: undefined;
-  pathParameters: undefined;
-};
-
-/**
- * Context provided when the caller is a Lambda caller
- */
-export type IWrapperLambdaContext = IWrapperContextCommonProps & {
-  caller: AwsSource.Lambda;
-  identity: IWrapperIdentityEssentials;
-
-  headers: undefined;
-  api: undefined;
-  token: undefined;
-  claims: undefined;
-  verb: undefined;
-  apiGateway: undefined;
-  queryParameters: undefined;
-  pathParameters: undefined;
-};
-
-/**
- * Context provided when the caller is API Gateway
- */
-export type IWrapperApiGatewayContext<Q, P> = IWrapperContextCommonProps & {
-  caller: AwsSource.ApiGateway;
-  /**
-   * A collection of attributes that help to identify the source/caller.
-   * This helps to abstract variations that might exist between REST and HTTP
-   * API's.
-   */
-  identity: IWrapperIdentityDetails;
-
-  /**
-   * If the caller sent in a value in the `Authenticate` header then it will be
-   * represented here.
-   */
-  token: string | undefined;
-  /**
-   * Distinguishes between the various API styles that API Gateway offers.
-   */
-  api: AwsApiStyle;
-  headers: IAwsLambdaProxyIntegrationRequestHeaders;
-  /**
-   * A dictionary of name/value pairs based on the values passed in from the
-   * _query parameters_ of the request
-   */
-  queryParameters: Q | {};
-  /**
-   * A dictionary of name/value pairs based on the values passed in from the
-   * URL/path of the request
-   */
-  pathParameters: P | {};
-
-  /**
-   * If the caller is API Gateway, this property will indicate the REST verb used
-   * in the call.
-   */
-  verb: RestMethod | undefined;
-
-  /**
-   * The _custom claims_ which this function received from API Gateway. This is structured
-   * as a dictionary with the claim being the key and the value being any data structure
-   * that the app has agreed to.
-   *
-   * > Note: currently this is only available in REST API's, not HTTP API's.
-   */
-  claims?: IDictionary;
-
-  /**
-   * The API Gateway "proxy integration" request data; this can be either version 1.0 or 2.0.
-   * If the caller is not API Gateway it will be left undefined.
-   */
-  apiGateway: IAwsLambdaProxyIntegrationRequest;
-};
-
 /** properties that wrapper function adds to the AWS context */
-export type IWrapperContextProps<Q, P> =
-  | IWrapperHeaderAndBodyContext
-  | IWrapperApiGatewayContext<Q, P>
-  | IWrapperLambdaContext;
+export type IWrapperContextProps<Q extends IQueryParameters, P extends IPathParameters> = Omit<
+  IRequestState<any, Q, P>,
+  "request"
+> & { correlationId: string };
 
 /**
  * The AWS `context` plus additional properties/functions that the `wrapper`
@@ -236,8 +114,8 @@ export type IWrapperContextProps<Q, P> =
 export type IWrapperContext<
   I,
   O,
-  Q extends object = IDictionary,
-  P extends object = IDictionary
+  Q extends IQueryParameters = IQueryParameters,
+  P extends IPathParameters = IPathParameters
 > = Omit<IAwsLambdaContext, "identity"> &
   IWrapperContextProps<Q, P> &
   IWrapperContextFunctions<I, O>;

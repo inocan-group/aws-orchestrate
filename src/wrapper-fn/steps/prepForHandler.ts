@@ -1,7 +1,6 @@
 import { ILoggerApi } from "aws-log";
 import { IAwsLambdaContext } from "common-types";
 import {
-  AwsSource,
   IPathParameters,
   IQueryParameters,
   IRequestState,
@@ -22,12 +21,13 @@ import {
   ErrorMeta,
 } from "../util";
 import { configureLambda, configureStepFn } from "~/wrapper-fn/util/invoke";
+import { omit } from "native-dash";
 
 export function prepForHandler<
   I,
   O,
-  Q extends object = IQueryParameters,
-  P extends object = IPathParameters
+  Q extends IQueryParameters = IQueryParameters,
+  P extends IPathParameters = IPathParameters
 >(
   state: IRequestState<I, Q, P>,
   context: IAwsLambdaContext,
@@ -60,20 +60,10 @@ export function prepForHandler<
     invokeStepFn: configureStepFn(options.StepFunctions),
   };
 
-  const contextProps: IWrapperContextProps<Q, P> = {
+  const contextProps = {
+    ...omit(state, "request"),
     correlationId,
-    isApiGateway: state.isApiGateway,
-    identity: state.identity,
-    api: state.api,
-    headers: state.headers,
-    caller: AwsSource.ApiGateway,
-    token: state.token,
-    claims: state.claims,
-    verb: state.verb,
-    apiGateway: state.apiGateway,
-    queryParameters: state.query,
-    pathParameters: state.path,
-  };
+  } as IWrapperContextProps<Q, P>;
 
   // the handler's function is now ready for use
   return {

@@ -30,8 +30,8 @@ export const wrapper = function <
   I,
   /** the handler's output*/
   O extends any,
-  Q extends object = IQueryParameters,
-  P extends object = IPathParameters
+  Q extends IQueryParameters = IQueryParameters,
+  P extends IPathParameters = IPathParameters
 >(
   fn: (request: I, context: IWrapperContext<I, O, Q, P>) => Promise<O>,
   options: IWrapperOptions = {}
@@ -83,7 +83,7 @@ export const wrapper = function <
         success: false,
         duration: Date.now() - metrics.startTime,
       };
-      return handleError<I, O, P, Q>(handlerFnError, state.request, wrapperContext, metrics, xray);
+      return handleError<I, O, Q, P>(handlerFnError, state.request, wrapperContext, metrics, xray);
     }
   };
 };

@@ -16,8 +16,8 @@ export type IPathParameters = IDictionary<scalar>;
 export type IHandlerFunction<
   I,
   O,
-  Q extends object = IQueryParameters,
-  P extends object = IPathParameters
+  Q extends IQueryParameters = IQueryParameters,
+  P extends IQueryParameters = IQueryParameters
 > = (event: I, context: IWrapperContext<I, O, Q, P>) => Promise<O>;
 
 /**
@@ -68,21 +68,52 @@ export interface IWrapperIdentityDetails extends IWrapperIdentityEssentials {
 
 export type IWrapperIdentity = IWrapperIdentityEssentials | IWrapperIdentityDetails;
 
-export interface IApiGatewayRequestState<B, Q extends object, P extends object> {
+export interface IApiGatewayRequestState<B, Q extends IQueryParameters, P extends IPathParameters> {
   kind: "api-gateway";
   caller: AwsSource;
   request: B;
   isApiGateway: true;
+  /**
+   * A collection of attributes that help to identify the source/caller.
+   * This helps to abstract variations that might exist between REST and HTTP
+   * API's.
+   */
   identity: IWrapperIdentityDetails;
 
+  /**
+   * Distinguishes between the various API styles that API Gateway offers.
+   */
   api: AwsApiStyle;
+  /**
+   * The API Gateway "proxy integration" request data; this can be either version 1.0 or 2.0.
+   * If the caller is not API Gateway it will be left undefined.
+   */
   apiGateway: IAwsLambdaProxyIntegrationRequest;
   headers: IAwsLambdaProxyIntegrationRequestHeaders;
   /** the value of the `Authorization` header (if it exists) */
   token: string | undefined;
-  path: P;
-  query: Q;
+  /**
+   * A dictionary of name/value pairs based on the values passed in from the
+   * URL/path of the request
+   */
+  pathParameters: P;
+  /**
+   * A dictionary of name/value pairs based on the values passed in from the
+   * _query parameters_ of the request
+   */
+  queryParameters: Q;
+  /**
+   * If the caller is API Gateway, this property will indicate the REST verb used
+   * in the call.
+   */
   verb: RestMethod;
+  /**
+   * The _custom claims_ which this function received from API Gateway. This is structured
+   * as a dictionary with the claim being the key and the value being any data structure
+   * that the app has agreed to.
+   *
+   * > Note: currently this is only available in REST API's, not HTTP API's.
+   */
   claims?: IDictionary;
 }
 
@@ -95,8 +126,8 @@ export interface IBasicRequestState<B> {
 
   headers: undefined;
   token: undefined;
-  path: undefined;
-  query: undefined;
+  pathParameters: undefined;
+  queryParameters: undefined;
   verb: undefined;
   claims: undefined;
   api: undefined;
@@ -118,28 +149,15 @@ export interface IHeaderBodyRequestState<B> {
   headers: IHttpRequestHeaders;
   /** the value of the `Authorization` header (if it exists) */
   token: string | undefined;
-  path: undefined;
-  query: undefined;
+  pathParameters: undefined;
+  queryParameters: undefined;
   verb: undefined;
   claims: undefined;
   api: undefined;
   apiGateway: undefined;
 }
 
-export type IRequestState<B, Q extends object, P extends object> =
+export type IRequestState<B, Q extends IQueryParameters, P extends IPathParameters> =
   | IApiGatewayRequestState<B, Q, P>
   | IBasicRequestState<B>
   | IHeaderBodyRequestState<B>;
-
-export enum WorkflowStatus {
-  /** handler setting up context and getting ready to hand over to handler fn */
-  "initializing" = "initializing (1 of 5)",
-  /** the wrapper has handed execution control over to the handler fn */
-  "handlerRunning" = "handlerRunning (2 of 5)",
-  /** the handler has returned execution control to the wrapper function */
-  "handlerComplete" = "handlerComplete (3 of 5)",
-  /** the wrapper fn is managing through the error handling features */
-  "errorHandling" = "errorHandling (4 of 5)",
-  /** the wrapper fn is completing the final steps before exiting */
-  "completing" = "completing (5 of 5)",
-}

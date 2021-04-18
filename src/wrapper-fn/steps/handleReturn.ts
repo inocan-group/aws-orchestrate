@@ -11,8 +11,8 @@ import { apiGatewaySuccess, getStatusCode, XRay } from "../util";
  */
 export function handleReturn<
   O extends any,
-  Q extends object = IQueryParameters,
-  P extends object = IPathParameters
+  Q extends IQueryParameters = IQueryParameters,
+  P extends IPathParameters = IPathParameters
 >(
   response: O,
   context: IWrapperContext<any, O, Q, P>,

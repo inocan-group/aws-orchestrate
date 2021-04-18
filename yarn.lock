@@ -8552,6 +8552,11 @@ native-dash@^1.11.0:
   resolved "https://registry.yarnpkg.com/native-dash/-/native-dash-1.11.0.tgz#106772ab38d07e06c9c88b220b4df963636ce513"
   integrity sha512-QDFE+jdhdwaq59Z0ilYCHflAlqKl+CHZ/w1j4KnnLpOcPj3uDEidhe0a8zXnke/kkWF21UCJp3nfTOicKLWl6g==
 
+native-dash@^1.12.0:
+  version "1.12.0"
+  resolved "https://registry.yarnpkg.com/native-dash/-/native-dash-1.12.0.tgz#bddc4c864c234faeb6623ae1caec42812a3653ca"
+  integrity sha512-CiEufhR/kYT1cJg/rTKq7NQPG9yO/ycxYgBWqnr/1tySsmNZBMmJ+bYB5VRjjZFPshw77Vn56/2p5jL6ksPqZw==
+
 native-dash@~1.10.0:
   version "1.10.0"
   resolved "https://registry.yarnpkg.com/native-dash/-/native-dash-1.10.0.tgz#ba9cf90a0b927705699bac335e92382a19b1e97e"
