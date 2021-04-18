@@ -14,7 +14,7 @@ export interface IStateMachineApi {
   /**
    * Transpiles the state machine definition into yaml
    */
-  toYaml(): string;
+  // toYaml(): string;
   /**
    * Generate a graph to visualize the entire state machine definition
    */

@@ -23,10 +23,9 @@
     "autoindex": "yarn do autoindex",
     "build": "run-s clean autoindex build:bundle",
     "build:analyze": "node devops/build es2020 --analyze",
-    "build:bundle": "node devops/build commonjs es2020 --closure",
+    "build:bundle": "node devops/build es2020 --closure --analyze",
     "build:cjs": "tsc -P tsconfig.cjs.json",
     "build:es": "tsc -P tsconfig.es.json",
-    "build:experimental": "node build/build.js es cjs --min",
     "build:tsc": "run-p build:es build:cjs",
     "circular": "yarn madge --circular src/**/*.ts",
     "clean": "rimraf dist",
@@ -100,6 +99,7 @@
   },
   "peerDependencies": {
     "aws-ssm": "^0.3.13",
+    "common-types": "^1.23.1",
     "inferred-types": "^0.3.0",
     "native-dash": "^1.12.0"
   }

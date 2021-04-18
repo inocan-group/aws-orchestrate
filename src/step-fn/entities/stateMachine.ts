@@ -6,7 +6,6 @@ import {
   IStepFunction,
   IStepFunctionChoiceItem,
 } from "common-types";
-import { dump } from "js-yaml";
 import { hash } from "native-dash";
 import { parseArn } from "~/shared";
 import {
@@ -29,7 +28,14 @@ import {
 } from "~/types";
 import { isFinalizedStepFn, parseStepFnSelector } from "~/step-fn";
 import { ServerlessError } from "~/errors";
-import { Catch, ICatchConfig, ICatchFluentApi, IRetryConfig, IRetryFluentApi, Retry } from "../error-handler";
+import {
+  Catch,
+  ICatchConfig,
+  ICatchFluentApi,
+  IRetryConfig,
+  IRetryFluentApi,
+  Retry,
+} from "../error-handler";
 
 export const isFinalizedState = <T extends IState>(obj: T | Finalized<T>): obj is Finalized<T> =>
   "name" in obj && obj.name !== undefined;
@@ -100,7 +106,9 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
 
     if (errorHandler !== undefined) {
       const catchConfig = getCatchConfig(errorHandler);
-      const aggregate = Object.keys(catchConfig).map((k) => parseErrorHandler(ctx)(k, catchConfig[k]));
+      const aggregate = Object.keys(catchConfig).map((k) =>
+        parseErrorHandler(ctx)(k, catchConfig[k])
+      );
       const errorStatesTuple: [string, IStepFunctionStep][] = aggregate.reduce((acc, curr) => {
         const k = Object.keys(curr[1]).map((c) => [c, curr[1][c]] as [string, IStepFunctionStep]);
         acc = [...acc, ...k];
@@ -133,11 +141,18 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
   };
 
   // eslint-disable-next-line unicorn/consistent-function-scoping
-  const parseSucceed = (ctx: IStepFunctionParseContext) => (stateDefn: Result<ISucceed>, options: IStepFnOptions) => {
+  const parseSucceed = (ctx: IStepFunctionParseContext) => (
+    stateDefn: Result<ISucceed>,
+    options: IStepFnOptions
+  ) => {
     const finalizedState =
       stateDefn.isFinalized === true && "name" in stateDefn
         ? stateDefn
-        : ({ ...stateDefn, isFinalized: true, name: `Succeed-${ctx.hashState}` } as Finalized<ISucceed>);
+        : ({
+            ...stateDefn,
+            isFinalized: true,
+            name: `Succeed-${ctx.hashState}`,
+          } as Finalized<ISucceed>);
 
     ctx.definitionStates.push([
       `${options.namePrefix || ""}${finalizedState.name}`,
@@ -236,7 +251,11 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
     const finalizedState =
       parallelDefinition.isFinalized === true && "name" in parallelDefinition
         ? parallelDefinition
-        : ({ ...parallelDefinition, isFinalized: true, name: `Parallel-${ctx.hashState}` } as Finalized<IParallel>);
+        : ({
+            ...parallelDefinition,
+            isFinalized: true,
+            name: `Parallel-${ctx.hashState}`,
+          } as Finalized<IParallel>);
 
     const { catch: stateErrorHandler, branches, name: _, retry, ...rest } = finalizedState;
     const retryconfig = retry ? getRetryConfig(retry) : undefined;
@@ -263,7 +282,9 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
 
     if (errorHandler !== undefined) {
       const catchConfig = getCatchConfig(errorHandler);
-      const aggregate = Object.keys(catchConfig).map((k) => parseErrorHandler(ctx)(k, catchConfig[k]));
+      const aggregate = Object.keys(catchConfig).map((k) =>
+        parseErrorHandler(ctx)(k, catchConfig[k])
+      );
       const errorStatesTuple: [string, IStepFunctionStep][] = aggregate.reduce((acc, curr) => {
         const k = Object.keys(curr[1]).map((c) => [c, curr[1][c]] as [string, IStepFunctionStep]);
         acc = [...acc, ...k];
@@ -300,10 +321,20 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
     const finalizedState =
       mapDefinition.isFinalized === true && "name" in mapDefinition
         ? mapDefinition
-        : ({ ...mapDefinition, isFinalized: true, name: `Map-${ctx.hashState}` } as Finalized<IMap>);
+        : ({
+            ...mapDefinition,
+            isFinalized: true,
+            name: `Map-${ctx.hashState}`,
+          } as Finalized<IMap>);
 
     // TODO: why are you pulling `stepFn` off of finalized state if you are not using it?
-    const { catch: stateErrorHandler, deployable: _stepFn, name: _, retry, ...rest } = finalizedState;
+    const {
+      catch: stateErrorHandler,
+      deployable: _stepFn,
+      name: _,
+      retry,
+      ...rest
+    } = finalizedState;
     const retryconfig = retry ? getRetryConfig(retry) : undefined;
     // eslint-disable-next-line unicorn/consistent-destructuring
     const stateName = `${options.namePrefix || ""}${finalizedState.name}`;
@@ -320,7 +351,9 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
 
     if (errorHandler !== undefined) {
       const catchConfig = getCatchConfig(errorHandler);
-      const aggregate = Object.keys(catchConfig).map((k) => parseErrorHandler(ctx)(k, catchConfig[k]));
+      const aggregate = Object.keys(catchConfig).map((k) =>
+        parseErrorHandler(ctx)(k, catchConfig[k])
+      );
       const errorStatesTuple: [string, IStepFunctionStep][] = aggregate.reduce((acc, curr) => {
         const k = Object.keys(curr[1]).map((c) => [c, curr[1][c]] as [string, IStepFunctionStep]);
         acc = [...acc, ...k];
@@ -360,7 +393,11 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
     const finalizedState =
       choiceDefinition.isFinalized === true && "name" in choiceDefinition
         ? choiceDefinition
-        : ({ ...choiceDefinition, isFinalized: true, name: `Choice-${ctx.hashState}` } as Finalized<IChoice>);
+        : ({
+            ...choiceDefinition,
+            isFinalized: true,
+            name: `Choice-${ctx.hashState}`,
+          } as Finalized<IChoice>);
 
     // TODO: why is `_index` here? it is not used
     // eslint-disable-next-line unicorn/no-array-for-each
@@ -431,12 +468,18 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
    * @param options it can be used to alter how step function would be parsed. ex: namePreffix
    * @param offset its used to have more context to generate a appropiate hash for idempotence purpose
    */
-  function parseStepFunction(state: Result<IState>[], options: IStepFnOptions, offset?: string | undefined) {
+  function parseStepFunction(
+    state: Result<IState>[],
+    options: IStepFnOptions,
+    offset?: string | undefined
+  ) {
     const definitionStates: [string, IStepFunctionStep][] = [];
     const errorHandlerStates: [string, IStepFunctionStep][] = [];
     const stepFnId =
       offset !== undefined
-        ? `stepFn${offset in processingStepFns ? Object.keys(processingStepFns[offset]).length + 1 : 1}`
+        ? `stepFn${
+            offset in processingStepFns ? Object.keys(processingStepFns[offset]).length + 1 : 1
+          }`
         : "root";
 
     if (offset === undefined) {
@@ -449,7 +492,9 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
     let cachedStates: Record<string, true> = {};
     const stepFnHash = hash(JSON.stringify(state));
 
-    const validateState = (_: number) => <T extends IState>(finalizedState: Finalized<T>): boolean => {
+    const validateState = (_: number) => <T extends IState>(
+      finalizedState: Finalized<T>
+    ): boolean => {
       const stateHash = hash(finalizedState.name);
       const fullStateHash = `${stepFnHash}${stateHash}`;
 
@@ -475,7 +520,10 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
     state.forEach(
       (stateDefn, index) => {
         const call = (fn: Function) =>
-          fn({ ...ctx, hashState: hashState(index), validateState: validateState(index) })(stateDefn, options);
+          fn({ ...ctx, hashState: hashState(index), validateState: validateState(index) })(
+            stateDefn,
+            options
+          );
 
         const parseStateDefn: Record<string, Function> = {
           Task: parseTask,
@@ -497,35 +545,41 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
 
     const terminalStates = new Set(["Choice", "Succeed", "Fail"]);
 
-    const stepFunctionDefn = definitionStates.reduce((acc: IDictionary<IStepFunctionStep>, curr, index) => {
-      const [stateName, stateDefn] = curr;
-      acc[stateName] = stateDefn;
-      const hasNextState = index + 1 in definitionStates;
+    const stepFunctionDefn = definitionStates.reduce(
+      (acc: IDictionary<IStepFunctionStep>, curr, index) => {
+        const [stateName, stateDefn] = curr;
+        acc[stateName] = stateDefn;
+        const hasNextState = index + 1 in definitionStates;
 
-      if (
-        !terminalStates.has(stateDefn.Type) &&
-        !("Next" in stateDefn && stateDefn.Next !== "") &&
-        hasNextState &&
-        !("End" in stateDefn && stateDefn.End)
-      ) {
-        (acc[stateName] as any).Next = definitionStates[index + 1][0];
-      }
+        if (
+          !terminalStates.has(stateDefn.Type) &&
+          !("Next" in stateDefn && stateDefn.Next !== "") &&
+          hasNextState &&
+          !("End" in stateDefn && stateDefn.End)
+        ) {
+          (acc[stateName] as any).Next = definitionStates[index + 1][0];
+        }
 
-      return acc;
-    }, {});
+        return acc;
+      },
+      {}
+    );
 
-    const errorHandler = ctx.errorHandlerStates.reduce((acc: IDictionary<IStepFunctionStep>, curr, index) => {
-      const [stateName, stateDefn] = curr;
-      acc[stateName] = stateDefn;
+    const errorHandler = ctx.errorHandlerStates.reduce(
+      (acc: IDictionary<IStepFunctionStep>, curr, index) => {
+        const [stateName, stateDefn] = curr;
+        acc[stateName] = stateDefn;
 
-      const hasNextState = index + 1 in definitionStates;
-      if (hasNextState) {
-        (acc[stateName] as any).Next = definitionStates[index + 1][0];
-        (acc[stateName] as any).End = undefined;
-      }
+        const hasNextState = index + 1 in definitionStates;
+        if (hasNextState) {
+          (acc[stateName] as any).Next = definitionStates[index + 1][0];
+          (acc[stateName] as any).End = undefined;
+        }
 
-      return acc;
-    }, {});
+        return acc;
+      },
+      {}
+    );
 
     return {
       States: { ...stepFunctionDefn, ...errorHandler },
@@ -545,9 +599,6 @@ export const StateMachine: IStateMachineFactory = (stateMachineName, params): IS
   };
 
   return {
-    toYaml() {
-      return dump(stateMachine);
-    },
     toJSON() {
       return JSON.parse(JSON.stringify(stateMachine));
     },
