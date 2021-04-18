@@ -71,9 +71,9 @@ describe("invoke :: buildInvocationRequest() →", () => {
       foo: 1,
       bar: 2,
     });
-    expect(response.Payload).toBe("string");
+    expect(response.Payload).toBeString();
     const payload = JSON.parse(response.Payload as string);
-    expect(payload.headers).toBe("object");
+    expect(payload.headers).toBeObject();
     expect(payload.headers).toHaveProperty("X-Correlation-Id");
     expect(payload.headers["x-calling-function"]);
 
