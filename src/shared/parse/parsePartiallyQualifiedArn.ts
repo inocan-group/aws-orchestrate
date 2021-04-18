@@ -91,6 +91,7 @@ export function parsePartiallyQualifiedArn(
   options: IPartialParseOptions = {}
 ): IParsedArn {
   const { lookup, service, resource } = options;
+
   if (lookup && lookup[partial as keyof typeof lookup]) {
     return parseFullyQualifiedArn(lookup[partial as keyof typeof lookup]);
   }
@@ -108,7 +109,6 @@ export function parsePartiallyQualifiedArn(
 
   if (service || isArnService(env.service || "")) {
     arn.service = service || (env.service as AwsArnService);
-    console.log({ arn: arn.service, env: env.service, service });
   }
 
   try {
@@ -179,7 +179,10 @@ export function parsePartiallyQualifiedArn(
       : undefined;
   }
 
-  arn.resource = resource || arn.service ? findResource(arn.service) : undefined;
+  arn.resource = resource;
+  if (!arn.resource && arn.service) {
+    arn.resource = findResource(arn.service);
+  }
 
   const parts = partial.split(":");
   const tail = parts.slice(-1).pop() || "";
@@ -189,8 +192,13 @@ export function parsePartiallyQualifiedArn(
     ? (tail.match(re) as [string, string, string])
     : [undefined, undefined, tail];
 
-  if (env.appName && (env.appName || appCandidate)) {
-    arn.appName = env.appName || appCandidate;
+  arn.appName = env.appName || appCandidate;
+  if (!arn.appName && ["function", "stateMachine", "table"].includes(arn.resource || "missing")) {
+    throw new ServerlessError(
+      500,
+      missingMessage("appName", partial, "APP_NAME", env),
+      "arn/missing-app-name"
+    );
   }
 
   switch (arn.resource as AwsArnResource) {
@@ -226,7 +234,6 @@ export function parsePartiallyQualifiedArn(
     2
   )}`;
 
-  // if (arn.partition && arn.account && arn.service && arn.resource && arn.stage && arn.appName) {
   try {
     arn.arn = buildArn(arn as Omit<IParsedArn, "arn">);
   } catch (buildError) {

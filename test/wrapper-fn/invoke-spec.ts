@@ -42,18 +42,21 @@ describe("invoke :: ARN Parsing →", () => {
     }
   });
 
-  it("short ARN without AWS_NAME errors out", () => {
+  it("short ARN without APP_NAME errors out", () => {
     const arn = "sentinel";
+    process.env = {};
     process.env.AWS_STAGE = "prod";
     process.env.AWS_ACCOUNT = "9378553667040";
     process.env.AWS_REGION = "us-east-1";
     process.env.APP_NAME = "";
     try {
-      parseArn(arn);
+      const result = parseArn(arn, { service: "lambda", resource: "function" });
+      console.log(result.arn);
       throw new Error("should not have gotten here");
     } catch (error) {
       expect(error.message).toInclude("appName");
-      expect(error.name).toEqual("ArnParsingError");
+      expect(error.name).toEqual("ServerlessError");
+      expect(error.classification).toBe("arn/missing-app-name");
     }
   });
 });

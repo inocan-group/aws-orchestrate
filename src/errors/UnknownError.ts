@@ -1,7 +1,9 @@
 import { IDictionary, isTypeSubtype, TypeSubtype } from "common-types";
 import { IServerlessError, IWrapperContext } from "~/types";
 
-export class UnknownError<T extends Error = Error, EH extends Error = Error> extends Error implements IServerlessError {
+export class UnknownError<T extends Error = Error, EH extends Error = Error>
+  extends Error
+  implements IServerlessError {
   public readonly kind = "UnknownError";
   public name = "UnknownError";
   public httpStatus;
@@ -16,11 +18,16 @@ export class UnknownError<T extends Error = Error, EH extends Error = Error> ext
    */
   public underlyingError?: EH;
 
-  constructor(public originatingError: T, context: IWrapperContext<any, any>, classification?: string) {
+  constructor(
+    public originatingError: T,
+    context: IWrapperContext<any, any>,
+    classification?: string
+  ) {
     super();
     this.message = originatingError.message;
     this.stack = originatingError.stack;
-    this.httpStatus = (originatingError as IDictionary).httpStatus || 500;
+    this.httpStatus =
+      (originatingError as IDictionary).httpStatus || context.errorMgmt.defaultErrorCode;
     if (classification) {
       if (isTypeSubtype(classification)) {
         this.classification = classification;
