@@ -1,8 +1,8 @@
-import { ErrorHandler } from "../../errors/ErrorHandler";
 import { IErrorIdentification, IErrorHandling, IErrorHandlerFunction } from "~/types";
 import { arn, AwsArnLambda, isLambdaFunctionArn } from "common-types";
 import { isServerlessError, ServerlessError } from "~/errors";
 import { parseLambdaFunctionArn } from "~/shared/parseLambdaFunctionArn";
+import { ErrorHandler } from "./ErrorHandler";
 
 export const DEFAULT_ERROR_CODE = 500;
 

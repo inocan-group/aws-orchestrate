@@ -12,7 +12,7 @@ import {
   IWrapperOptions,
   IWrapperMetrics,
 } from "~/types";
-import { ErrorMeta, extractRequestState } from "./util";
+import { ErrorMeta, extractRequestState, XRay } from "./util";
 import { handleError, handlePrepError, handleReturn, prepForHandler } from "./steps";
 
 /**
@@ -43,6 +43,8 @@ export const wrapper = function <
   ): Promise<O | IAwsApiGatewayResponse> {
     let metrics: IWrapperMetrics = { kind: "start", startTime: Date.now() };
     const log = logger(options.loggerConfig).lambda(event, context);
+    const xray = new XRay(log, options.XRay);
+    xray.startPrep();
     log.info(`Starting wrapper function for "${context.functionName}"`, { event, context });
     const state = extractRequestState<I, Q, P>(event, context);
     let response: O = Symbol("Not Yet Defined") as O;
@@ -53,29 +55,35 @@ export const wrapper = function <
     // PREP
     try {
       wrapperContext = prepForHandler<I, O, Q, P>(state, context, errorMeta, log, options);
+      xray.finishPrep();
     } catch (prepError) {
+      xray.finishPrep(prepError);
       return handlePrepError(prepError, context, isLambdaProxyRequest(event), log);
     }
 
     // FN EXECUTION and ERROR HANDLING
+    xray.startHandler();
     metrics = { ...metrics, kind: "prepped", ...{ prepTime: Date.now() - metrics.startTime } };
     try {
       response = await fn(state.request, wrapperContext);
+      xray.finishHandler();
+      xray.startCloseout();
       metrics = {
         ...metrics,
         kind: "pre-closure",
         success: true,
         duration: Date.now() - metrics.startTime,
       };
-      return handleReturn<O, Q, P>(response, wrapperContext, metrics);
+      return handleReturn<O, Q, P>(response, wrapperContext, metrics, xray);
     } catch (handlerFnError) {
+      xray.finishHandler();
       metrics = {
         ...metrics,
         kind: "pre-closure",
         success: false,
         duration: Date.now() - metrics.startTime,
       };
-      return handleError<I, O, P, Q>(handlerFnError, state.request, wrapperContext, metrics);
+      return handleError<I, O, P, Q>(handlerFnError, state.request, wrapperContext, metrics, xray);
     }
   };
 };

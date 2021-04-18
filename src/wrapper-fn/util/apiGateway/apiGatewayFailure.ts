@@ -1,7 +1,6 @@
 import { IAwsApiGatewayResponse } from "common-types";
 import { IError } from "~/types";
-import { DEFAULT_ERROR_CODE } from "../ErrorMeta";
-import { getResponseHeaders } from "../headers";
+import { DEFAULT_ERROR_CODE, getResponseHeaders } from "~/wrapper-fn/util";
 /**
  * **apiGatewayFailure**
  *
@@ -15,8 +14,9 @@ export function apiGatewayFailure(e: IError): IAwsApiGatewayResponse {
     headers: getResponseHeaders(),
     statusCode: e.httpStatus || DEFAULT_ERROR_CODE,
     body: JSON.stringify({
-      errorType: e.name || e.code || "Error",
+      errorType: e.name || "Error",
       errorMessage: e.message,
+      trace: e.stack,
     }),
   };
 }

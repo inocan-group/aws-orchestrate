@@ -1,5 +1,4 @@
-import { ErrorHandler } from "~/errors/ErrorHandler";
-import { ErrorMeta } from ".";
+import { ErrorMeta, ErrorHandler } from "~/wrapper-fn/util";
 /**
  * **findError**
  *

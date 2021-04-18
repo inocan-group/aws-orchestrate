@@ -8,7 +8,7 @@ import {
   IWrapperMetricsClosure,
   IWrapperMetricsPreClosure,
 } from "~/types";
-import { findError, ErrorMeta, apiGatewayFailure, apiGatewaySuccess } from "../util";
+import { findError, ErrorMeta, apiGatewayFailure, apiGatewaySuccess, XRay } from "../util";
 
 /**
  * Handles _non_-`ServerlessError` thrown during execution of the handler
@@ -32,9 +32,10 @@ export async function handleOtherErrors<
   errorMeta: ErrorMeta<I, O>,
   request: I,
   context: IWrapperContext<I, O, Q, P>,
-  metrics: IWrapperMetricsPreClosure | IWrapperMetricsClosure
+  metrics: IWrapperMetricsPreClosure | IWrapperMetricsClosure,
+  xray: XRay
 ): Promise<IAwsApiGatewayResponse | O> {
-  const { log, isApiGatewayRequest } = context;
+  const { log, isApiGateway } = context;
   const found = findError<I, O>(originatingError, errorMeta);
   const { errorMgmt } = context;
 
@@ -73,7 +74,8 @@ export async function handleOtherErrors<
           handlerResolved: true,
           closureDuration: Date.now() - (metrics.startTime + metrics.duration),
         };
-        return isApiGatewayRequest ? apiGatewaySuccess(result) : result;
+        xray.finishCloseout(metrics);
+        return isApiGateway ? apiGatewaySuccess(result) : result;
       } else {
         log.info("handler function was executed but error was not corrected", {
           kind: "error-handler-failed",
@@ -101,8 +103,9 @@ export async function handleOtherErrors<
       closureDuration: Date.now() - (metrics.startTime + metrics.duration),
     };
     log.info("wrapper-metrics", metrics);
+    xray.finishCloseout(metrics, error);
 
-    if (isApiGatewayRequest) {
+    if (isApiGateway) {
       return apiGatewayFailure(error);
     } else {
       throw error;
@@ -152,7 +155,8 @@ export async function handleOtherErrors<
           closureDuration: Date.now() - (metrics.startTime + metrics.duration),
         };
         log.info("wrapper-metrics", metrics);
-        return isApiGatewayRequest ? apiGatewaySuccess(result) : result;
+        xray.finishCloseout(metrics, error);
+        return isApiGateway ? apiGatewaySuccess(result) : result;
       }
     }
   }
@@ -162,8 +166,9 @@ export async function handleOtherErrors<
     closureDuration: Date.now() - (metrics.startTime + metrics.duration),
   };
   log.info("wrapper-metrics", metrics);
+  xray.finishCloseout(metrics, error);
 
-  if (isApiGatewayRequest) {
+  if (isApiGateway) {
     return apiGatewayFailure(error);
   } else {
     throw error;

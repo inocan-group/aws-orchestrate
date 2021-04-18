@@ -1,7 +1,8 @@
 import { HttpStatusCodes, IAwsApiGatewayResponse } from "common-types";
+import { ServerlessError } from "~/errors";
 import { IPathParameters, IQueryParameters, IWrapperContext } from "~/types";
 import { IWrapperMetricsClosure, IWrapperMetricsPreClosure } from "~/types/timing";
-import { apiGatewaySuccess, getStatusCode } from "../util";
+import { apiGatewaySuccess, getStatusCode, XRay } from "../util";
 
 /**
  * When the wrapper function gets a returned value from the _handler function_
@@ -15,9 +16,10 @@ export function handleReturn<
 >(
   response: O,
   context: IWrapperContext<any, O, Q, P>,
-  metrics: IWrapperMetricsPreClosure | IWrapperMetricsClosure
+  metrics: IWrapperMetricsPreClosure | IWrapperMetricsClosure,
+  xray: XRay
 ): O | IAwsApiGatewayResponse {
-  const { log, isApiGatewayRequest } = context;
+  const { log, isApiGateway } = context;
   const defaultCode: number =
     response === undefined || response === "" ? HttpStatusCodes.NoContent : HttpStatusCodes.Success;
   const statusCode = getStatusCode() || defaultCode;
@@ -50,9 +52,20 @@ export function handleReturn<
 
   // log metrics
   log.info("wrapper-metrics", metrics);
+  // close XRay Segment
+  if (statusCode >= 300) {
+    const error = new ServerlessError(
+      statusCode,
+      JSON.stringify(response),
+      "wrapper-fn/returned-error"
+    );
+    xray.finishCloseout(metrics, error);
+  } else {
+    xray.finishCloseout(metrics);
+  }
 
   // return error or success via api gateway
-  if (isApiGatewayRequest) {
+  if (isApiGateway) {
     return apiGatewaySuccess(response);
   }
   // for other callers we will still just

@@ -2,13 +2,12 @@
 
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 06:19 PM ( GMT-7 )
+// index last changed at: 4th Apr, 2021, 03:19 AM ( GMT-7 )
 // export: named; exclusions: index, private.
-// files: ErrorHandler, KnownError, ServerlessError, UnknownError.
+// files: KnownError, ServerlessError, UnknownError.
 // directories: type-guards.
 
 // local file exports
-export * from "./ErrorHandler";
 export * from "./KnownError";
 export * from "./ServerlessError";
 export * from "./UnknownError";

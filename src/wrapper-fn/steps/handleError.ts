@@ -3,7 +3,7 @@ import { isServerlessError, UnknownError } from "~/errors";
 import { handleServerlessError } from "./handleServerlessError";
 import { handleOtherErrors } from "./handleOtherErrors";
 import { IDictionary, isTypeSubtype } from "common-types";
-import { apiGatewayFailure } from "../util";
+import { apiGatewayFailure, XRay } from "../util";
 import { IWrapperMetricsClosure, IWrapperMetricsPreClosure } from "~/types/timing";
 
 /**
@@ -20,14 +20,16 @@ export async function handleError<
   error: T,
   request: I,
   context: IWrapperContext<I, O, Q, P>,
-  metrics: IWrapperMetricsPreClosure | IWrapperMetricsClosure
+  metrics: IWrapperMetricsPreClosure | IWrapperMetricsClosure,
+  xray: XRay
 ) {
-  const { log, isApiGatewayRequest, functionName, errorMgmt } = context;
+  const { log, isApiGateway, functionName, errorMgmt } = context;
+
   try {
     if (isServerlessError(error)) {
       // A `ServerlessError` is always an _intentful_ error which a user
       // will have thrown for explicit reasons
-      return handleServerlessError(error, context, metrics);
+      return handleServerlessError(error, context, metrics, xray);
     } else {
       // An error was thrown by the handler function but it was not a ServerlessError
       // which means it may have been unexpected, however, it's also possible that the
@@ -37,10 +39,13 @@ export async function handleError<
         context,
       });
 
-      return handleOtherErrors<I, O, P, Q>(error, errorMgmt, request, context, metrics);
+      return handleOtherErrors<I, O, P, Q>(error, errorMgmt, request, context, metrics, xray);
     }
   } catch (underlyingError) {
-    log.warn("There was an error which occurred during error handling", { originalError: error, underlyingError });
+    log.warn("There was an error which occurred during error handling", {
+      originalError: error,
+      underlyingError,
+    });
 
     const classification =
       typeof (error as IDictionary).classification === "string" &&
@@ -57,8 +62,9 @@ export async function handleError<
       underlyingError: true,
     };
     log.info("wrapper-metrics", metrics);
+    xray.finishCloseout(metrics, err);
 
-    if (isApiGatewayRequest) {
+    if (isApiGateway) {
       return apiGatewayFailure(err);
     } else {
       throw err;

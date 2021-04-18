@@ -43,9 +43,9 @@
   },
   "homepage": "https://github.com/inocan-group/aws-orchestrate#readme",
   "dependencies": {
+    "aws-sdk": "2",
     "inferred-types": "^0.3.0",
-    "lzutf8": "^0.6.0",
-    "aws-sdk": "2"
+    "lzutf8": "^0.6.0"
   },
   "peerDependencies": {
     "aws-log": "^0.11.0",
@@ -72,6 +72,7 @@
     "aws-log": "^0.11.0",
     "aws-sdk": "2",
     "aws-ssm": "^0.3.13",
+    "aws-xray-sdk-core": "^3.3.1",
     "common-types": "^1.23.0",
     "do-devops": "^0.6.1",
     "eslint": "^7.23.0",
