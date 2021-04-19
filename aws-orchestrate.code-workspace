@@ -1,0 +1,24 @@
+{
+  "folders": [
+    {
+      "name": "✨ root",
+      "path": "."
+    },
+    {
+      "name": "📚 docs",
+      "path": "p/docs"
+    },
+    {
+      "name": "🪜 step-fns",
+      "path": "p/step-fns"
+    },
+    {
+      "name": "ƛ wrapper-fn",
+      "path": "p/wrapper"
+    }
+  ],
+  "settings": {
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "git.ignoreLimitWarning": true
+  }
+}

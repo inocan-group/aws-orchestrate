@@ -1,0 +1,24 @@
+{
+    "name": "@types/mermaid",
+    "version": "8.2.4",
+    "description": "TypeScript definitions for mermaid",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": "Geoffrey Gilmore",
+            "url": "https://github.com/ggilmore",
+            "githubUsername": "ggilmore"
+        }
+    ],
+    "main": "",
+    "types": "index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+        "directory": "types/mermaid"
+    },
+    "scripts": {},
+    "dependencies": {},
+    "typesPublisherContentHash": "3aa361507cd0861969f6962d192711dfe270666cd5d680f4050c5c03be906bec",
+    "typeScriptVersion": "3.5"
+}

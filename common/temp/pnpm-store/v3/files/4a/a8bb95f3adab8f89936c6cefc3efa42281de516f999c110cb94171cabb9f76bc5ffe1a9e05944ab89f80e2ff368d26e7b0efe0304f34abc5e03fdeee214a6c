@@ -1,0 +1,7 @@
+import { IDictionary } from "./IDictionary";
+/**
+ * **lastKey**
+ *
+ * returns the _last_ key in a dictionary
+ */
+export declare function lastKey(dict: IDictionary): undefined | (string & keyof typeof dict);

@@ -1,0 +1,33 @@
+{
+    "name": "@types/test-console",
+    "version": "1.1.0",
+    "description": "TypeScript definitions for test-console",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": " Roberto Soares",
+            "url": "https://github.com/roberto",
+            "githubUsername": "roberto"
+        },
+        {
+            "name": "Pedro Guidoux",
+            "url": "https://github.com/guidoux",
+            "githubUsername": "guidoux"
+        },
+        {
+            "name": "Guilherme Moretti",
+            "url": "https://github.com/gbmoretti",
+            "githubUsername": "gbmoretti"
+        }
+    ],
+    "main": "",
+    "types": "",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git"
+    },
+    "scripts": {},
+    "dependencies": {},
+    "typesPublisherContentHash": "01777e598d99d424f5d25e4db3485fc0cfbe13d6cb040b823cce8a2731bdddab",
+    "typeScriptVersion": "2.0"
+}

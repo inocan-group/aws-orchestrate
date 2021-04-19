@@ -1,0 +1,7 @@
+{
+  "node": "15.5.0",
+  "packageManager": "pnpm",
+  "packageManagerVersion": "6.0.2",
+  "storePath": "/Volumes/Coding/inocan/open-source/aws-orchestrate/common/temp/pnpm-store",
+  "workspaces": true
+}

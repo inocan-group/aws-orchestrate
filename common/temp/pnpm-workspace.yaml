@@ -1,0 +1,4 @@
+packages:
+  - ../../p/docs
+  - ../../p/step-fns
+  - ../../p/wrapper

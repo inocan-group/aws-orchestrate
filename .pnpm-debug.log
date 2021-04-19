@@ -1,0 +1,16 @@
+{
+  "0 debug pnpm:scope": {
+    "selected": 1
+  },
+  "1 error pnpm": {
+    "message": {
+      "code": "ERR_PNPM_NO_IMPORTER_MANIFEST_FOUND"
+    },
+    "err": {
+      "name": "Error",
+      "message": "No package.json (or package.yaml, or package.json5) was found in \"/Volumes/Coding/inocan/open-source/aws-orchestrate\".",
+      "code": "ERR_PNPM_NO_IMPORTER_MANIFEST_FOUND",
+      "stack": "Error: No package.json (or package.yaml, or package.json5) was found in \"/Volumes/Coding/inocan/open-source/aws-orchestrate\".\n    at readProjectManifest (/Users/ken/.volta/tools/image/node/14.15.3/pnpm-global/4/node_modules/.pnpm/pnpm@5.18.9/node_modules/pnpm/dist/pnpm.js:43153:11)\n    at async Object.readProjectManifestOnly (/Users/ken/.volta/tools/image/node/14.15.3/pnpm-global/4/node_modules/.pnpm/pnpm@5.18.9/node_modules/pnpm/dist/pnpm.js:43157:24)\n    at async Object.readProjectManifestOnly (/Users/ken/.volta/tools/image/node/14.15.3/pnpm-global/4/node_modules/.pnpm/pnpm@5.18.9/node_modules/pnpm/dist/pnpm.js:43372:22)\n    at async Object.handler (/Users/ken/.volta/tools/image/node/14.15.3/pnpm-global/4/node_modules/.pnpm/pnpm@5.18.9/node_modules/pnpm/dist/pnpm.js:118900:22)\n    at async Timeout._onTimeout (/Users/ken/.volta/tools/image/node/14.15.3/pnpm-global/4/node_modules/.pnpm/pnpm@5.18.9/node_modules/pnpm/dist/pnpm.js:123358:22)"
+    }
+  }
+}
