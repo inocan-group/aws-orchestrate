@@ -62,7 +62,7 @@ function inferDirectory(file) {
   return fileParts.slice(0, fileParts.length - 1).join("/");
 }
 
-function getFilenameByModule(mod) {
+function getFilenameByModule(mod, offset) {
   const shortname = getModuleShortname(mod);
   const outputFile = {
     // @ts-ignore
@@ -72,9 +72,11 @@ function getFilenameByModule(mod) {
     typings: pkg.typings || pkg.types,
   };
 
-  return Object.keys(outputFile).includes(shortname) && outputFile[shortname]
+  console.log({ offset, mod });
+
+  return Object.keys(outputFile).includes(shortname) && outputFile[shortname] && !offset
     ? outputFile[shortname]
-    : `dist/${shortname}/index.js`;
+    : `dist/${offset}/${shortname}/index.js`;
 }
 
 /**
@@ -85,9 +87,8 @@ function getFilenameByModule(mod) {
  * @param {boolean} minimized
  * @param {boolean} emitDeclaration
  */
-const moduleConfig = (moduleSystem, file, minimized, emitDeclaration) => {
+const moduleConfig = (input, offset, moduleSystem, file, minimized, emitDeclaration) => {
   try {
-    const input = "src/index.ts";
     if (!existsSync(input)) {
       console.log(`The source entry point was set as "${input}" but this was not found!`);
       console.log();
@@ -95,10 +96,13 @@ const moduleConfig = (moduleSystem, file, minimized, emitDeclaration) => {
     }
     const outDir = inferDirectory(file);
     // @ts-ignore
-    const declarationDir = pkg.typings
-      ? // @ts-ignore
-        inferDirectory(pkg.typings)
-      : `dist/types`;
+    const declarationDir =
+      pkg.typings & !offset
+        ? // @ts-ignore
+          inferDirectory(pkg.typings)
+        : offset
+        ? `dist/${offset}/types`
+        : `dist/types`;
     console.log(
       `- the source's entrypoint is "${input}" and output will be put in "${outDir}" folder`
     );
@@ -173,7 +177,7 @@ const usesGlobalVars = (mod) => {
  * @param {boolean} min
  * @param {boolean} emitDeclaration
  */
-async function buildModule(m, min, emitDeclaration) {
+async function buildModule(input, offset, m, min, emitDeclaration) {
   try {
     console.log(`- 📦 starting bundling of ${m.toUpperCase()} module ${min ? "(minimized)" : ""}`);
     if (switches.has("closure")) {
@@ -185,10 +189,10 @@ async function buildModule(m, min, emitDeclaration) {
         '- 🤨 while you are building for the ES module system your package.json doesn\'t specify a "module" entrypoint.'
       );
     }
-    const file = minimizeFilename(getFilenameByModule(m), min);
+    const file = minimizeFilename(getFilenameByModule(m, offset), min);
     console.log(`- transpiled source will be saved as: ${file}`);
     // build the configuration
-    const config = moduleConfig(m, file, min, emitDeclaration);
+    const config = moduleConfig(input, offset, m, file, min, emitDeclaration);
     if (switches.has("v") || switches.has("verbose")) {
       console.log("- bundle config is:\n", JSON.stringify(config, null, 2));
     }
@@ -216,7 +220,21 @@ async function buildModule(m, min, emitDeclaration) {
 (async () => {
   const validModules = ["esnext", "es2020", "es2015", "commonjs", "iife", "umd"];
   const hasValidModules = moduleSystems.every((m) => validModules.includes(m));
+  const inputs = ["src/wrapper-fn/index.ts", "src/step-fn/index.ts"];
+
+  if (inputs.length > 1) {
+    console.log(`- There are ${inputs.length} entry points: ${inputs.join(", ")}`);
+    console.log(`- we will iterate through each entry point and offset the outputs\n`);
+  }
+
   if (!hasValidModules) {
+    if (moduleSystems.length === 0) {
+      console.log(
+        `- No module systems were specified please add one or more modules system to the build command.`
+      );
+      console.log(`- valid module systems are: ${validModules.join(", ")}\n`);
+      process.exit();
+    }
     console.log(
       `You specified an invalid module system. Valid module systems are: ${validModules.join(
         ", "
@@ -246,19 +264,33 @@ async function buildModule(m, min, emitDeclaration) {
   }
   console.log();
 
-  for (const m of moduleSystems) {
-    const emitDeclaration = moduleSystems.length === 1 || getModuleShortname(m) === "es";
-    await buildModule(m, false, emitDeclaration);
-  }
-
-  if (switches.has("min")) {
-    if (!moduleSystems.includes("commonjs")) {
-      throw new Error(
-        "Minimization was requested but no CJS module was built; either include CJS module build or remove minimization"
-      );
+  for (const input of inputs) {
+    let offset;
+    if (inputs.length > 1) {
+      console.log(`- starting build for the entry point: ${input}`);
+      offset = input
+        .replace("src/", "")
+        .replace(/index.[jt]s/, "")
+        .replace(/\//g, "");
+      console.log(`- output will be placed in dist/${offset}/[module-system]`);
+    } else {
+      offset = "";
     }
-    console.log("Building minimized version of CJS module system");
-    await buildModule("commonjs", true, true);
+
+    for (const m of moduleSystems) {
+      const emitDeclaration = moduleSystems.length === 1 || getModuleShortname(m) === "es";
+      await buildModule(input, offset, m, false, emitDeclaration);
+    }
+
+    if (switches.has("min")) {
+      if (!moduleSystems.includes("commonjs")) {
+        throw new Error(
+          "Minimization was requested but no CJS module was built; either include CJS module build or remove minimization"
+        );
+      }
+      console.log("Building minimized version of CJS module system");
+      await buildModule("commonjs", true, true);
+    }
   }
 
   console.log("\n- Build completed!\n");

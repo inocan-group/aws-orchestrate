@@ -23,7 +23,7 @@
     "autoindex": "yarn do autoindex",
     "build": "run-s clean autoindex build:bundle",
     "build:analyze": "node devops/build es2020 --analyze",
-    "build:bundle": "node devops/build es2020 --closure --analyze",
+    "build:bundle": "node devops/build es2020 --closure",
     "build:cjs": "tsc -P tsconfig.cjs.json",
     "build:es": "tsc -P tsconfig.es.json",
     "build:tsc": "run-p build:es build:cjs",
