@@ -27,15 +27,6 @@ describe("State Machine", () => {
     expect(secondSequence).toEqual("secondTask");
     expect(thirdSequence).toEqual("thirdTask");
   });
-  it("`toYaml` should return yaml definition as string value", () => {
-    const fooTask = State((s) => s.task("firstTask"));
-
-    const yamlDefinition = StateMachine("fooStateMachine", {
-      stepFunction: StepFunction(fooTask),
-    }).toYaml();
-
-    expect(typeof yamlDefinition).toEqual("string");
-  });
 
   it("Defining state machine should only allow finalized state be used once", () => {
     const finalizedState = State((s) => s.task("foo1", { name: "finalizedState" }));
