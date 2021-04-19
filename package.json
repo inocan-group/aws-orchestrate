@@ -13,9 +13,9 @@
   "license": "MIT",
   "author": "Ken Snyder<ken@ken.net>",
   "sideEffects": false,
-  "main": "dist/cjs/index.js",
-  "module": "dist/es/index.js",
-  "typings": "dist/typings/index.d.ts",
+  "main": "dist/wrapper-fn/cjs/index.js",
+  "module": "dist/wrapper-fn/es/index.js",
+  "typings": "dist/wrapper-fn/typings/index.d.ts",
   "files": [
     "dist"
   ],

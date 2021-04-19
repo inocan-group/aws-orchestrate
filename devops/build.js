@@ -18,7 +18,6 @@ const typescript = require("rollup-plugin-typescript2");
 const ttypescript = require("ttypescript");
 const closure = require("@ampproject/rollup-plugin-closure-compiler");
 const { existsSync, statSync } = require("fs");
-const { exit } = require("process");
 const { join } = require("path");
 
 const moduleSystems = process.argv.slice(2).filter((i) => !i.startsWith("-"));
@@ -72,8 +71,6 @@ function getFilenameByModule(mod, offset) {
     typings: pkg.typings || pkg.types,
   };
 
-  console.log({ offset, mod });
-
   return Object.keys(outputFile).includes(shortname) && outputFile[shortname] && !offset
     ? outputFile[shortname]
     : `dist/${offset}/${shortname}/index.js`;
@@ -92,7 +89,7 @@ const moduleConfig = (input, offset, moduleSystem, file, minimized, emitDeclarat
     if (!existsSync(input)) {
       console.log(`The source entry point was set as "${input}" but this was not found!`);
       console.log();
-      exit(1);
+      process.exit(1);
     }
     const outDir = inferDirectory(file);
     // @ts-ignore
