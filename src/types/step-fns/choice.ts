@@ -100,18 +100,18 @@ export interface IComplexChoiceItem {
   or?: IOperand[];
   not?: IOperand;
 }
-export interface IStepFnConditionApi {
-  stringEquals: (value: string, variable?: IChoiceVariable) => Partial<IOperand_StringEquals>;
-  stringGreaterThan: (value: string, variable?: IChoiceVariable) => Partial<IOperand_StringGreaterThan>;
-  stringGreaterThanEquals: (value: string, variable?: IChoiceVariable) => Partial<IOperand_StringGreaterThanEquals>;
-  stringLessThan: (value: string, variable?: IChoiceVariable) => Partial<IOperand_StringLessThan>;
-  stringLessThanEquals: (value: string, variable?: IChoiceVariable) => Partial<IOperand_StringLessThanEquals>;
-  numericEquals: (value: number, variable?: IChoiceVariable) => Partial<IOperand_NumericEquals>;
-  numericGreaterThan: (value: number, variable?: IChoiceVariable) => Partial<IOperand_NumericGreaterThan>;
-  numericGreaterThanEquals: (value: number, variable?: IChoiceVariable) => Partial<IOperand_NumericGreaterThanEquals>;
-  numericLessThan: (value: number, variable?: IChoiceVariable) => Partial<IOperand_NumericLessThan>;
-  numericLessThanEquals: (value: number, variable?: IChoiceVariable) => Partial<IOperand_NumericLessThanEquals>;
-  booleanEquals: (value: boolean, variable?: IChoiceVariable) => Partial<IOperand_BooleanEquals>;
+export interface IStepFnConditionApi<T extends any = unknown> {
+  stringEquals: (value: string, variable?: IChoiceVariable) => T;
+  stringGreaterThan: (value: string, variable?: IChoiceVariable) => T;
+  stringGreaterThanEquals: (value: string, variable?: IChoiceVariable) => T;
+  stringLessThan: (value: string, variable?: IChoiceVariable) => T;
+  stringLessThanEquals: (value: string, variable?: IChoiceVariable) => T;
+  numericEquals: (value: number, variable?: IChoiceVariable) => T;
+  numericGreaterThan: (value: number, variable?: IChoiceVariable) => T;
+  numericGreaterThanEquals: (value: number, variable?: IChoiceVariable) => T;
+  numericLessThan: (value: number, variable?: IChoiceVariable) => T;
+  numericLessThanEquals: (value: number, variable?: IChoiceVariable) => T;
+  booleanEquals: (value: boolean, variable?: IChoiceVariable) => T;
 }
 export interface IStepFnConditionApiParam {}
 

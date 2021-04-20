@@ -45,7 +45,7 @@ describe("State Machine", () => {
 
     const fetchFromUnavatar = State((s) => s.task("fetchFromUnavatar"));
     const unavatarOpts: IStepFnOptions = { namePrefix: "unavatar-" };
-    const unavatarChoice = condition((c) => c.stringEquals("unavatar"), [fetchFromUnavatar, unavatarOpts], "$.type");
+    const unavatarChoice = condition((c) => c.stringEquals("unavatar", "$.type"), [fetchFromUnavatar, unavatarOpts]);
 
     const fetchProfileImgUrl = State((s) => s.choice([defaultChoiceOption, unavatarChoice], { name: "fooChoiceState" }));
 

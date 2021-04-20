@@ -1,4 +1,3 @@
-import { ServerlessError } from "~/errors";
 import {
   Finalized,
   IChoice,
@@ -93,10 +92,10 @@ const numericLessThanEquals = (value: number): Partial<IOperand_NumericLessThanE
 };
 
 export const condition = (
-  cb: (api: IStepFnConditionApi) => Partial<IOperand> | Partial<IDefaultChoiceOptions>,
+  cb: (api: IStepFnConditionApi) => unknown,
   stepFn: IFluentApi | IStepFnShorthand
 ) => {
-  const api: IStepFnConditionApi = {
+  const api = {
     stringEquals,
     stringGreaterThan,
     stringGreaterThanEquals,
@@ -110,7 +109,7 @@ export const condition = (
     booleanEquals,
   };
 
-  const operand = cb(api);
+  const operand = cb(api) as IOperand;
 
   return {
     stepFn,
