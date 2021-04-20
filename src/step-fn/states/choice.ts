@@ -94,8 +94,7 @@ const numericLessThanEquals = (value: number): Partial<IOperand_NumericLessThanE
 
 export const condition = (
   cb: (api: IStepFnConditionApi) => Partial<IOperand> | Partial<IDefaultChoiceOptions>,
-  stepFn: IFluentApi | IStepFnShorthand,
-  variable?: string | undefined
+  stepFn: IFluentApi | IStepFnShorthand
 ) => {
   const api: IStepFnConditionApi = {
     stringEquals,
@@ -113,16 +112,7 @@ export const condition = (
 
   const operand = cb(api);
 
-  if (variable !== undefined && !variable.startsWith("$.")) {
-    throw new ServerlessError(
-      400,
-      `variable ${variable} is not allowed. It must start with "$."`,
-      "bad-format"
-    );
-  }
-
   return {
-    variable,
     stepFn,
     ...operand,
   };
@@ -136,12 +126,10 @@ export function choice(api: () => IConfigurableStepFn, commit: IStore["commit"])
   };
 }
 
-export function defaultChoice(
-  stepFn: IFluentApi | IStepFnShorthand,
-): IDefaultChoiceOptions {
+export function defaultChoice(stepFn: IFluentApi | IStepFnShorthand): IDefaultChoiceOptions {
   return {
     stepFn,
-    kind: "defaultChoice"
+    kind: "defaultChoice",
   };
 }
 
@@ -164,7 +152,6 @@ export function choiceConfiguration(
 
   const choicesDefn = conditionChoices.map((c) => {
     const { stepFn, ...rest } = c;
-
     const finalizedStepFn = parseAndFinalizeStepFn(stepFn);
 
     return {

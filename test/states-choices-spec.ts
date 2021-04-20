@@ -61,9 +61,8 @@ describe("Choice State", () => {
     const fetchFromUnavatar = State((s) => s.task("fetchFromUnavatar"));
     const unavatarOpts: IStepFnOptions = { namePrefix: "unavatar-" };
     const unavatarChoice = condition(
-      (c) => c.stringEquals("unavatar"),
-      [fetchFromUnavatar, unavatarOpts],
-      "$.type"
+      (c) => c.stringEquals("unavatar", "$.type"),
+      [fetchFromUnavatar, unavatarOpts]
     );
 
     const fetchProfileImgUrl = State((s) => s.choice([defaultChoiceOption, unavatarChoice]));
@@ -71,15 +70,5 @@ describe("Choice State", () => {
     expect(fetchProfileImgUrl.default).not.toBeUndefined();
     expect(fetchProfileImgUrl.isTerminalState).toBeTrue();
     expect(fetchProfileImgUrl.choices).toHaveLength(1);
-  });
-
-  it("Defining choice conditions variables without '$.' preffix should throw StepFunctionError", () => {
-    const sendGreatNews = State((s) => s.task("sendEmailNotification"));
-    const action = () => condition((c) => c.numericEquals(20), [sendGreatNews], "score");
-
-    expect(action).toThrowError({
-      name: "ServerlessError",
-      message: 'variable score is not allowed. It must start with "$."',
-    });
   });
 });

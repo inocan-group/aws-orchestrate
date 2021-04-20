@@ -26,8 +26,9 @@ export type IChoice = Omit<IChoiceOptions, "name"> &
 export interface IChoiceCondition<T = IDictionary> extends Omit<IChoiceConditionOptions<T>, "stepFn"> {
   finalizedStepFn: IFinalizedStepFn;
 }
-
-export declare type IChoiceItem<T> = Partial<IOperand> & IComplexChoiceItem;
+// TODO: Type passed through might be needed for later improvements
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export declare type IChoiceItem<T extends any = unknown> = Partial<IOperand> & IComplexChoiceItem;
 
 export interface IOperand_BooleanEquals extends IBaseLogicalOperand {
   /** compare the value passed in -- and scoped by "Variable" -- to be equal to a stated string */
@@ -75,8 +76,10 @@ export interface IOperand_NumericLessThanEquals extends IBaseLogicalOperand {
 }
 export interface IBaseLogicalOperand {
   /** points to the specific area of context which is being evaluated in the choice */
-  variable: string;
+  variable: IChoiceVariable;
 }
+
+export type IChoiceVariable = `\$.${string}`;
 
 export declare type IOperand =
   | IOperand_StringEquals
@@ -98,17 +101,17 @@ export interface IComplexChoiceItem {
   not?: IOperand;
 }
 export interface IStepFnConditionApi {
-  stringEquals: (value: string) => Partial<IOperand_StringEquals>;
-  stringGreaterThan: (value: string) => Partial<IOperand_StringGreaterThan>;
-  stringGreaterThanEquals: (value: string) => Partial<IOperand_StringGreaterThanEquals>;
-  stringLessThan: (value: string) => Partial<IOperand_StringLessThan>;
-  stringLessThanEquals: (value: string) => Partial<IOperand_StringLessThanEquals>;
-  numericEquals: (value: number) => Partial<IOperand_NumericEquals>;
-  numericGreaterThan: (value: number) => Partial<IOperand_NumericGreaterThan>;
-  numericGreaterThanEquals: (value: number) => Partial<IOperand_NumericGreaterThanEquals>;
-  numericLessThan: (value: number) => Partial<IOperand_NumericLessThan>;
-  numericLessThanEquals: (value: number) => Partial<IOperand_NumericLessThanEquals>;
-  booleanEquals: (value: boolean) => Partial<IOperand_BooleanEquals>;
+  stringEquals: (value: string, variable?: IChoiceVariable) => Partial<IOperand_StringEquals>;
+  stringGreaterThan: (value: string, variable?: IChoiceVariable) => Partial<IOperand_StringGreaterThan>;
+  stringGreaterThanEquals: (value: string, variable?: IChoiceVariable) => Partial<IOperand_StringGreaterThanEquals>;
+  stringLessThan: (value: string, variable?: IChoiceVariable) => Partial<IOperand_StringLessThan>;
+  stringLessThanEquals: (value: string, variable?: IChoiceVariable) => Partial<IOperand_StringLessThanEquals>;
+  numericEquals: (value: number, variable?: IChoiceVariable) => Partial<IOperand_NumericEquals>;
+  numericGreaterThan: (value: number, variable?: IChoiceVariable) => Partial<IOperand_NumericGreaterThan>;
+  numericGreaterThanEquals: (value: number, variable?: IChoiceVariable) => Partial<IOperand_NumericGreaterThanEquals>;
+  numericLessThan: (value: number, variable?: IChoiceVariable) => Partial<IOperand_NumericLessThan>;
+  numericLessThanEquals: (value: number, variable?: IChoiceVariable) => Partial<IOperand_NumericLessThanEquals>;
+  booleanEquals: (value: boolean, variable?: IChoiceVariable) => Partial<IOperand_BooleanEquals>;
 }
 export interface IStepFnConditionApiParam {}
 
