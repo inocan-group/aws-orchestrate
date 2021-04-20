@@ -7,6 +7,11 @@ sidebarDepth: 3
 
 ## Overview
 
+This framework provides wrappers around the Serverless Framework's CLI commands. We do not aim to replace these commands at all but rather to wrap them with a few enhancements we find useful and we hope you do too.
+
+- `deploy` - full deploys or partial deploys of your serverless repo
+- `test` - test your server
+
 If you're thinking about this library you're probably already convinced that Typescript might be better than sliced bread. It's close right? Anyway, this final part of the `aws-orchestration` ecosystem provides a means to configure your serverless configuration using Typescript as the language for configuration.
 
 At the end of the day, we're not replacing the `serverless.yml` file that defines your serverless service but offering to build it for you. By adopting this build system you will get the following benefits:
@@ -16,7 +21,17 @@ At the end of the day, we're not replacing the `serverless.yml` file that define
 
 Beyond getting strong typing, inline documentation, and more convenient co-existance of your handler function and it's config, this build process will automatically wrap in 
 
-## A Strongly Typed Configuration
+### Convention and Configuration
+
+People often talk about _convention over configuration_ and if you're a fan then we aim to please. But while aiming for _zero config_ is a nice idea its not truely practical. So once that bubble was burst for us we decided to aim at the following:
+
+- Reduced Configuration through Convention 
+  
+  Whereever possible we will provide sensible defaults -- even resorting to magic where it still exists in this world -- to ensure you don't have to.
+
+- Strongly Typed Configuration
+
+    When configuration _is_ required, we want to have it be _strongly typed_ so that mistakes can be avoided and -- via comments and autocomplete -- some of the the documentation of configuration is "baked in".
 
 ### Getting Started
 As was mentioned in the intro, we will produce a `serverless.yml` file for you and instead we ask you to focus on a `serverless.ts` file (also hosted in the root of your repo). What the heck is a `serverless.ts` file? Well in the fine tradition of "starting at the end", here is an example of what your file might look like:
@@ -46,45 +61,36 @@ The `aws-orchestrate` framework aims to provide sensible defaults to keep your i
 
 If you don't trust magic (or for that matter _defaults_) you can always run `yarn sls_build` and we'll build the `serverless.yml` for you to gaze in wonderment in how much easier your life has gotten. You truely have arrived.
 
-### To Infinity and Beyond
+### Inline Handler Configuration
 
-Ok, so sensible defaults definitely makes life easier but the cynical amoungst you will have noted that there are no function definitions and while we appear to be using the Step Functions plugins we're actually not defining those step functions in our config.
+This devops framework allows you to configure your handler functions in the same file that you define your function:
 
-This is one of the bigger differences that come from using this build system. Both functions and step functions (aka, state machines or orchestration) are configured inline and not in the central configuration file. The next two sections will introduce this in more detail.
-
-## Inline Handler Configuration
-
-### Why Inline?
-When you develop services using the Serverless framework the "entry point" for your services are _handler_ functions and typically you would write them in the language of your choice and once written you'd then head over to your `serverless.yml` file and register them in the configuration. There's nothing wrong with this process except that because the code and the configuration live apart from one another it adds a bit of friction to the process and discourages developers from properly annotating their handlers as well as being able to switch between code and configuration in the same location. On the surface this may seem like a small change but it's surprising sometimes how a small reduction of friction can aggregate into a bigger impact and in our experience this is a very nice developer DX improvement.
-
-### Example of Usage
-
-If the idea isn't yet fully crystalized yet, the best medicine is typically a real example. So without further ado, here's an example handler function:
-
+`src/foobar.ts`
 ```ts
 export config: IHandlerConfig = {
-    description: "my amazing handler where I do what others thought impossible",
-    layers: ["arn:aws:lambda:us-east-1:999888377040:layer:that-thing:1"],
-    events: [ { httpApi: { method: 'POST', path: '/give-it-to-me', cors: true } } ],
-    memorySize: 2048
+    description: "The foobar service brings foo and bar together",
+    memorySize: 1024,
+    events: [ { httpApi: "POST /foobar" } ]
 }
 
-const fn: IHandlerFunction<Request, Response> = (req, res) { ... }
+export fn: IHandlerFunction<IRequest, IResponse> = async (req, ctx) { ... }
 
 export const handler = wrapper(fn);
 ```
 
-In this example, we are exporting two symbols: `config` and `handler`. So long as we do this the build system will automatically detect all of your handler functions under the `/src` directory and add them into the `serverless.yml` file at build time.
+Now we'll let you get over your initial excitement that _foo_ and _bar_ have been finally brought together by the above handler but then let's dig into why this is better.
 
-> **Note:** in fact, you don't actually need to export a `config` symbol but you'll get a generic configuration if you don't.
+So as the example above alludes to:
 
-It's also worth noting that in our example we used the `wrapper` function included in this repo but you don't _need_ to. We just think you owe to yourself to bath in the lovely typing powers it gives you.
+- **Handler Detection.** You can now put your handler files anywhere in your `src` directory and so long as you're exporting a symbol called `handler` the build system will see this as a handler file and make sure it is included at build time into the `serverless.yml` file.
+- **Inline Handler Config.** If you export a symbol called `config` from this file, we'll use this to configure your lambda function as well
 
-### Friends with Benefits
+> **Note:** the **name** of your handler function will be derived from the _filename_ and if you do not export a `config` symbol we'll just configure the handler with the name property.
 
-Now that you hopefully are excited about the nicities of having your functions auto-detected and brought into the `serverless.yml` automatically it's time for us to let you know there are a few more fringe benefits:
+In contrast to the normal Serverless approach of writing the function and then going into the `serverless.yml` file and and pointing back to the handler and configuring it along with everything else. In our experience, having the functions configuration _near_ the function itself is much nicer. It increases DX by reducing back-and-forth friction, encourages developers to consider config more (and hopefully at least add a description), and ensures that all your handlers make it into your next build because the build system is now responsible for that.
 
-1. **Function Enumeration** - because we can detect your handler functions we can also provide you a typescript enumeration of 
+
+
 
 ### A Safety Hatch
 
@@ -121,6 +127,13 @@ export default StateMachine("mySequence", stepFn);
 **TODO:** finish after completing API
 
 By exporting a _default export_ of , it will be detected by the build system. If you've already included the step-function plugin to your configuration then it will automatically added to the definition of your step function into 
+
+
+### Auto Enumeration
+
+Now that you hopefully are excited about the nicities of having your functions auto-detected and brought into the `serverless.yml` automatically it's time for us to let you know there are a few more fringe benefits:
+
+1. **Function Enumeration** - because we can detect your handler functions we can also provide you a typescript enumeration of 
 
 ## Deployment
 

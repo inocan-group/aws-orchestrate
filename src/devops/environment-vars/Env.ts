@@ -15,4 +15,4 @@ import { IEnvBuildConfig } from "../types/env-types";
  * - `region` - the region being built for [ **AWS_REGION** ]
  * - `partition` - the AWS _partition_ which you are using [ **AWS_PARTITION** ]
  */
-export function Env(config: IEnvBuildConfig) {}
+export function Env(_config: IEnvBuildConfig) {}

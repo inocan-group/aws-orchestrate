@@ -6,4 +6,4 @@ export interface IEnvBuildConfig {
   partition: AwsArnPartition;
 }
 
-export type IEnvConfigApi<S> = {};
+// export type IEnvConfigApi<S> = {};
