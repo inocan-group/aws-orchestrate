@@ -1,4 +1,5 @@
-import { IFinalizedStepFn, IFluentApi, IStepFnShorthand } from "~/types";
+import { ICatchConfigurableStepFn, IFinalizedStepFn, IStepFnShorthand } from "~/types";
+import { IConfigurableStepFn } from "./stepFunction";
 
 /**
  * Step Function Common Errors
@@ -55,23 +56,16 @@ export interface IErrorTypeSelector {
   (e: IErrorType): string;
 }
 
-export type IErrorHandlerPointer = IFluentApi | IStepFnShorthand | IFinalizedStepFn;
+export type IErrorHandlerPointer = ICatchFluentStepFnApi | IStepFnShorthand | IFinalizedStepFn;
+
+export interface ICatchFluentStepFnApi {
+  (sf: ICatchConfigurableStepFn): IConfigurableStepFn | IFinalizedStepFn;
+}
+
 
 export interface ErrDefn {
   selector: IErrorHandlerPointer;
   resultPath?: Partial<IResultPath>;
-}
-
-
-export interface IErrHandlerApi {
-  default(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>): Record<string, ErrDefn>;
-  handle(errorType: IErrorTypeSelector, selector: IErrorHandlerPointer, resultPath?: string): IErrHandlerApiExtension;
-}
-
-export interface IErrHandlerApiExtension {
-  default(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>): Record<string, ErrDefn>;
-  handle(errorType: IErrorTypeSelector, selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>): IErrHandlerApiExtension;
-  withoutDefault(): Record<string, ErrDefn>;
 }
 
 export interface RetryOptions {
@@ -83,13 +77,3 @@ export interface RetryOptions {
   maxAttempts?: number;
 }
 
-export interface IRetryHandlerApiExtension {
-  default(options: RetryOptions): Record<string, RetryOptions>;
-  handle(errorType: IErrorTypeSelector, options: RetryOptions): IRetryHandlerApiExtension;
-  withoutDefault(): Record<string, RetryOptions>;
-}
-
-export interface IRetryHandlerApi {
-  default(options: RetryOptions): Record<string, RetryOptions>;
-  handle(errorType: IErrorTypeSelector, options: RetryOptions): IRetryHandlerApiExtension;
-}

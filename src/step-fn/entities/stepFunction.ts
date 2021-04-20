@@ -2,7 +2,10 @@ import { ServerlessError } from "~/errors";
 import {
   CallableConfiguration,
   Finalized,
+  ICatchConfigurableStepFn,
+  ICatchFluentStepFnApi,
   IConfigurableStepFn,
+  IErrorHandlerPointer,
   IFinalizedStepFn,
   IFluentApi,
   IState,
@@ -13,8 +16,8 @@ import {
 import { goTo } from "..";
 import { choice, fail, map, parallel, pass, succeed, task, wait } from "../states";
 
-export const isFluentApi = (obj: IStepFnSelector): obj is IFluentApi => !isStepFunction(obj) && !Array.isArray(obj);
-export function isStepFunction(obj: IStepFnSelector): obj is IStepFn {
+export const isFluentApi = (obj: IStepFnSelector | IErrorHandlerPointer): obj is IFluentApi | ICatchFluentStepFnApi=> !isStepFunction(obj) && !Array.isArray(obj);
+export function isStepFunction(obj: IStepFnSelector | IErrorHandlerPointer): obj is IStepFn {
   return "getState" in obj || "finalize" in obj;
 }
 export const isFinalizedStepFn = (obj: IStepFn): obj is IFinalizedStepFn => "getState" in obj;
@@ -49,7 +52,7 @@ export function StepFunction(...params: (IState | Finalized<IState> | IStepFnOpt
     return options;
   };
 
-  function configuring(options: IStepFnOptions): IConfigurableStepFn {
+  function configuring(options: IStepFnOptions): IConfigurableStepFn | ICatchConfigurableStepFn {
     const callable = <T>(fn: CallableConfiguration<T>) => fn(() => configuring(options), commit);
 
     return {

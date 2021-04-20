@@ -16,7 +16,7 @@ describe("State Machine", () => {
     const thirdTask = State((s) => s.task("thirdTask"));
 
     const awesomeStateMachine = StateMachine("fooStateMachine", {
-      stepFunction: StepFunction(firstTask, secondTask, thirdTask),
+      stepFunction: StepFunction(firstTask, secondTask, thirdTask)
     }).toJSON();
 
     const firstSequence = "firstTask";

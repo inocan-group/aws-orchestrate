@@ -1,3 +1,4 @@
+/* eslint-disable no-use-before-define */
 import { ICatchConfig, ICatchFluentApi } from "~/step-fn";
 import {
   IState,
@@ -48,6 +49,10 @@ export interface IFinalizedStepFn {
   getOptions: () => IStepFnOptions;
 }
 
+export type ICatchConfigurableStepFn = {
+  goTo(finalizedState: Finalized<IState> | string): IFinalizedStepFn;
+} & IConfigurableStepFn;
+
 /**
  * The API that will be used to call another states in order to build our step function.
  */
@@ -60,7 +65,7 @@ export interface IConfigurableStepFn {
    *
    * A task performs work by using an activity or an AWS Lambda function, or by passing parameters to the API actions of other services.
    */
-  task(resourceName: string, options?: ITaskOptions): IConfigurableStepFn;
+  task(resourceName: string, options?: ITaskOptions): this;
   /**
    * This state stops an execution successfully.
    *
@@ -72,7 +77,7 @@ export interface IConfigurableStepFn {
    *
    * While the Parallel state executes multiple branches of steps using the same input, a Map state will execute the same steps for multiple entries of an array in the state input.
    */
-  map(itemsPath: string, options?: IMapOptions): IMapUseCallable<IConfigurableStepFn>;
+  map(itemsPath: string, options?: IMapOptions): IMapUseCallable<this>;
   /**
    * This state stops the execution of the state machine and marks it as a failure.
    */
@@ -84,21 +89,19 @@ export interface IConfigurableStepFn {
   /**
    * This state can be used to create parallel branches of execution in your state machine.
    */
-  parallel(params: IParallelBranchOptions[], options?: IParallelOptions): IConfigurableStepFn;
+  parallel(params: IParallelBranchOptions[], options?: IParallelOptions): this;
   /**
    * This passes its input to its output, without performing work.
    *
    * Pass states are useful when constructing and debugging state machines.
    */
-  pass(options?: IPassOptions): IConfigurableStepFn;
+  pass(options?: IPassOptions): this;
   /**
    * This state delays the state machine from continuing for a specified time.
    *
    * You can choose either a relative time, specified in seconds from when the state begins, or an absolute end time, specified as a timestamp.
    */
-  wait(options?: IWaitOptions): IConfigurableStepFn;
-
-  goTo(finalizedState: Finalized<IState> | string): IFinalizedStepFn;
+  wait(options?: IWaitOptions): this;
 
   finalize(): IFinalizedStepFn;
 }

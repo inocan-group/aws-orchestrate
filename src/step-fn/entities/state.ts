@@ -1,6 +1,8 @@
 import { ServerlessError } from "~/errors";
 import {
   Finalized,
+  ICatchConfigurableStepFn,
+  IErrorHandlerPointer,
   IFinalizedStepFn,
   IState,
   IStateConfiguring,
@@ -51,11 +53,11 @@ function isState(
   return "type" in obj;
 }
 
-export function isFinalizedStepFnSelector(selector: IStepFnSelector): boolean {
+export function isFinalizedStepFnSelector(selector: IStepFnSelector | IErrorHandlerPointer): boolean {
   if (isStepFunction(selector)) {
     return isFinalizedStepFn(selector);
   } else if (isFluentApi(selector)) {
-    const configurationApi = StepFunction();
+    const configurationApi = StepFunction() as ICatchConfigurableStepFn;;
     const sf = selector(configurationApi);
     return isFinalizedStepFn(sf);
   } else {
@@ -63,7 +65,7 @@ export function isFinalizedStepFnSelector(selector: IStepFnSelector): boolean {
   }
 }
 
-export function parseStepFnSelector(selector: IStepFnSelector): IFinalizedStepFn {
+export function parseStepFnSelector(selector: IStepFnSelector | IErrorHandlerPointer): IFinalizedStepFn {
   if (isStepFunction(selector)) {
     if (isFinalizedStepFn(selector)) {
       return selector;
@@ -75,7 +77,7 @@ export function parseStepFnSelector(selector: IStepFnSelector): IFinalizedStepFn
       return c;
     }
   } else if (isFluentApi(selector)) {
-    const configurationApi = StepFunction();
+    const configurationApi = StepFunction() as ICatchConfigurableStepFn;
     const sf = selector(configurationApi);
     console.log("foo", selector);
     return !isFinalizedStepFn(sf) ? sf.finalize() : sf;
@@ -101,7 +103,7 @@ export function parseStepFnSelector(selector: IStepFnSelector): IFinalizedStepFn
   }
 }
 
-export function parseAndFinalizeStepFn(selector: IStepFnSelector): IFinalizedStepFn {
+export function parseAndFinalizeStepFn(selector: IStepFnSelector | IErrorHandlerPointer): IFinalizedStepFn {
   if (isStepFunction(selector)) {
     if (isFinalizedStepFn(selector)) {
       return selector;
@@ -110,7 +112,7 @@ export function parseAndFinalizeStepFn(selector: IStepFnSelector): IFinalizedSte
       return c;
     }
   } else if (isFluentApi(selector)) {
-    const configurationApi = StepFunction();
+    const configurationApi = StepFunction() as ICatchConfigurableStepFn;
     const sf = selector(configurationApi);
     return isFinalizedStepFn(sf) ? sf : sf.finalize();
   } else {
