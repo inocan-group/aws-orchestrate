@@ -109,7 +109,6 @@ export interface IStepFnConditionApi {
   numericLessThan: (value: number) => Partial<IOperand_NumericLessThan>;
   numericLessThanEquals: (value: number) => Partial<IOperand_NumericLessThanEquals>;
   booleanEquals: (value: boolean) => Partial<IOperand_BooleanEquals>;
-  default: () => Partial<IDefaultChoiceOptions>;
 }
 export interface IStepFnConditionApiParam {}
 

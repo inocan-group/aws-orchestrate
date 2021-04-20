@@ -1,5 +1,5 @@
 import { IStepFunctionTask } from "common-types";
-import { condition, State, StateMachine, StepFunction } from "~/step-fn";
+import { condition, defaultChoice, State, StateMachine, StepFunction } from "~/step-fn";
 import { IStepFnOptions } from "~/types";
 
 describe("State Machine", () => {
@@ -41,13 +41,13 @@ describe("State Machine", () => {
     const fetchFromGravatar = State((s) => s.task("fetchAvatarUrlFromGravatar"));
     const saveIntoDb = State((s) => s.task("SaveIntoDb"));
     const defaultOpts: IStepFnOptions = { namePrefix: "default-" };
-    const defaultChoice = condition((c) => c.default(), [fetchFromGravatar, saveIntoDb, defaultOpts], "$.type");
+    const defaultChoiceOption = defaultChoice([fetchFromGravatar, saveIntoDb, defaultOpts]);
 
     const fetchFromUnavatar = State((s) => s.task("fetchFromUnavatar"));
     const unavatarOpts: IStepFnOptions = { namePrefix: "unavatar-" };
     const unavatarChoice = condition((c) => c.stringEquals("unavatar"), [fetchFromUnavatar, unavatarOpts], "$.type");
 
-    const fetchProfileImgUrl = State((s) => s.choice([defaultChoice, unavatarChoice], { name: "fooChoiceState" }));
+    const fetchProfileImgUrl = State((s) => s.choice([defaultChoiceOption, unavatarChoice], { name: "fooChoiceState" }));
 
     const stepFn = StepFunction(fetchProfileImgUrl);
     const stateMachine = StateMachine("fooStateMachine", { stepFunction: stepFn }).toJSON();

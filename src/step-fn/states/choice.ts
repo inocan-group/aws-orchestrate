@@ -32,12 +32,6 @@ const stringEquals = (value: string): Partial<IOperand_StringEquals> => {
   };
 };
 
-const defaultChoice = (): Partial<IDefaultChoiceOptions> => {
-  return {
-    kind: "defaultChoice",
-  };
-};
-
 const booleanEquals = (value: boolean): Partial<IOperand_BooleanEquals> => {
   return {
     booleanEquals: value,
@@ -115,13 +109,16 @@ export const condition = (
     numericLessThan,
     numericLessThanEquals,
     booleanEquals,
-    default: defaultChoice,
   };
 
   const operand = cb(api);
 
   if (variable !== undefined && !variable.startsWith("$.")) {
-    throw new ServerlessError(400, `variable ${variable} is not allowed. It must start with "$."`, "bad-format");
+    throw new ServerlessError(
+      400,
+      `variable ${variable} is not allowed. It must start with "$."`,
+      "bad-format"
+    );
   }
 
   return {
@@ -136,6 +133,15 @@ export function choice(api: () => IConfigurableStepFn, commit: IStore["commit"])
     commit(choiceConfiguration(choices, options));
 
     return api().finalize();
+  };
+}
+
+export function defaultChoice(
+  stepFn: IFluentApi | IStepFnShorthand,
+): IDefaultChoiceOptions {
+  return {
+    stepFn,
+    kind: "defaultChoice"
   };
 }
 
@@ -173,6 +179,8 @@ export function choiceConfiguration(
     default: defaultDfn,
     ...choiceOptions,
     isTerminalState: true,
-    ...(choiceOptions?.name !== undefined ? { name: choiceOptions?.name, isFinalized: true } : { isFinalized: false }),
+    ...(choiceOptions?.name !== undefined
+      ? { name: choiceOptions?.name, isFinalized: true }
+      : { isFinalized: false }),
   };
 }

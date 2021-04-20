@@ -1,4 +1,4 @@
-import { condition, State, StepFunction } from "~/step-fn";
+import { condition, defaultChoice, State, StepFunction } from "~/step-fn";
 import { IParallelOptions } from "~/types";
 
 describe("Step Function", () => {
@@ -69,14 +69,12 @@ describe("Step Function", () => {
 
     const fetchFromGravatar = State((s) => s.task("fetchAvatarUrlFromGravatar"));
     const saveIntoDb = State((s) => s.task("SaveIntoDb"));
-    const defaultChoice = condition((c) => c.default(), [fetchFromGravatar, saveIntoDb]);
+    const defaultChoiceOpt = defaultChoice([fetchFromGravatar, saveIntoDb]);
 
     const fetchFromUnavatar = State((s) => s.task("fetchFromUnavatar"));
     const unavatarChoice = condition((c) => c.stringEquals("unavatar"), [fetchFromUnavatar], "$.type");
 
-    const myAwesomeStepFunction = StepFunction(saveBasicInfo).choice([defaultChoice, unavatarChoice]);
-
-    console.log(myAwesomeStepFunction.getState());
+    const myAwesomeStepFunction = StepFunction(saveBasicInfo).choice([defaultChoiceOpt, unavatarChoice]);
 
     expect(myAwesomeStepFunction.getState()).toHaveLength(2);
   });

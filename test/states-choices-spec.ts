@@ -1,4 +1,4 @@
-import { condition, State } from "~/step-fn";
+import { condition, defaultChoice, State } from "~/step-fn";
 import { IStepFnOptions } from "~/types";
 
 describe("Choice State", () => {
@@ -10,10 +10,7 @@ describe("Choice State", () => {
   });
 
   it("Defining default choice condition should be able to be configured by fluent API", () => {
-    const fetchGravatar = condition(
-      (c) => c.default(),
-      (s) => s.task("fetchAvatarUrlFromGravatar")
-    );
+    const fetchGravatar = defaultChoice((s) => s.task("fetchAvatarUrlFromGravatar"));
 
     const fetchProfileImgUrl = State((s) => s.choice([fetchGravatar]));
 
@@ -25,9 +22,9 @@ describe("Choice State", () => {
   it("Defining default choice condition should be able to be configured by step function shorthand", () => {
     const fetchAvatarUrlFromGravatar = State((s) => s.task("fetchAvatarUrlFromGravatar"));
 
-    const fetchGravatar = condition((c) => c.default(), [fetchAvatarUrlFromGravatar]);
+    const defaultChoiceOption = defaultChoice([fetchAvatarUrlFromGravatar]);
 
-    const fetchProfileImgUrl = State((s) => s.choice([fetchGravatar]));
+    const fetchProfileImgUrl = State((s) => s.choice([defaultChoiceOption]));
 
     expect(fetchProfileImgUrl.default).not.toBeUndefined();
     expect(fetchProfileImgUrl.isTerminalState).toBeTrue();
@@ -37,8 +34,16 @@ describe("Choice State", () => {
   it("Defining choice conditions should be able to be configured by fluent API", () => {
     const fetchProfileImgUrl = State((s) =>
       s.choice([
-        { variable: "$.type", stringEquals: "gravatar", stepFn: (s) => s.task("fetchFromGravatar") },
-        { variable: "$.type", stringEquals: "unavatar", stepFn: (s) => s.task("fetchFromUnavatar") },
+        {
+          variable: "$.type",
+          stringEquals: "gravatar",
+          stepFn: (s) => s.task("fetchFromGravatar"),
+        },
+        {
+          variable: "$.type",
+          stringEquals: "unavatar",
+          stepFn: (s) => s.task("fetchFromUnavatar"),
+        },
       ])
     );
 
@@ -51,13 +56,17 @@ describe("Choice State", () => {
     const fetchFromGravatar = State((s) => s.task("fetchAvatarUrlFromGravatar"));
     const saveIntoDb = State((s) => s.task("SaveIntoDb"));
     const defaultOpts: IStepFnOptions = { namePrefix: "default-" };
-    const defaultChoice = condition((c) => c.default(), [fetchFromGravatar, saveIntoDb, defaultOpts], "$.type");
+    const defaultChoiceOption = defaultChoice([fetchFromGravatar, saveIntoDb, defaultOpts]);
 
     const fetchFromUnavatar = State((s) => s.task("fetchFromUnavatar"));
     const unavatarOpts: IStepFnOptions = { namePrefix: "unavatar-" };
-    const unavatarChoice = condition((c) => c.stringEquals("unavatar"), [fetchFromUnavatar, unavatarOpts], "$.type");
+    const unavatarChoice = condition(
+      (c) => c.stringEquals("unavatar"),
+      [fetchFromUnavatar, unavatarOpts],
+      "$.type"
+    );
 
-    const fetchProfileImgUrl = State((s) => s.choice([defaultChoice, unavatarChoice]));
+    const fetchProfileImgUrl = State((s) => s.choice([defaultChoiceOption, unavatarChoice]));
 
     expect(fetchProfileImgUrl.default).not.toBeUndefined();
     expect(fetchProfileImgUrl.isTerminalState).toBeTrue();
@@ -65,21 +74,12 @@ describe("Choice State", () => {
   });
 
   it("Defining choice conditions variables without '$.' preffix should throw StepFunctionError", () => {
-    const sendGreatNews = State(s => s.task("sendEmailNotification"))
-    const action = () => condition(c => c.numericEquals(20), [sendGreatNews], "score")
+    const sendGreatNews = State((s) => s.task("sendEmailNotification"));
+    const action = () => condition((c) => c.numericEquals(20), [sendGreatNews], "score");
 
-    expect(action).toThrowError({ name: "ServerlessError", message: 'variable score is not allowed. It must start with "$."'})
-  })
-})
-
-// TODO: new conditional fn implementation api
-export interface IConditionalStatement {
-  kind: 'conditional-statement';
-  operation: 'stringEquals' | 'numberEquals';
-  path?: `\$.${string}`;
-  value: unknown;
-}
-
-export function isConditionalStatement(obj: unknown): obj is IConditionalStatement {
-  return typeof obj === 'object' && (obj as IConditionalStatement).kind === 'conditional-statement' ? true : false;
-}
+    expect(action).toThrowError({
+      name: "ServerlessError",
+      message: 'variable score is not allowed. It must start with "$."',
+    });
+  });
+});
