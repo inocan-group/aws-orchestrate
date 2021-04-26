@@ -1,5 +1,5 @@
 /* eslint-disable no-use-before-define */
-import { ICatchConfig, ICatchFluentApi } from "~/step-fn";
+import { ICatchConfig, ICatchFluentApi, IStepFnState } from "~/step-fn";
 import {
   IState,
   Finalized,
@@ -20,7 +20,7 @@ export enum ParamsKind {
   StepFnOptions = "StepFnOptions",
 }
 
-export type IStepFnOptions = {
+export interface IStepFnOptions  {
   /**
    * you can add a named prefix to a step function
    * so that all _states_ defined within this step
@@ -89,7 +89,7 @@ export interface IConfigurableStepFn {
   /**
    * This state can be used to create parallel branches of execution in your state machine.
    */
-  parallel(params: IParallelBranchOptions[], options?: IParallelOptions): this;
+  parallel(...params: IParallelBranchOptions[] | [...IParallelBranchOptions[], IParallelOptions]): this;
   /**
    * This passes its input to its output, without performing work.
    *
@@ -123,7 +123,8 @@ export type IStepFnSelector = IFluentApi | IStepFnShorthand | IStepFn;
  *
  * It's a wrapper being used internally
  */
-export type IStepFnShorthand = Array<IState | Finalized<IState> | IStepFnOptions>;
+// export type IStepFnShorthand = TupleWithOptionalTail<(StepFnState | IStepFnOptions)[] | [StepFnState, IStepFnOptions]>;
+export type IStepFnShorthand = IStepFnState[] | [...IStepFnState[], IStepFnOptions];
 
 /**
  * Creates a new step function with the options provided (optional)

@@ -22,6 +22,17 @@ import {
 
 export type Result<T extends IState> = Finalized<T> | T;
 
+type TupleWithOptionalTail<
+  T extends readonly (IParallelBranchOptions | IParallelOptions)[]
+> = T extends readonly []
+  ? T
+  : T extends readonly [...infer I, infer U]
+  ? I extends []
+    ? T
+    : I extends IParallelBranchOptions[]
+    ? T
+    : readonly [...{ [K in keyof I]: IParallelBranchOptions }, U]
+  : never;
 export type IStateConfiguring = {
   /**
    * This state represents a single unit of work performed by a state machine.
@@ -62,8 +73,8 @@ export type IStateConfiguring = {
   /**
    * This state can be used to create parallel branches of execution in your state machine.
    */
-  parallel(branches: IParallelBranchOptions[], options?: IParallelOptions & { name: string }): Finalized<IParallel>;
-  parallel(branches: IParallelBranchOptions[], options?: Omit<IParallelOptions, "name">): IParallel;
+  parallel(...params: IParallelBranchOptions[] | [...IParallelBranchOptions[], IParallelOptions  & { name: string }]): Finalized<IParallel>;
+  parallel(...params: IParallelBranchOptions[] | [...IParallelBranchOptions[], Omit<IParallelOptions, "name">]): IParallel;
   /**
    * This state delays the state machine from continuing for a specified time.
    *

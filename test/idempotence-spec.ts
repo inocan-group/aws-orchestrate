@@ -198,7 +198,7 @@ describe("Idempotence", () => {
     const branch2Task2 = State((s) => s.pass({ comment: "branch2Task1" }));
 
     const parallelState = State((s) =>
-      s.parallel([StepFunction(branch1Task1, branch1Task2), StepFunction(branch2Task1, branch2Task2)], {
+      s.parallel(StepFunction(branch1Task1, branch1Task2), StepFunction(branch2Task1, branch2Task2), {
         name: "myParallelState",
       })
     );
@@ -214,7 +214,7 @@ describe("Idempotence", () => {
     for (const [index, _] of Array.from({ length: 20 }).fill(0).entries()) {
       const branch3 = StepFunction(State((s) => s.wait({ seconds: index + 1 })));
       const modifiedParallelState = State((s) =>
-        s.parallel([StepFunction(branch1Task1, branch1Task2), StepFunction(branch2Task1, branch2Task2), branch3], {
+        s.parallel(StepFunction(branch1Task1, branch1Task2), StepFunction(branch2Task1, branch2Task2), branch3, {
           name: "myParallelState",
         })
       );
@@ -237,7 +237,7 @@ describe("Idempotence", () => {
     const branch2Task2 = State((s) => s.pass({ comment: "branch2Task1" }));
 
     const parallelState = State((s) =>
-      s.parallel([StepFunction(branch1Task1, branch1Task2), StepFunction(branch2Task1, branch2Task2)], {
+      s.parallel(StepFunction(branch1Task1, branch1Task2), StepFunction(branch2Task1, branch2Task2), {
         name: "myParallelState",
       })
     );
@@ -253,7 +253,7 @@ describe("Idempotence", () => {
     for (const [index, _] of Array.from({ length: 20 }).fill(0).entries()) {
       const branch3 = StepFunction(State((s) => s.wait({ seconds: index + 1 })));
       const modifiedParallelState = State((s) =>
-        s.parallel([branch3, StepFunction(branch1Task1, branch1Task2), StepFunction(branch2Task1, branch2Task2)], {
+        s.parallel(branch3, StepFunction(branch1Task1, branch1Task2), StepFunction(branch2Task1, branch2Task2), {
           name: "myParallelState",
         })
       );

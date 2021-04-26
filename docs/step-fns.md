@@ -20,16 +20,16 @@ The intent of this `module` is to give users and strongly typed and friendly API
 
 We will attempt to define key terms which will be reinforced in the API (and type system) to describe key constructs when writing step functions:
 
-<mermaid>
-graph TD
-    SM(State Machine) -->| defined by | SF(Step Function)
-    SM -->|also has| MD(Meta Data)
-    SF -->|has many| S(States)
-
-    style MD fill:#FFF,stroke:#bbf,stroke-width:2px,color:#aaa,stroke-dasharray: 5 5
-
-</mermaid>
-
+```mermaid
+erDiagram
+    StateMachine ||--|| StepFunction : has
+    StepFunction ||--|{ State : contains
+    StateMachine ||--o| Catch : has
+    StepFunction ||--o| Catch : has
+    State ||--o| Catch: has
+    State ||--o| Retry: has
+    Catch ||--|| StepFunctionn : has
+```
 ### State Machine
 
 Even though the service is called "Step Functions", ultimately it a **State Machine** that you "deploy" to AWS and get a uniquely identifying ARN back to make reference to. There are two key parts of the "meta-data" which help define a State Machine:
@@ -60,6 +60,28 @@ const myStepFn = StepFunction()
 ### State(s)
 
 A state machine must have "states" but of course from a terminology standpoint we say that a _state_ belongs to the **Step Function** and that this function is then formalized by being wrapped by a **State Machine**. Anyway ... semantics. Who has the time? 
+
+```mermaid
+classDiagram
+    class StepFunction
+    class State
+    State : String Type
+    State : String Comment
+    State : Boolean Ends
+    class Task
+    State <|-- Task
+    State <|-- Parallel
+    class Parallel
+    Parallel "1" --> "*" StepFunction
+    State <|-- Choice
+    class Choice
+    class ChoiceItem
+    Choice "1" --> "*" ChoiceItem
+    ChoiceItem "1" --> "1" StepFunction
+    State <|-- Map
+    class Map
+    Map "1" --> "1" StepFunction 
+```
 
 In the next section we'll review all of the "kinds" of states that you can use to compose a Step Function.
 
@@ -412,23 +434,24 @@ This option state is available in most of our states. It enable us to determine 
 ```ts
 const myStateMachine = StateMachine("myStateMachine", {
     stepFunction: myStepFn,
-    defaultErrorHandler: errorHandler(e => e.default(s => s.task(NotifyError.handlerFn))),
+    catch: e => e.all(s => s.task(NotifyError.handlerFn)),
 })
 ```
 
 * Step function level:
 ```ts
 const fooStepFn = StepFunction({
-    defaultErrorHandler: errorHandler(e => e.default(s => s.task(NotifyError.handlerFn))),
+    catch: e => e.all(s => s.task(NotifyError.handlerFn)),
 }).task('task1')
 ```
 
 * State level:
 ```ts
 const notifyError = State(s => s.task(NotifyError.handlerFn))
+const myStepFn = StepFunction(notifyError)
 
 const fooTask = State(s => s.task('task1', {
-    catch: errorHandler(e => e.handle(h => h.all, StepFunction(notifyError)).withoutDefault()),
+    catch: e => e.all(myStepFn)
 }))
 ```
 
@@ -436,7 +459,7 @@ const fooTask = State(s => s.task('task1', {
 This is also useful if we want to retry execution of error caught state. It is also important to keep in mind that execution the state again won't break our data flow.
 * example: 
 ```ts
-const fooTask = State(s => s.task('fooTask', { retry: retryHandler(e => e.default(retryOptions)) }))
+const fooTask = State(s => s.task('fooTask', { retry: e => e.all(retryOptions)) }))
 ```
 ### Secret Management
 One of the benefits of using aws-orchestrate wrapper is that it detects secrets from input payload and include in our `request`, and if we fetched another ssm secret in the lambda fn handler, it would include along with the current one in the output/response, which is the input of the next state in our step function. All detection and includement in input/output is done under the hood.
@@ -452,7 +475,7 @@ It helps you to compose a condition to be used in "choice" state. Instead of hav
 ```typescript
     const sendGreatNews = State(s => s.task("sendEmailNotification"));
     // You would be able to specify the state's property to be evaluated as the third parameter
-    const myCondition = condition(c => c.numericEquals(20), [sendGreatNews], "score");
+    const myCondition = ChoiceItem(c => c.numericEquals(20), [sendGreatNews], "score");
 ```
 
 ### `errorHandler()` fn

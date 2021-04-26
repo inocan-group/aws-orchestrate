@@ -83,15 +83,15 @@ export function parseStepFnSelector(selector: IStepFnSelector | IErrorHandlerPoi
     return !isFinalizedStepFn(sf) ? sf.finalize() : sf;
   } else {
     let stepFnOptions: IStepFnOptions = {};
+    const states =[];
 
-    const states = selector.reduce((acc: IState[], param: IState | IStepFnOptions) => {
-      if (isStateDefn(param)) {
-        acc.push(param);
+    for (const s of selector) {
+      if (isStateDefn(s)) {
+        states.push(s);
       } else {
-        stepFnOptions = param;
+        stepFnOptions = s;
       }
-      return acc;
-    }, [] as IState[]);
+    }
 
     if (!states[0].isFinalized) {
       throw new ServerlessError(400, "The first state must be finalized", "not-valid");
@@ -113,19 +113,20 @@ export function parseAndFinalizeStepFn(selector: IStepFnSelector | IErrorHandler
     }
   } else if (isFluentApi(selector)) {
     const configurationApi = StepFunction() as ICatchConfigurableStepFn;
+    console.log(selector);
     const sf = selector(configurationApi);
     return isFinalizedStepFn(sf) ? sf : sf.finalize();
   } else {
     let stepFnOptions: IStepFnOptions = {};
+    const states =[];
 
-    const states = selector.reduce((acc: IState[], param: IState | IStepFnOptions) => {
-      if (isStateDefn(param)) {
-        acc.push(param);
+    for (const s of selector) {
+      if (isStateDefn(s)) {
+        states.push(s);
       } else {
-        stepFnOptions = param;
+        stepFnOptions = s;
       }
-      return acc;
-    }, [] as IState[]);
+    }
 
     return StepFunction(...states, {
       ...stepFnOptions,
