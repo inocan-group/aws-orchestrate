@@ -69,7 +69,7 @@
     "aws-ssm": "^0.3.13",
     "aws-xray-sdk-core": "^3.3.1",
     "common-types": "^1.23.1",
-    "do-devops": "^0.6.1",
+    "do-devops": "^0.7.0",
     "eslint": "^7.24.0",
     "eslint-config-prettier": "^8.2.0",
     "eslint-plugin-import": "^2.22.1",

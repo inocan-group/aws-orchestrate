@@ -7,19 +7,62 @@ sidebarDepth: 3
 
 ## Overview
 
-This framework provides wrappers around the Serverless Framework's CLI commands. We do not aim to replace these commands at all but rather to wrap them with a few enhancements we find useful and we hope you do too.
+### Structure and Genesis
 
-- `deploy` - full deploys or partial deploys of your serverless repo
-- `test` - test your server
+This framework's CLI surface area can be thought of in two parts:
 
-If you're thinking about this library you're probably already convinced that Typescript might be better than sliced bread. It's close right? Anyway, this final part of the `aws-orchestration` ecosystem provides a means to configure your serverless configuration using Typescript as the language for configuration.
+1. **Wrapping Serverless CLI**
 
-At the end of the day, we're not replacing the `serverless.yml` file that defines your serverless service but offering to build it for you. By adopting this build system you will get the following benefits:
+    A big part of what we're doing is providing simple wrappers around the Serverless API to provide better defaults, a more composable configuration, and give you strong typing. We're not trying to compete with the existing CLI but rather enhance it.
 
-1. Define all of your config in Typescript (with strong typing and good commenting)
-2. Define your handler functions inline with the handler code
+2. **Additional Features**
 
-Beyond getting strong typing, inline documentation, and more convenient co-existance of your handler function and it's config, this build process will automatically wrap in 
+    There are some CLI commands that we've come up with beyond what already exists.
+
+The genesis of the CLI is via the `do-devops` repo. In fact the CLI is really _just_ the CLI which the `do-devops` repo exposes, however, in this repo you will also find helpful utilities for making configuration even easier. Also, because both repos have the same basic authorship, `do-devops` will recognize that you have the `aws-orchestrate` repo installed and take on extra super powers as a result.
+
+In this section we'll primarily talk about the _wrapping_ of the Serverless CLI and then hit the other features you get for free at the end.
+
+### It's all about Deployment
+
+
+At the heart of the Serverless framework is the _central_ task of deployment. Aka, getting your functions, and other AWS resources/configuration up into the cloud so they can be run from there. This is the central problem that Serverless framework solved all those years ago and it's still the main utility that it provides.
+
+When you deploy -- using the Serverless framework -- you might broadly be doing two things:
+
+```sh
+# deploy all your services 
+sls deploy
+# deploy just a function or a discrete set of functions
+sls deploy function --function helloWorld
+```
+> Serverless docs can be found here: [deploy](https://www.serverless.com/framework/docs/providers/aws/cli-reference/deploy/), [deploy function](https://www.serverless.com/framework/docs/providers/aws/cli-reference/deploy-function/)
+
+Now hopefully, you'll have no surprises to find out that the `do-devops` API surface is nearly the same:
+
+```sh
+# deploy all your services 
+dd deploy
+# deploy just a function or a discrete set of functions
+dd deploy helloWorld
+```
+> all CLI commands are executed with `dd` which can be installed globally or locally to the repo
+
+From an interaction standpoint, you'll see very little difference. There's a little less _cruft_ in deploying a function (or set of functions) but otherwise you interact in the same way. Behind the scenes, however, a lot more is happening but to understand that we'll need to get into greater details. For now let's just cover more topic in _overview mode_ and that is the `serverless.yml` file.
+
+### Serverless Configuration
+
+If you've used the [Serverless Framework](https://serverless.com) before you'll know that at the heart of this system is the `serverless.yml` file. This file configures everything that eventually the framework will deploy to the cloud for you. When you switch to using the Serverless Devops wrappers you will instead focus your energy on the `serverless.ts` file. 
+
+Moving from YAML to Typescript as the format for stating your configuration provides notable advantages:
+
+- Strong typing keeps you on safe guard rails; you can configure what you're allowed to configure but not what you aren't
+- With Typescript you'll get autocomplete and with typings that allow you to avoid having to refer to docs most of the time.
+- YAML is purely about configuration, Typescript can be used for this purpose but can also _react_ programatically to certain environmental or configured factors. This allows much more power when you need power.
+
+Ok we're done with the overview. Read on for more details of using the **Serverless Devops** framework.
+
+## Using Serverless Devops
 
 ### Convention and Configuration
 
@@ -34,7 +77,9 @@ People often talk about _convention over configuration_ and if you're a fan then
     When configuration _is_ required, we want to have it be _strongly typed_ so that mistakes can be avoided and -- via comments and autocomplete -- some of the the documentation of configuration is "baked in".
 
 ### Getting Started
-As was mentioned in the intro, we will produce a `serverless.yml` file for you and instead we ask you to focus on a `serverless.ts` file (also hosted in the root of your repo). What the heck is a `serverless.ts` file? Well in the fine tradition of "starting at the end", here is an example of what your file might look like:
+As was mentioned in the intro, we ask you to forget that pesky `serverless.yml` file and focus instead on the `serverless.ts` file (we'll automatically create the `serverless.yml` file and you can always look over our shoulder).
+
+So, what might your `serverless.ts` file look like? Here's a very simple example:
 
 ```ts
 const config: IServerlessConfig = {
@@ -47,7 +92,7 @@ export default config;
 ```
 > Example `serverless.ts` config file
 
-The first thing to note is that the top level sections are the same as you'd have in the `serverless.yml` file. Turns out we are fan's of the "wheel" _just as it is_. The hopefully obvious difference is that in a Typescript file, you get typing. You get autocomplete, inline comments on properties, and you can only configure things that are actually allowed.
+The first thing to note is that the top level _sections_ are the same as you'd have in the `serverless.yml` file. Turns out we are fan's of the "wheel" _just as it is_. The hopefully obvious difference is that by typing it as `IServerlessConfig`, you get typing, autocomplete, and verbose inline comments on properties.
 
 ### Sensible Defaults
 

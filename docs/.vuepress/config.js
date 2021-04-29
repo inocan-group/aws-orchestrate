@@ -92,7 +92,7 @@ module.exports = {
         link: "/wrapper",
       },
       {
-        text: "Step Function Builder",
+        text: "Step Functions",
         link: "/step-fns",
       },
       {
