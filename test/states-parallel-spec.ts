@@ -2,51 +2,48 @@ import { State, StepFunction } from "~/step-fn";
 import { IParallelOptions } from "~/types";
 
 describe("Parallel State", () => {
-  beforeEach(() => {
-    process.env.AWS_REGION = "us-east-1";
-    process.env.AWS_STAGE = "dev";
-    process.env.AWS_ACCOUNT = "1234 ";
-    process.env.APP_NAME = "abcapp";
-  });
+
+  process.env.AWS_REGION = "us-east-1";
+  process.env.AWS_STAGE = "dev";
+  process.env.AWS_ACCOUNT = "1234 ";
+  process.env.APP_NAME = "abcapp";
+
+  const s1 = State((s) => s.task("foo"));
+  const s2 = State((s) => s.task("bar"));
+  const s3 = State((s) => s.task("baz"));
+  const s4 = State((s) => s.task("quz"));
+
+  const sf1 = [s1, s2];
+  const sf2 = [s1, s3];
 
   it("Defining parallel should be able to configured by fluent API", () => {
     const opts = { comment: "foo" };
-    /**
-     * Composable Syntax: Each array of states represents a step function (a branch)
-     */
-    const branch1state1 = State((s) => s.task("foo1"));
-    const branch1state2 = State((s) => s.task("foo1"));
-
-    const branch2state1 = State((s) => s.task("foo1"));
-    const branch2state2 = State((s) => s.task("foo1"));
-
-    const notifyTasks1 = State((s) =>
-      s.parallel([branch1state1, branch1state2], [branch2state1, branch2state2], opts)
-    );
 
     /**
-     * Composable Syntax: Accepts passing step function as branch in the leading params
-     */
-    const branch1StepFn = StepFunction(branch1state1, branch1state2);
-    const branch2StepFn = StepFunction(branch2state1, branch2state2);
-
-    const notifyTasks2 = State((s) => s.parallel(branch1StepFn, branch2StepFn, opts));
-
-    /**
-     * FluentAPI: You could define each branch/stepFn in fluent Api syntax separated by comma. 
+     * FluentAPI: You could define each branch/stepFn in fluent Api syntax separated by comma.
      * Optionally, accepts tail param as options hash
      */
-    const notifyTasks3 = State((s) =>
-      s.parallel(
-        (s1) => s1.task("branch1State1").task("branch1State2"),
-        (s2) => s2.task("branch2State1").task("branch2State2"),
-        opts
-      )
+    const pFluent = State((s) =>
+      s.parallel((p) => p.addBranch([s1, s2]).addBranch([s3, s4]), opts)
     );
 
-    expect(notifyTasks1.branches).toHaveLength(2);
-    expect(notifyTasks2.branches).toHaveLength(2);
-    expect(notifyTasks3.branches).toHaveLength(2);
+    /**
+     * Composable (1): Each array of states represents a step function (a branch)
+     *
+     */
+    const pShorthand = State((s) => s.parallel(sf1, sf2, opts));
+
+    /**
+     * Composable (2): Accepts passing step function as branch in the leading params
+     */
+    const branch1 = StepFunction(s1, s2);
+    const branch2 = StepFunction(s3, s4);
+    const pShorthand2 = State((s) => s.parallel(branch1, branch2, opts));
+
+
+    expect(pFluent.branches).toHaveLength(2);
+    expect(pShorthand.branches).toHaveLength(2);
+    expect(pShorthand2.branches).toHaveLength(2);
   });
 
   it("Defining parallel should be able to be configured by step function shorthand", () => {

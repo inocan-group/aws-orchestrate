@@ -1,19 +1,20 @@
+/* eslint-disable no-use-before-define */
 import { IDictionary } from "common-types";
 import { IBaseOptions, IBaseState, IFinalizedStepFn, IState, IStepFnSelector, TerminalState } from "~/types";
 
 export interface IChoiceCallable {
-  (choices: (IDefaultChoiceOptions | IChoiceConditionOptions)[], options?: IChoiceOptions): IFinalizedStepFn;
+  (choices: (IChoiceDefaultItemParam | IChoiceItemParam)[], options?: IChoiceOptions): IFinalizedStepFn;
 }
 
 export interface IChoiceConfiguration {
-  (choices: (IDefaultChoiceOptions | IChoiceConditionOptions)[], options?: IChoiceOptions): IChoice;
+  (choices: (IChoiceDefaultItemParam | IChoiceItemParam)[], options?: IChoiceOptions): IChoice;
 }
 
 export interface IChoiceOptions extends IBaseOptions {
   default?: IDefaultChoice;
 }
 
-export type IChoiceConditionOptions<T = IDictionary> = IChoiceItem<T> & {
+export type IChoiceItemParam<T = IDictionary> = IChoiceItem<T> & {
   stepFn: IStepFnSelector;
 };
 
@@ -23,7 +24,7 @@ export type IChoice = Omit<IChoiceOptions, "name"> &
     choices: IChoiceCondition[];
   } & TerminalState;
 
-export interface IChoiceCondition<T = IDictionary> extends Omit<IChoiceConditionOptions<T>, "stepFn"> {
+export interface IChoiceCondition<T = IDictionary> extends Omit<IChoiceItemParam<T>, "stepFn"> {
   finalizedStepFn: IFinalizedStepFn;
 }
 // TODO: Type passed through might be needed for later improvements
@@ -115,7 +116,7 @@ export interface IStepFnConditionApi<T extends any = unknown> {
 }
 export interface IStepFnConditionApiParam {}
 
-export interface IDefaultChoiceOptions {
+export interface IChoiceDefaultItemParam {
   kind: "defaultChoice";
   stepFn: IStepFnSelector;
 }
@@ -128,4 +129,4 @@ export type IStepFnCondition = (
   cb: IStepFnConditionApiParam,
   stepFn: IStepFnSelector,
   variable?: any
-) => IChoiceConditionOptions;
+) => IChoiceItemParam;

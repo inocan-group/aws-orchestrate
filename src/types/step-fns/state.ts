@@ -1,3 +1,4 @@
+import { IChoiceItemFluentApi } from "~/step-fn";
 import {
   ITask,
   ISucceed,
@@ -10,29 +11,20 @@ import {
   IMapOptions,
   IMapUseCallable,
   IFailOptions,
-  IDefaultChoiceOptions,
-  IChoiceConditionOptions,
+  IChoiceDefaultItemParam,
+  IChoiceItemParam,
   IChoiceOptions,
   IParallelBranchOptions,
   IParallelOptions,
   IWaitOptions,
   IPassOptions,
   IPass,
+  ParallelFluentApi,
+  FluentApi,
 } from "~/types";
 
 export type Result<T extends IState> = Finalized<T> | T;
 
-type TupleWithOptionalTail<
-  T extends readonly (IParallelBranchOptions | IParallelOptions)[]
-> = T extends readonly []
-  ? T
-  : T extends readonly [...infer I, infer U]
-  ? I extends []
-    ? T
-    : I extends IParallelBranchOptions[]
-    ? T
-    : readonly [...{ [K in keyof I]: IParallelBranchOptions }, U]
-  : never;
 export type IStateConfiguring = {
   /**
    * This state represents a single unit of work performed by a state machine.
@@ -55,7 +47,10 @@ export type IStateConfiguring = {
    *
    * While the Parallel state executes multiple branches of steps using the same input, a Map state will execute the same steps for multiple entries of an array in the state input.
    */
-  map(itemsPath: string, options?: IMapOptions & { name: string }): IMapUseCallable<Finalized<IMap>>;
+  map(
+    itemsPath: string,
+    options?: IMapOptions & { name: string }
+  ): IMapUseCallable<Finalized<IMap>>;
   map(itemsPath: string, options?: Omit<IMapOptions, "name">): IMapUseCallable<IMap>;
   /**
    * This state stops the execution of the state machine and marks it as a failure.
@@ -66,15 +61,36 @@ export type IStateConfiguring = {
    * Given a certains conditions it should invoke diferent steps to follow the workflow
    */
   choice(
-    choices: (IDefaultChoiceOptions | IChoiceConditionOptions)[],
-    options?: IChoiceOptions & { name: string }
+    ...params:
+      | IChoiceItemFluentApi[]
+      | [IChoiceItemFluentApi, IChoiceOptions & { name: string }]
+      | (IChoiceDefaultItemParam | IChoiceItemParam)[]
+      | [...(IChoiceDefaultItemParam | IChoiceItemParam)[], IChoiceOptions & { name: string }]
   ): Finalized<IChoice>;
-  choice(choices: (IDefaultChoiceOptions | IChoiceConditionOptions)[], options?: Omit<IChoiceOptions, "name">): IChoice;
+  choice(
+    ...params:
+      | IChoiceItemFluentApi[]
+      | [IChoiceItemFluentApi, Omit<IChoiceOptions, "name">]
+      | (IChoiceDefaultItemParam | IChoiceItemParam)[]
+      | [...(IChoiceDefaultItemParam | IChoiceItemParam)[], Omit<IChoiceOptions, "name">]
+  ): IChoice;
   /**
    * This state can be used to create parallel branches of execution in your state machine.
    */
-  parallel(...params: IParallelBranchOptions[] | [...IParallelBranchOptions[], IParallelOptions  & { name: string }]): Finalized<IParallel>;
-  parallel(...params: IParallelBranchOptions[] | [...IParallelBranchOptions[], Omit<IParallelOptions, "name">]): IParallel;
+  parallel(
+    ...params:
+      | [FluentApi<ParallelFluentApi, ParallelFluentApi>]
+      | [FluentApi<ParallelFluentApi, ParallelFluentApi>, IParallelOptions & { name: string }]
+      | IParallelBranchOptions[]
+      | [...IParallelBranchOptions[], IParallelOptions & { name: string }]
+  ): Finalized<IParallel>;
+  parallel(
+    ...params:
+      | [FluentApi<ParallelFluentApi, ParallelFluentApi>]
+      | [FluentApi<ParallelFluentApi, ParallelFluentApi>, Omit<IParallelOptions, "name">]
+      | IParallelBranchOptions[]
+      | [...IParallelBranchOptions[], Omit<IParallelOptions, "name">]
+  ): IParallel;
   /**
    * This state delays the state machine from continuing for a specified time.
    *

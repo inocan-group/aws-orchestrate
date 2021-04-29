@@ -7,18 +7,18 @@ import {
   IConfigurableStepFn,
   IErrorHandlerPointer,
   IFinalizedStepFn,
-  IFluentApi,
   IState,
   IStepFn,
   IStepFnOptions,
   IStepFnSelector,
+  IStepFnFluentApi,
 } from "~/types";
 import { goTo } from "..";
 import { choice, fail, map, parallel, pass, succeed, task, wait } from "../states";
 
 export const isFluentApi = (
   obj: IStepFnSelector | IErrorHandlerPointer
-): obj is IFluentApi | ICatchFluentStepFnApi => !isStepFunction(obj) && !Array.isArray(obj);
+): obj is IStepFnFluentApi | ICatchFluentStepFnApi => !isStepFunction(obj) && !Array.isArray(obj);
 export function isStepFunction(obj: IStepFnSelector | IErrorHandlerPointer): obj is IStepFn {
   return "getState" in obj || "finalize" in obj;
 }
@@ -55,7 +55,7 @@ export function StepFunction(...params: IStepFnState[] | [...IStepFnState[], ISt
   };
 
   let options: IStepFnOptions = {};
-  for (const param of params as T) {
+  for (const param of params) {
     if (isStateDefn(param)) {
       commit(param);
     } else {

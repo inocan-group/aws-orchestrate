@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { condition, defaultChoice, State, StepFunction } from "~/step-fn";
+import { ChoiceItem, State, StepFunction } from "~/step-fn";
 import { IParallelOptions } from "~/types";
 
 describe("Step Function", () => {
@@ -16,12 +16,11 @@ describe("Step Function", () => {
      */
     const state1 = State((s) => s.task("foo1"));
     const state2 = State((s) => s.task("foo2"));
-    const mystepFn1 = StepFunction(
-      state1,
-      state2,
-      { excludeStartAt: true }
+    const mystepFn1 = StepFunction(state1, state2, { excludeStartAt: true });
+    const myStepFn2 = StepFunction(
+      State((s) => s.task("foo")),
+      state2
     );
-    const myStepFn2 = StepFunction(State((s) => s.task("foo")), state2,);
     /**
      * FluentAPI: extend step function by using fluentAPI
      */
@@ -52,10 +51,11 @@ describe("Step Function", () => {
   });
 
   it("`succeed`, `fail`, `choice` terminal states should finalize the step function", () => {
+    const s1 = State(s => s.task("foo"));
     const terminalStepFns = [
       StepFunction().succeed("succeddNoREason"),
       StepFunction().fail("no reason"),
-      StepFunction().choice([]),
+      StepFunction().choice(c => c.default([s1])),
     ];
 
     expect(terminalStepFns.every((r) => "getState" in r && "getOptions" in r)).toBeTrue();
@@ -87,19 +87,17 @@ describe("Step Function", () => {
 
     const fetchFromGravatar = State((s) => s.task("fetchAvatarUrlFromGravatar"));
     const saveIntoDb = State((s) => s.task("SaveIntoDb"));
-    const defaultChoiceOpt = defaultChoice([fetchFromGravatar, saveIntoDb]);
+    const defaultChoiceOpt = ChoiceItem((c) => c.default([fetchFromGravatar, saveIntoDb]));
 
     const fetchFromUnavatar = State((s) => s.task("fetchFromUnavatar"));
-    const unavatarChoice = condition(
-      (c) => c.stringEquals("unavatar"),
-      [fetchFromUnavatar],
-      // "$.type"
+    const unavatarChoice = ChoiceItem((c) =>
+      c.stringEquals([fetchFromUnavatar], "unavatar", "$.type")
     );
 
-    const myAwesomeStepFunction = StepFunction(saveBasicInfo).choice([
+    const myAwesomeStepFunction = StepFunction(saveBasicInfo).choice(
       defaultChoiceOpt,
-      unavatarChoice,
-    ]);
+      unavatarChoice
+    );
 
     expect(myAwesomeStepFunction.getState()).toHaveLength(2);
   });

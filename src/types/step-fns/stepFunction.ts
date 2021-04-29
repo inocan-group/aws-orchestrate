@@ -1,26 +1,25 @@
 /* eslint-disable no-use-before-define */
-import { ICatchConfig, ICatchFluentApi, IStepFnState } from "~/step-fn";
+import { ICatchConfig, ICatchFluentApi, IChoiceParams, IStepFnState } from "~/step-fn";
 import {
   IState,
   Finalized,
   ITaskOptions,
   IMapOptions,
   IMapUseCallable,
-  IChoiceConditionOptions,
-  IChoiceOptions,
   IFailOptions,
   IWaitOptions,
   IParallelBranchOptions,
   IPassOptions,
   IParallelOptions,
   Result,
+  ParallelFluentApi,
 } from "~/types";
 
 export enum ParamsKind {
   StepFnOptions = "StepFnOptions",
 }
 
-export interface IStepFnOptions  {
+export interface IStepFnOptions {
   /**
    * you can add a named prefix to a step function
    * so that all _states_ defined within this step
@@ -39,7 +38,7 @@ export interface IStepFnOptions  {
    * Error handler used for all children states unless their overrites this one using `catch` option explicitely
    */
   catch?: ICatchConfig | ICatchFluentApi;
-};
+}
 
 /**
  * This type represents a finalized Step Function
@@ -85,11 +84,17 @@ export interface IConfigurableStepFn {
   /**
    * Given a certains conditions it should invoke diferent steps to follow the workflow
    */
-  choice(choices: IChoiceConditionOptions[], options?: IChoiceOptions): IFinalizedStepFn;
+  choice(...params: IChoiceParams): IFinalizedStepFn;
   /**
    * This state can be used to create parallel branches of execution in your state machine.
    */
-  parallel(...params: IParallelBranchOptions[] | [...IParallelBranchOptions[], IParallelOptions]): this;
+  parallel(
+    ...params:
+      | [FluentApi<ParallelFluentApi, ParallelFluentApi>]
+      | [FluentApi<ParallelFluentApi, ParallelFluentApi>, IParallelOptions]
+      | IParallelBranchOptions[]
+      | [...IParallelBranchOptions[], IParallelOptions]
+  ): this;
   /**
    * This passes its input to its output, without performing work.
    *
@@ -109,14 +114,22 @@ export interface IConfigurableStepFn {
 /**
  * It lets you use a fluent api for configuring a set of step function's states
  */
-export interface IFluentApi {
-  (sf: IConfigurableStepFn): IConfigurableStepFn | IFinalizedStepFn;
+// export interface FluentApi<I,O, E extends string[]=[]> {
+//   (sf: I): O | Finalized<O>;
+// }
+export interface FluentApi<I, O> {
+  (sf: I): O;
 }
+
+export type IStepFnFluentApi = FluentApi<
+  IConfigurableStepFn,
+  IConfigurableStepFn | IFinalizedStepFn
+>;
 
 /**
  * It lets you use a fluent api or passing states and options directly
  */
-export type IStepFnSelector = IFluentApi | IStepFnShorthand | IStepFn;
+export type IStepFnSelector = IStepFnFluentApi | IStepFnShorthand | IStepFn;
 
 /**
  * Wraps `IStepFunction` in order to be able to pass the store
@@ -143,7 +156,10 @@ export interface IStepFunctionFactory {
  * A wrapper for the states definition functions to be able to pass store and Step Function's api that
  * most of the cases it will be what we should see as return value of the wrapped function
  */
-export type CallableConfiguration<T> = (cb: () => IConfigurableStepFn, commit: IStore["commit"]) => T;
+export type CallableConfiguration<T> = (
+  cb: () => IConfigurableStepFn,
+  commit: IStore["commit"]
+) => T;
 
 // type Last<T extends any[]> = T extends [...infer _, infer L] ? L : never
 
