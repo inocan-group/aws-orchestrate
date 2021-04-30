@@ -61,8 +61,8 @@ describe("Idempotence", () => {
 
     const conditionBTask1 = State((s) => s.pass({ comment: "conditionBTask1" }));
     const conditionBTask2 = State((s) => s.pass({ comment: "conditionBTask2" }));
-    const conditionA = ChoiceItem((c) => c.stringEquals([conditionATask1, conditionATask2], "a"));
-    const conditionB = ChoiceItem((c) => c.stringEquals([conditionBTask1, conditionBTask2], "b"));
+    const conditionA = ChoiceItem((c) => c.stringEquals("a", [conditionATask1, conditionATask2]));
+    const conditionB = ChoiceItem((c) => c.stringEquals("b", [conditionBTask1, conditionBTask2]));
     const choice = State((s) => s.choice(conditionA, conditionB, { name: "myChoiceState" }));
 
     const initialStateMachine = StateMachine("foo", {
@@ -88,8 +88,8 @@ describe("Idempotence", () => {
 
     const conditionBTask1 = State((s) => s.pass({ comment: "conditionBTask1" }));
     const conditionBTask2 = State((s) => s.pass({ comment: "conditionBTask2" }));
-    const conditionA = ChoiceItem((c) => c.stringEquals([conditionATask1, conditionATask2], "a"));
-    const conditionB = ChoiceItem((c) => c.stringEquals([conditionBTask1, conditionBTask2], "b"));
+    const conditionA = ChoiceItem((c) => c.stringEquals("a", [conditionATask1, conditionATask2]));
+    const conditionB = ChoiceItem((c) => c.stringEquals("b", [conditionBTask1, conditionBTask2],));
     const choice = State((s) => s.choice(conditionA, conditionB));
 
     const initialStateMachine = StateMachine("foo", {
@@ -100,7 +100,7 @@ describe("Idempotence", () => {
 
     for (let index = 0; index < 20; index++) {
       const conditionCTask = State((s) => s.pass({ comment: `conditionCTask${index + 1}` }));
-      const conditionC = ChoiceItem((c) => c.stringEquals([conditionCTask], "c"));
+      const conditionC = ChoiceItem((c) => c.stringEquals("c", [conditionCTask]));
       const modifiedChoice = State((s) =>
         s.choice(conditionC, conditionA, conditionB, { name: "myChoiceState" })
       );
@@ -123,8 +123,8 @@ describe("Idempotence", () => {
 
     const conditionBTask1 = State((s) => s.pass({ comment: "conditionBTask1" }));
     const conditionBTask2 = State((s) => s.pass({ comment: "conditionBTask2" }));
-    const conditionA = ChoiceItem((c) => c.stringEquals([conditionATask1, conditionATask2], "a"));
-    const conditionB = ChoiceItem((c) => c.stringEquals([conditionBTask1, conditionBTask2], "b"));
+    const conditionA = ChoiceItem((c) => c.stringEquals("a", [conditionATask1, conditionATask2]));
+    const conditionB = ChoiceItem((c) => c.stringEquals("b", [conditionBTask1, conditionBTask2]));
     const choice = State((s) => s.choice(conditionA, conditionB, { name: "myChoiceState" }));
 
     const initialStateMachine = StateMachine("foo", {
@@ -348,9 +348,9 @@ describe("Idempotence", () => {
 
     const conditionBTask1 = State((s) => s.pass({ comment: "conditionBTask1" }));
     const conditionBTask2 = State((s) => s.pass({ comment: "conditionBTask2" }));
-    const conditionA = ChoiceItem((c) => c.stringEquals([conditionATask1, conditionATask2], "a"));
+    const conditionA = ChoiceItem((c) => c.stringEquals("a", [conditionATask1, conditionATask2]));
     const conditionB = ChoiceItem((c) =>
-      c.stringEquals([conditionBTask1, conditionBTask2, mapState], "b")
+      c.stringEquals("b", [conditionBTask1, conditionBTask2, mapState])
     );
     const choice = State((s) => s.choice(conditionA, conditionB, { name: "myChoiceState" }));
 
@@ -364,7 +364,7 @@ describe("Idempotence", () => {
 
     for (let index = 0; index < 20; index++) {
       const conditionCTask = State((s) => s.pass({ comment: `conditionCTask${index + 1}` }));
-      const conditionC = ChoiceItem((c) => c.stringEquals([conditionCTask], "c"));
+      const conditionC = ChoiceItem((c) => c.stringEquals("c", [conditionCTask]));
       const modifiedChoice = State((s) =>
         s.choice(conditionC, conditionA, conditionB, { name: "myChoiceState" })
       );

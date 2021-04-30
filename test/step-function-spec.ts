@@ -10,22 +10,6 @@ describe("Step Function", () => {
     process.env.APP_NAME = "abcapp";
   });
 
-  it("foo", () => {
-    /**
-     * Composable Syntax contains states (1 to many)
-     */
-    const state1 = State((s) => s.task("foo1"));
-    const state2 = State((s) => s.task("foo2"));
-    const mystepFn1 = StepFunction(state1, state2, { excludeStartAt: true });
-    const myStepFn2 = StepFunction(
-      State((s) => s.task("foo")),
-      state2
-    );
-    /**
-     * FluentAPI: extend step function by using fluentAPI
-     */
-    const myStepFn3 = StepFunction().task("foo1");
-  });
   it("Defining step function should be configured by step function shorthand", () => {
     const task1 = State((s) => s.task("helloWorld", { name: "foo2042" }));
     const task2 = State((s) => s.task("helloWorld", { name: "foo2042" }));
@@ -51,11 +35,11 @@ describe("Step Function", () => {
   });
 
   it("`succeed`, `fail`, `choice` terminal states should finalize the step function", () => {
-    const s1 = State(s => s.task("foo"));
+    const s1 = State((s) => s.task("foo"));
     const terminalStepFns = [
       StepFunction().succeed("succeddNoREason"),
       StepFunction().fail("no reason"),
-      StepFunction().choice(c => c.default([s1])),
+      StepFunction().choice((c) => c.default([s1])),
     ];
 
     expect(terminalStepFns.every((r) => "getState" in r && "getOptions" in r)).toBeTrue();
@@ -91,7 +75,7 @@ describe("Step Function", () => {
 
     const fetchFromUnavatar = State((s) => s.task("fetchFromUnavatar"));
     const unavatarChoice = ChoiceItem((c) =>
-      c.stringEquals([fetchFromUnavatar], "unavatar", "$.type")
+      c.stringEquals("unavatar", "$.type", [fetchFromUnavatar])
     );
 
     const myAwesomeStepFunction = StepFunction(saveBasicInfo).choice(
