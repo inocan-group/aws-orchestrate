@@ -1,11 +1,11 @@
 import { ServerlessError } from "~/errors";
 import {
   IConfigurableStepFn,
-  IFluentApi,
   IMap,
   IMapConfiguration,
   IMapOptions,
   IMapUseConfigurationWrapper,
+  IStepFnFluentApi,
   IStepFnShorthand,
   IStore,
 } from "~/types";
@@ -14,7 +14,7 @@ import { parseAndFinalizeStepFn } from "../entities/state";
 export function map(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (itemsPath: string, options?: IMapOptions) => {
     return {
-      use: (params: IFluentApi | IStepFnShorthand) => {
+      use: (params: IStepFnFluentApi | IStepFnShorthand) => {
         commit(mapUseConfiguration(itemsPath, options)(params));
         return api();
       },
@@ -23,7 +23,7 @@ export function map(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
 }
 
 const mapUseConfiguration: IMapUseConfigurationWrapper<IMap> = (itemsPath, options?: IMapOptions) => (
-  params: IFluentApi | IStepFnShorthand
+  params: IStepFnFluentApi | IStepFnShorthand
 ) => {
   if (!itemsPath.startsWith("$.")) {
     throw new ServerlessError(400, `itemsPath ${itemsPath} is not allowed. It must start with "$."`, "bad-format");
