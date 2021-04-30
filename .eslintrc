@@ -28,6 +28,7 @@
     "no-nested-ternary": "off",
     // doesn't play well with prettier
     "unicorn/no-nested-ternary": "off",
+    "unicorn/prefer-node-protocol": "off",
 
     // we need exceptions to be only "warn" because
     // there are valid use cases for generic variables being

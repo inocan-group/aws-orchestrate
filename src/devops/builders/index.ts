@@ -4,12 +4,10 @@
 
 // index last changed at: 4th Apr, 2021, 05:49 AM ( GMT-7 )
 // export: named; exclusions: index, private.
-// directories: builders, environment-vars, types.
+// files: Serverless.
 
-// directory exports
-export * from "./builders/index";
-export * from "./environment-vars/index";
-export * from "./types/index";
+// local file exports
+export * from "./Serverless";
 
 // Note:
 // -----
