@@ -1,19 +1,20 @@
+/* eslint-disable no-use-before-define */
 import { IDictionary } from "common-types";
 import { IBaseOptions, IBaseState, IFinalizedStepFn, IState, IStepFnSelector, TerminalState } from "~/types";
 
 export interface IChoiceCallable {
-  (choices: (IDefaultChoiceOptions | IChoiceConditionOptions)[], options?: IChoiceOptions): IFinalizedStepFn;
+  (choices: (IChoiceDefaultItemParam | IChoiceItemParam)[], options?: IChoiceOptions): IFinalizedStepFn;
 }
 
 export interface IChoiceConfiguration {
-  (choices: (IDefaultChoiceOptions | IChoiceConditionOptions)[], options?: IChoiceOptions): IChoice;
+  (choices: (IChoiceDefaultItemParam | IChoiceItemParam)[], options?: IChoiceOptions): IChoice;
 }
 
 export interface IChoiceOptions extends IBaseOptions {
   default?: IDefaultChoice;
 }
 
-export type IChoiceConditionOptions<T = IDictionary> = IChoiceItem<T> & {
+export type IChoiceItemParam<T = IDictionary> = IChoiceItem<T> & {
   stepFn: IStepFnSelector;
 };
 
@@ -23,11 +24,12 @@ export type IChoice = Omit<IChoiceOptions, "name"> &
     choices: IChoiceCondition[];
   } & TerminalState;
 
-export interface IChoiceCondition<T = IDictionary> extends Omit<IChoiceConditionOptions<T>, "stepFn"> {
+export interface IChoiceCondition<T = IDictionary> extends Omit<IChoiceItemParam<T>, "stepFn"> {
   finalizedStepFn: IFinalizedStepFn;
 }
-
-export declare type IChoiceItem<T> = Partial<IOperand> & IComplexChoiceItem;
+// TODO: Type passed through might be needed for later improvements
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export declare type IChoiceItem<T extends any = unknown> = Partial<IOperand> & IComplexChoiceItem;
 
 export interface IOperand_BooleanEquals extends IBaseLogicalOperand {
   /** compare the value passed in -- and scoped by "Variable" -- to be equal to a stated string */
@@ -75,8 +77,10 @@ export interface IOperand_NumericLessThanEquals extends IBaseLogicalOperand {
 }
 export interface IBaseLogicalOperand {
   /** points to the specific area of context which is being evaluated in the choice */
-  variable: string;
+  variable: IChoiceVariable;
 }
+
+export type IChoiceVariable = `\$.${string}`;
 
 export declare type IOperand =
   | IOperand_StringEquals
@@ -97,23 +101,22 @@ export interface IComplexChoiceItem {
   or?: IOperand[];
   not?: IOperand;
 }
-export interface IStepFnConditionApi {
-  stringEquals: (value: string) => Partial<IOperand_StringEquals>;
-  stringGreaterThan: (value: string) => Partial<IOperand_StringGreaterThan>;
-  stringGreaterThanEquals: (value: string) => Partial<IOperand_StringGreaterThanEquals>;
-  stringLessThan: (value: string) => Partial<IOperand_StringLessThan>;
-  stringLessThanEquals: (value: string) => Partial<IOperand_StringLessThanEquals>;
-  numericEquals: (value: number) => Partial<IOperand_NumericEquals>;
-  numericGreaterThan: (value: number) => Partial<IOperand_NumericGreaterThan>;
-  numericGreaterThanEquals: (value: number) => Partial<IOperand_NumericGreaterThanEquals>;
-  numericLessThan: (value: number) => Partial<IOperand_NumericLessThan>;
-  numericLessThanEquals: (value: number) => Partial<IOperand_NumericLessThanEquals>;
-  booleanEquals: (value: boolean) => Partial<IOperand_BooleanEquals>;
-  default: () => Partial<IDefaultChoiceOptions>;
+export interface IStepFnConditionApi<T extends any = unknown> {
+  stringEquals: (value: string, variable?: IChoiceVariable) => T;
+  stringGreaterThan: (value: string, variable?: IChoiceVariable) => T;
+  stringGreaterThanEquals: (value: string, variable?: IChoiceVariable) => T;
+  stringLessThan: (value: string, variable?: IChoiceVariable) => T;
+  stringLessThanEquals: (value: string, variable?: IChoiceVariable) => T;
+  numericEquals: (value: number, variable?: IChoiceVariable) => T;
+  numericGreaterThan: (value: number, variable?: IChoiceVariable) => T;
+  numericGreaterThanEquals: (value: number, variable?: IChoiceVariable) => T;
+  numericLessThan: (value: number, variable?: IChoiceVariable) => T;
+  numericLessThanEquals: (value: number, variable?: IChoiceVariable) => T;
+  booleanEquals: (value: boolean, variable?: IChoiceVariable) => T;
 }
 export interface IStepFnConditionApiParam {}
 
-export interface IDefaultChoiceOptions {
+export interface IChoiceDefaultItemParam {
   kind: "defaultChoice";
   stepFn: IStepFnSelector;
 }
@@ -126,4 +129,4 @@ export type IStepFnCondition = (
   cb: IStepFnConditionApiParam,
   stepFn: IStepFnSelector,
   variable?: any
-) => IChoiceConditionOptions;
+) => IChoiceItemParam;

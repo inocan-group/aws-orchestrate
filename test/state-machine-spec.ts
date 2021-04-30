@@ -1,5 +1,5 @@
 import { IStepFunctionTask } from "common-types";
-import { condition, State, StateMachine, StepFunction } from "~/step-fn";
+import { ChoiceItem, State, StateMachine, StepFunction } from "~/step-fn";
 import { IStepFnOptions } from "~/types";
 
 describe("State Machine", () => {
@@ -16,7 +16,7 @@ describe("State Machine", () => {
     const thirdTask = State((s) => s.task("thirdTask"));
 
     const awesomeStateMachine = StateMachine("fooStateMachine", {
-      stepFunction: StepFunction(firstTask, secondTask, thirdTask),
+      stepFunction: StepFunction(firstTask, secondTask, thirdTask)
     }).toJSON();
 
     const firstSequence = "firstTask";
@@ -26,15 +26,6 @@ describe("State Machine", () => {
     expect(awesomeStateMachine.definition.StartAt).toEqual(firstSequence);
     expect(secondSequence).toEqual("secondTask");
     expect(thirdSequence).toEqual("thirdTask");
-  });
-  it("`toYaml` should return yaml definition as string value", () => {
-    const fooTask = State((s) => s.task("firstTask"));
-
-    const yamlDefinition = StateMachine("fooStateMachine", {
-      stepFunction: StepFunction(fooTask),
-    }).toYaml();
-
-    expect(typeof yamlDefinition).toEqual("string");
   });
 
   it("Defining state machine should only allow finalized state be used once", () => {
@@ -50,13 +41,13 @@ describe("State Machine", () => {
     const fetchFromGravatar = State((s) => s.task("fetchAvatarUrlFromGravatar"));
     const saveIntoDb = State((s) => s.task("SaveIntoDb"));
     const defaultOpts: IStepFnOptions = { namePrefix: "default-" };
-    const defaultChoice = condition((c) => c.default(), [fetchFromGravatar, saveIntoDb, defaultOpts], "$.type");
+    const defaultChoiceOption = ChoiceItem( c => c.default([fetchFromGravatar, saveIntoDb, defaultOpts]));
 
     const fetchFromUnavatar = State((s) => s.task("fetchFromUnavatar"));
     const unavatarOpts: IStepFnOptions = { namePrefix: "unavatar-" };
-    const unavatarChoice = condition((c) => c.stringEquals("unavatar"), [fetchFromUnavatar, unavatarOpts], "$.type");
+    const unavatarChoice = ChoiceItem((c) => c.stringEquals([fetchFromUnavatar, unavatarOpts], "unavatar", "$.type"));
 
-    const fetchProfileImgUrl = State((s) => s.choice([defaultChoice, unavatarChoice], { name: "fooChoiceState" }));
+    const fetchProfileImgUrl = State((s) => s.choice(defaultChoiceOption, unavatarChoice, { name: "fooChoiceState" }));
 
     const stepFn = StepFunction(fetchProfileImgUrl);
     const stateMachine = StateMachine("fooStateMachine", { stepFunction: stepFn }).toJSON();

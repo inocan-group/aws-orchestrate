@@ -4,12 +4,12 @@ import type {
   IBaseState,
   IConfigurableStepFn,
   IFinalizedStepFn,
-  IFluentApi,
   IOptionsWithInput,
   IStepFnShorthand,
 } from "~/types";
+import { IStepFnFluentApi } from "./stepFunction";
 
-export type IMapUseParams = IFluentApi | IStepFnShorthand;
+export type IMapUseParams = IStepFnFluentApi | IStepFnShorthand;
 
 export interface IMapOptions extends IOptionsWithInput {
   /**
@@ -29,7 +29,7 @@ export interface IMapOptions extends IOptionsWithInput {
 }
 
 export interface IMapUseConfiguration<T> {
-  (params: IFluentApi | IStepFnShorthand): T;
+  (params: IStepFnFluentApi | IStepFnShorthand): T;
 }
 
 export interface IMapUseConfigurationWrapper<T> {

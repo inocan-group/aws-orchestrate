@@ -3,9 +3,11 @@ import {
   IBaseOptions,
   IBaseState,
   IConfigurableStepFn,
-  IStepFnSelector,
   IFinalizedStepFn,
+  IStepFnShorthand,
+  IStepFn,
 } from "~/types";
+import { IStepFnSelector } from "./stepFunction";
 
 export interface IParallelCallable {
   (branches: IParallelBranchOptions[], options?: IParallelOptions): IConfigurableStepFn;
@@ -20,7 +22,11 @@ export interface IParallelOptions extends IBaseOptions {
   retry?: IRetryConfig | IRetryFluentApi;
 }
 
-export type IParallelBranchOptions = IStepFnSelector;
+export interface ParallelFluentApi {
+  addBranch(selector: IStepFnSelector): this;
+}
+
+export type IParallelBranchOptions = IStepFnShorthand | IStepFn;
 
 export type IParallel = Omit<IParallelOptions, "name"> &
   IBaseState & {

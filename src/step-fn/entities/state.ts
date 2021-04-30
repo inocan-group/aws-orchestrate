@@ -1,5 +1,14 @@
 import { ServerlessError } from "~/errors";
-import { Finalized, IFinalizedStepFn, IState, IStateConfiguring, IStepFnOptions, IStepFnSelector } from "~/types";
+import {
+  Finalized,
+  ICatchConfigurableStepFn,
+  IErrorHandlerPointer,
+  IFinalizedStepFn,
+  IState,
+  IStateConfiguring,
+  IStepFnOptions,
+  IStepFnSelector,
+} from "~/types";
 import {
   choiceConfiguration,
   failConfiguration,
@@ -38,23 +47,25 @@ export function State<T extends Finalized<IState> | IState>(cb: (api: IStateConf
   return cb(configuring);
 }
 
-function isState(obj: IState | Finalized<IState> | IStepFnOptions): obj is IState | Finalized<IState> {
-  return "type" in obj
+function isState(
+  obj: IState | Finalized<IState> | IStepFnOptions
+): obj is IState | Finalized<IState> {
+  return "type" in obj;
 }
 
-export function isFinalizedStepFnSelector(selector: IStepFnSelector): boolean {
+export function isFinalizedStepFnSelector(selector: IStepFnSelector | IErrorHandlerPointer): boolean {
   if (isStepFunction(selector)) {
     return isFinalizedStepFn(selector);
   } else if (isFluentApi(selector)) {
-    const configurationApi = StepFunction();
+    const configurationApi = StepFunction() as ICatchConfigurableStepFn;;
     const sf = selector(configurationApi);
     return isFinalizedStepFn(sf);
   } else {
-    return selector.filter(s => isState(s)).every((s) => isState(s) && s.isTerminalState);
+    return selector.filter((s) => isState(s)).every((s) => isState(s) && s.isTerminalState);
   }
 }
 
-export function parseStepFnSelector(selector: IStepFnSelector): IFinalizedStepFn {
+export function parseStepFnSelector(selector: IStepFnSelector | IErrorHandlerPointer): IFinalizedStepFn {
   if (isStepFunction(selector)) {
     if (isFinalizedStepFn(selector)) {
       return selector;
@@ -66,27 +77,25 @@ export function parseStepFnSelector(selector: IStepFnSelector): IFinalizedStepFn
       return c;
     }
   } else if (isFluentApi(selector)) {
-    const configurationApi = StepFunction();
+    const configurationApi = StepFunction() as ICatchConfigurableStepFn;
     const sf = selector(configurationApi);
-    if (!isFinalizedStepFn(sf)) {
-      if (!sf.state[0].isFinalized) throw new ServerlessError(400, "The first state must be finalized", "not-valid");
-      return sf.finalize();
-    } else {
-      return sf;
-    }
+    console.log("foo", selector);
+    return !isFinalizedStepFn(sf) ? sf.finalize() : sf;
   } else {
     let stepFnOptions: IStepFnOptions = {};
+    const states =[];
 
-    const states = selector.reduce((acc: IState[], param: IState | IStepFnOptions) => {
-      if (isStateDefn(param)) {
-        acc.push(param);
+    for (const s of selector) {
+      if (isStateDefn(s)) {
+        states.push(s);
       } else {
-        stepFnOptions = param;
+        stepFnOptions = s;
       }
-      return acc;
-    }, [] as IState[]);
+    }
 
-    if (!states[0].isFinalized) throw new ServerlessError(400, "The first state must be finalized", "not-valid");
+    if (!states[0].isFinalized) {
+      throw new ServerlessError(400, "The first state must be finalized", "not-valid");
+    }
 
     return StepFunction(...states, {
       ...stepFnOptions,
@@ -94,7 +103,7 @@ export function parseStepFnSelector(selector: IStepFnSelector): IFinalizedStepFn
   }
 }
 
-export function parseAndFinalizeStepFn(selector: IStepFnSelector): IFinalizedStepFn {
+export function parseAndFinalizeStepFn(selector: IStepFnSelector | IErrorHandlerPointer): IFinalizedStepFn {
   if (isStepFunction(selector)) {
     if (isFinalizedStepFn(selector)) {
       return selector;
@@ -103,20 +112,21 @@ export function parseAndFinalizeStepFn(selector: IStepFnSelector): IFinalizedSte
       return c;
     }
   } else if (isFluentApi(selector)) {
-    const configurationApi = StepFunction();
+    const configurationApi = StepFunction() as ICatchConfigurableStepFn;
+    console.log(selector);
     const sf = selector(configurationApi);
     return isFinalizedStepFn(sf) ? sf : sf.finalize();
   } else {
     let stepFnOptions: IStepFnOptions = {};
+    const states =[];
 
-    const states = selector.reduce((acc: IState[], param: IState | IStepFnOptions) => {
-      if (isStateDefn(param)) {
-        acc.push(param);
+    for (const s of selector) {
+      if (isStateDefn(s)) {
+        states.push(s);
       } else {
-        stepFnOptions = param;
+        stepFnOptions = s;
       }
-      return acc;
-    }, [] as IState[]);
+    }
 
     return StepFunction(...states, {
       ...stepFnOptions,

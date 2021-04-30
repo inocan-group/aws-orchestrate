@@ -10,8 +10,9 @@ describe("Step Function Builder Error Handler", () => {
     process.env.APP_NAME = "abcapp";
   });
 
-  it("Definig error step function should start with first state finalized", () => {
-    const catchConfig = Catch((e) => e.allErrors((s) => s.task("foo")));
+  it("Defining error step function should start with first state finalized", () => {
+    const waitState = State(s => s.wait({ timestamp: "asd"}));
+    const catchConfig = Catch((e) => e.allErrors([waitState]));
     const fooStepFn = StepFunction({
       catch: catchConfig,
     }).task("task1");
@@ -19,6 +20,17 @@ describe("Step Function Builder Error Handler", () => {
     const action = () => StateMachine("foo", { stepFunction: fooStepFn }).toJSON();
 
     expect(action).toThrowError({ name: "ServerlessError", message: "The first state must be finalized" });
+  });
+
+  it("Defining error step function should start with first state finalized unless state is being defined by fluentAPI", () => {
+    const catchConfig = Catch((e) => e.allErrors((s) => s.task("foo")));
+    const fooStepFn = StepFunction({
+      catch: catchConfig,
+    }).task("task1");
+
+    const action = () => StateMachine("foo", { stepFunction: fooStepFn }).toJSON();
+
+    expect(action).not.toThrowError();
   });
 
   it("Defining error handler as state machine options should be populated in all children states", () => {

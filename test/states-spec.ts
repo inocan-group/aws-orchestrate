@@ -21,9 +21,11 @@ describe("States", () => {
       (s) =>
         s
           .map("$.foo", { name: "fooMap" })
-          .use([{ type: "Task", resource: "fooMapTask", isFinalized: false, isTerminalState: false }]),
-      (s) => s.choice([], { name: "fooChoice" }),
-      (s) => s.parallel([], { name: "fooParallel" }),
+          .use([
+            { type: "Task", resource: "fooMapTask", isFinalized: false, isTerminalState: false },
+          ]),
+      (s) => s.choice(c => c.default([]), { name: "fooChoice" }),
+      (s) => s.parallel(p => p.addBranch((s1) => s1.task("task1")), { comment: "foo", name: "fooParallel" }),
     ];
 
     const result = stateDefinitions.map((s) => State(s));
@@ -43,8 +45,13 @@ describe("States", () => {
       (s) => s.pass(),
       (s) => s.succeed(),
       (s) => s.fail("unknown reason"),
-      (s) => s.map("$.foo").use([{ type: "Task", resource: "fooMapTask", isFinalized: false, isTerminalState: false }]),
-      (s) => s.choice([]),
+      (s) =>
+        s
+          .map("$.foo")
+          .use([
+            { type: "Task", resource: "fooMapTask", isFinalized: false, isTerminalState: false },
+          ]),
+      (s) => s.choice(c => c.default([])),
       (s) => s.parallel([]),
     ];
 
@@ -69,6 +76,8 @@ describe("Task State", () => {
 
     expect(sendEmail.type).toEqual("Task");
     expect(sendEmail.isTerminalState).toEqual(false);
-    expect(sendEmail.resource).toEqual(`arn:aws:lambda:us-east-1:1234:function:abcapp-dev-${fnName}`);
+    expect(sendEmail.resource).toEqual(
+      `arn:aws:lambda:us-east-1:1234:function:abcapp-dev-${fnName}`
+    );
   });
 });

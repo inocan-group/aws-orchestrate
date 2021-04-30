@@ -1,5 +1,4 @@
-import { condition, State } from "~/step-fn";
-import { IStepFnOptions } from "~/types";
+import { ChoiceItem, State } from "~/step-fn";
 
 describe("Choice State", () => {
   beforeEach(() => {
@@ -9,37 +8,55 @@ describe("Choice State", () => {
     process.env.APP_NAME = "abcapp";
   });
 
-  it("Defining default choice condition should be able to be configured by fluent API", () => {
-    const fetchGravatar = condition(
-      (c) => c.default(),
-      (s) => s.task("fetchAvatarUrlFromGravatar")
-    );
+  // it("Defining default choice condition should be able to be configured by fluent API", () => {
+  //   const fetchGravatar = defaultChoice((s) => s.task("fetchAvatarUrlFromGravatar"));
 
-    const fetchProfileImgUrl = State((s) => s.choice([fetchGravatar]));
+  //   const fetchProfileImgUrl = State((s) => s.choice(fetchGravatar));
 
-    expect(fetchProfileImgUrl.default).not.toBeUndefined();
-    expect(fetchProfileImgUrl.isTerminalState).toBeTrue();
-    expect(fetchProfileImgUrl.choices).toHaveLength(0);
-  });
+  //   expect(fetchProfileImgUrl.default).not.toBeUndefined();
+  //   expect(fetchProfileImgUrl.isTerminalState).toBeTrue();
+  //   expect(fetchProfileImgUrl.choices).toHaveLength(0);
+  // });
+
+  // TODO: add this type
+  /**
+   * My description
+   *
+   * ``ts
+   * const foo = "bar";
+   * ```
+   */
+  // export type Condition<T> = T | [T, IChoiceVariable];
+  // const c: Condition<string> = ["foobar", "$.pathToFoobar"];
+  // function stringEquals(...c: Condition, ...sf: StepFunction) {}
 
   it("Defining default choice condition should be able to be configured by step function shorthand", () => {
+    const gravatarChoiceItem = ChoiceItem(
+      (c) => c.stringEquals((s) => s.task("fetchFromGravatar"), "gravatar", "$.type")
+      // TODO: c.stringEquals("gravatar", "$.type", (s) => s.task("fetchFromGravatar", "$.type")
+      // TODO: c.stringEquals("gravatar", "$.type", [state1, state2])
+      // TODO: c.stringEquals("gravatar", "$.type", sf);
+      // TODO: c.stringEquals("gravatar", [state1, state2])
+      // TODO: c.stringEquals(c, [state1, state2])
+    );
+
     const fetchAvatarUrlFromGravatar = State((s) => s.task("fetchAvatarUrlFromGravatar"));
+    const defaultChoiceItem = ChoiceItem((c) => c.default([fetchAvatarUrlFromGravatar]));
 
-    const fetchGravatar = condition((c) => c.default(), [fetchAvatarUrlFromGravatar]);
-
-    const fetchProfileImgUrl = State((s) => s.choice([fetchGravatar]));
+    const fetchProfileImgUrl = State((s) => s.choice(gravatarChoiceItem, defaultChoiceItem));
 
     expect(fetchProfileImgUrl.default).not.toBeUndefined();
     expect(fetchProfileImgUrl.isTerminalState).toBeTrue();
-    expect(fetchProfileImgUrl.choices).toHaveLength(0);
+    expect(fetchProfileImgUrl.choices).toHaveLength(1);
   });
 
   it("Defining choice conditions should be able to be configured by fluent API", () => {
     const fetchProfileImgUrl = State((s) =>
-      s.choice([
-        { variable: "$.type", stringEquals: "gravatar", stepFn: (s) => s.task("fetchFromGravatar") },
-        { variable: "$.type", stringEquals: "unavatar", stepFn: (s) => s.task("fetchFromUnavatar") },
-      ])
+      s.choice((c1) =>
+        c1
+          .stringEquals((stepFn) => stepFn.task("fetchFromGravatar"), "gravatar", "$.type")
+          .stringEquals((stepFn) => stepFn.task("fetchFromUnavatar"), "unavatar", "$.type")
+      )
     );
 
     expect(fetchProfileImgUrl.default).toBeUndefined();
@@ -50,36 +67,17 @@ describe("Choice State", () => {
   it("Defining choice conditions should be able to be configured by step function shorthand", () => {
     const fetchFromGravatar = State((s) => s.task("fetchAvatarUrlFromGravatar"));
     const saveIntoDb = State((s) => s.task("SaveIntoDb"));
-    const defaultOpts: IStepFnOptions = { namePrefix: "default-" };
-    const defaultChoice = condition((c) => c.default(), [fetchFromGravatar, saveIntoDb, defaultOpts], "$.type");
+    const defaultChoice = ChoiceItem((c) => c.default([fetchFromGravatar, saveIntoDb]));
 
     const fetchFromUnavatar = State((s) => s.task("fetchFromUnavatar"));
-    const unavatarOpts: IStepFnOptions = { namePrefix: "unavatar-" };
-    const unavatarChoice = condition((c) => c.stringEquals("unavatar"), [fetchFromUnavatar, unavatarOpts], "$.type");
+    const unavatarChoice = ChoiceItem((c) =>
+      c.stringEquals([fetchFromUnavatar, { namePrefix: "unavatar-" }], "unavatar", "$.type")
+    );
 
-    const fetchProfileImgUrl = State((s) => s.choice([defaultChoice, unavatarChoice]));
+    const fetchProfileImgUrl = State((s) => s.choice(defaultChoice, unavatarChoice));
 
     expect(fetchProfileImgUrl.default).not.toBeUndefined();
     expect(fetchProfileImgUrl.isTerminalState).toBeTrue();
     expect(fetchProfileImgUrl.choices).toHaveLength(1);
   });
-
-  it("Defining choice conditions variables without '$.' preffix should throw StepFunctionError", () => {
-    const sendGreatNews = State(s => s.task("sendEmailNotification"))
-    const action = () => condition(c => c.numericEquals(20), [sendGreatNews], "score")
-
-    expect(action).toThrowError({ name: "ServerlessError", message: 'variable score is not allowed. It must start with "$."'})
-  })
-})
-
-// TODO: new conditional fn implementation api
-export interface IConditionalStatement {
-  kind: 'conditional-statement';
-  operation: 'stringEquals' | 'numberEquals';
-  path?: `\$.${string}`;
-  value: unknown;
-}
-
-export function isConditionalStatement(obj: unknown): obj is IConditionalStatement {
-  return typeof obj === 'object' && (obj as IConditionalStatement).kind === 'conditional-statement' ? true : false;
-}
+});
