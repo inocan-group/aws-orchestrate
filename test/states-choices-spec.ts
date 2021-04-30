@@ -32,7 +32,7 @@ describe("Choice State", () => {
 
   it("Defining default choice condition should be able to be configured by step function shorthand", () => {
     const gravatarChoiceItem = ChoiceItem(
-      (c) => c.stringEquals((s) => s.task("fetchFromGravatar"), "gravatar", "$.type")
+      (c) => c.stringEquals("value", "$.type", (s) => s.task("fetchFromGravatar"))
       // TODO: c.stringEquals("gravatar", "$.type", (s) => s.task("fetchFromGravatar", "$.type")
       // TODO: c.stringEquals("gravatar", "$.type", [state1, state2])
       // TODO: c.stringEquals("gravatar", "$.type", sf);
@@ -54,8 +54,8 @@ describe("Choice State", () => {
     const fetchProfileImgUrl = State((s) =>
       s.choice((c1) =>
         c1
-          .stringEquals((stepFn) => stepFn.task("fetchFromGravatar"), "gravatar", "$.type")
-          .stringEquals((stepFn) => stepFn.task("fetchFromUnavatar"), "unavatar", "$.type")
+          .stringEquals("gravatar", "$.type", (stepFn) => stepFn.task("fetchFromGravatar"))
+          .stringEquals("unavatar", "$.type", (stepFn) => stepFn.task("fetchFromUnavatar"))
       )
     );
 
@@ -71,7 +71,7 @@ describe("Choice State", () => {
 
     const fetchFromUnavatar = State((s) => s.task("fetchFromUnavatar"));
     const unavatarChoice = ChoiceItem((c) =>
-      c.stringEquals([fetchFromUnavatar, { namePrefix: "unavatar-" }], "unavatar", "$.type")
+      c.stringEquals("unavatar", "$.type", [fetchFromUnavatar, { namePrefix: "unavatar-" }],)
     );
 
     const fetchProfileImgUrl = State((s) => s.choice(defaultChoice, unavatarChoice));
