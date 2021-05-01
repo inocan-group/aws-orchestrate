@@ -22,111 +22,78 @@ import {
   IOperand_StringLessThanEquals,
   IStepFnSelector,
   IStore,
+  IChoiceItemApi,
+  IChoiceItemFluentApi,
+  IChoiceParams,
+  IChoiceItemParamApi,
 } from "~/types";
 import { parseAndFinalizeStepFn } from "..";
 
-const stringEquals = (value: string): Partial<IOperand_StringEquals> => {
+function stringEquals(value: string): Partial<IOperand_StringEquals> {
   return {
     stringEquals: value,
   };
 };
 
-const booleanEquals = (value: boolean): Partial<IOperand_BooleanEquals> => {
+function booleanEquals (value: boolean): Partial<IOperand_BooleanEquals> {
   return {
     booleanEquals: value,
   };
 };
 
-const stringGreaterThan = (value: string): Partial<IOperand_StringGreaterThan> => {
+function stringGreaterThan (value: string): Partial<IOperand_StringGreaterThan> {
   return {
     stringGreaterThan: value,
   };
 };
 
-const stringGreaterThanEquals = (value: string): Partial<IOperand_StringGreaterThanEquals> => {
+function stringGreaterThanEquals (value: string): Partial<IOperand_StringGreaterThanEquals> {
   return {
     stringGreaterThanEquals: value,
   };
 };
 
-const stringLessThan = (value: string): Partial<IOperand_StringLessThan> => {
+function stringLessThan (value: string): Partial<IOperand_StringLessThan> {
   return {
     stringLessThan: value,
   };
 };
 
-const stringLessThanEquals = (value: string): Partial<IOperand_StringLessThanEquals> => {
+function stringLessThanEquals (value: string): Partial<IOperand_StringLessThanEquals> {
   return {
     stringLessThanEquals: value,
   };
 };
 
-const numericEquals = (value: number): Partial<IOperand_NumericEquals> => {
+function numericEquals (value: number): Partial<IOperand_NumericEquals> {
   return {
     numericEquals: value,
   };
 };
 
-const numericGreaterThan = (value: number): Partial<IOperand_NumericGreaterThan> => {
+function numericGreaterThan (value: number): Partial<IOperand_NumericGreaterThan> {
   return {
     numericGreaterThan: value,
   };
 };
 
-const numericGreaterThanEquals = (value: number): Partial<IOperand_NumericGreaterThanEquals> => {
+function numericGreaterThanEquals (value: number): Partial<IOperand_NumericGreaterThanEquals> {
   return {
     numericGreaterThanEquals: value,
   };
 };
 
-const numericLessThan = (value: number): Partial<IOperand_NumericLessThan> => {
+function numericLessThan (value: number): Partial<IOperand_NumericLessThan> {
   return {
     numericLessThan: value,
   };
 };
 
-const numericLessThanEquals = (value: number): Partial<IOperand_NumericLessThanEquals> => {
+function numericLessThanEquals (value: number): Partial<IOperand_NumericLessThanEquals> {
   return {
     numericLessThanEquals: value,
   };
 };
-
-
-type ChoiceConditionItem<T> = [T, IStepFnSelector] | [T, IChoiceVariable, IStepFnSelector];
-
-export interface IChoiceItemApi {
-  stringEquals(...params: ChoiceConditionItem<string>): this;
-  booleanEquals(...params: ChoiceConditionItem<boolean>): this;
-  stringGreaterThan(...params: ChoiceConditionItem<string>): this;
-  stringGreaterThanEquals(...params: ChoiceConditionItem<string>): this;
-  stringLessThan(...params: ChoiceConditionItem<string>): this;
-  stringLessThanEquals(...params: ChoiceConditionItem<string>): this;
-  numericEquals(...params: ChoiceConditionItem<number>): this;
-  numericGreaterThan(...params: ChoiceConditionItem<number>): this;
-  numericGreaterThanEquals(...params: ChoiceConditionItem<number>): this;
-  numericLessThan(...params: ChoiceConditionItem<number>): this;
-  numericLessThanEquals(...params: ChoiceConditionItem<number>): this;
-  default(stepFn: IStepFnSelector): this;
-}
-
-export interface IChoiceItemDefnFluentApi {
-  stringEquals(...params: ChoiceConditionItem<string>): IChoiceItemParam;
-  booleanEquals(...params: ChoiceConditionItem<boolean>): IChoiceItemParam;
-  stringGreaterThan(...params: ChoiceConditionItem<string>): IChoiceItemParam;
-  stringGreaterThanEquals(...params: ChoiceConditionItem<string>): IChoiceItemParam;
-  stringLessThan(...params: ChoiceConditionItem<string>): IChoiceItemParam;
-  stringLessThanEquals(...params: ChoiceConditionItem<string>): IChoiceItemParam;
-  numericEquals(...params: ChoiceConditionItem<number>): IChoiceItemParam;
-  numericGreaterThan(...params: ChoiceConditionItem<number>): IChoiceItemParam;
-  numericGreaterThanEquals(...params: ChoiceConditionItem<number>): IChoiceItemParam;
-  numericLessThan(...params: ChoiceConditionItem<number>): IChoiceItemParam;
-  numericLessThanEquals(...params: ChoiceConditionItem<number>): IChoiceItemParam;
-  default(stepFn: IStepFnSelector): IChoiceDefaultItemParam;
-}
-
-export interface IChoiceItemFluentApi {
-  (c: IChoiceItemApi): IChoiceItemApi;
-}
 
 function extractChoiceParams(arg1: IStepFnSelector | IChoiceVariable, arg2?: IStepFnSelector ) {
   if (arg2 !== undefined) {
@@ -140,22 +107,22 @@ function extractChoiceParams(arg1: IStepFnSelector | IChoiceVariable, arg2?: ISt
 }
 
 export function ChoiceItem(
-  fluentApi: FluentApi<IChoiceItemDefnFluentApi, IChoiceItemParam | IChoiceDefaultItemParam>
+  fluentApi: FluentApi<IChoiceItemParamApi, IChoiceItemParam>
 ) {
-  const api: IChoiceItemDefnFluentApi = {
-    stringEquals: (...[value, variable, stepFn]) => {
+  const api: IChoiceItemParamApi = {
+    stringEquals(...[value, variable, stepFn]) {
       return { ...stringEquals(value), ...extractChoiceParams(variable, stepFn) };
     },
-    booleanEquals: (...[value, variable, stepFn]) => {
+    booleanEquals(...[value, variable, stepFn])  {
       return { ...booleanEquals(value), ...extractChoiceParams(variable, stepFn) };
     },
-    stringGreaterThan: (...[value, variable, stepFn]) => {
+    stringGreaterThan(...[value, variable, stepFn]) {
       return { ...stringGreaterThan(value), ...extractChoiceParams(variable, stepFn) };
     },
-    stringGreaterThanEquals: (...[value, variable, stepFn]) => {
+    stringGreaterThanEquals(...[value, variable, stepFn]) {
       return { ...stringGreaterThanEquals(value), ...extractChoiceParams(variable, stepFn) };
     },
-    stringLessThan: (...[value, variable, stepFn]) => {
+    stringLessThan(...[value, variable, stepFn]) {
       return { ...stringLessThan(value), ...extractChoiceParams(variable, stepFn) };
     },
     stringLessThanEquals(...[value, variable, stepFn]) {
@@ -188,21 +155,22 @@ function choiceItemFluent(fluentApi: IChoiceItemFluentApi) {
   const choiceApi = (
     state: (IChoiceItemParam | IChoiceDefaultItemParam)[]
   ): IChoiceItemApi & { state: any } => {
+    
     return {
       state,
-      stringEquals: (...[value, variable, stepFn]) => {
+      stringEquals(...[value, variable, stepFn]) {
         return choiceApi([...state, { ...stringEquals(value), ...extractChoiceParams(variable, stepFn) }]);
       },
-      booleanEquals: (...[value, variable, stepFn]) => {
+      booleanEquals(...[value, variable, stepFn]) {
         return choiceApi([...state, { ...booleanEquals(value), ...extractChoiceParams(variable, stepFn) }]);
       },
-      stringGreaterThan: (...[value, variable, stepFn]) => {
+      stringGreaterThan(...[value, variable, stepFn]) {
         return choiceApi([...state, { ...stringGreaterThan(value), ...extractChoiceParams(variable, stepFn) }]);
       },
-      stringGreaterThanEquals: (...[value, variable, stepFn]) => {
+      stringGreaterThanEquals(...[value, variable, stepFn]) {
         return choiceApi([...state, { ...stringGreaterThanEquals(value), ...extractChoiceParams(variable, stepFn) }]);
       },
-      stringLessThan: (...[value, variable, stepFn]) => {
+      stringLessThan(...[value, variable, stepFn]) {
         return choiceApi([...state, { ...stringLessThan(value), ...extractChoiceParams(variable, stepFn) }]);
       },
       stringLessThanEquals(...[value, variable, stepFn]) {
@@ -231,19 +199,6 @@ function choiceItemFluent(fluentApi: IChoiceItemFluentApi) {
   return fluentApi(choiceApi([]));
 }
 
-export type IChoiceParams =
-  | [IChoiceItemFluentApi]
-  | [IChoiceItemFluentApi, IChoiceOptions]
-  | (IChoiceDefaultItemParam | IChoiceItemParam)[]
-  | [...(IChoiceDefaultItemParam | IChoiceItemParam)[], IChoiceOptions];
-
-export function choice(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
-  return (...params: IChoiceParams): IFinalizedStepFn => {
-    commit(choiceConfiguration(...params));
-
-    return api().finalize();
-  };
-}
 
 function getDefaultChoiceStates(options: IChoiceDefaultItemParam) {
   const finalizedStepFn = parseAndFinalizeStepFn(options.stepFn);
@@ -263,7 +218,12 @@ const isFluentApi = (
 const isObjectDefinition = (obj: IChoiceItemParam | IChoiceOptions): obj is IChoiceItemParam =>
   obj !== undefined && "stepFn" in obj;
 
-export function choiceConfiguration(...params: IChoiceParams): IChoice | Finalized<IChoice> {
+/**
+ * 
+ * @param params it accepts __choice items__ in shorthand and fluent api syntax and option hash as the last param
+ * @returns IChoice | Finalized<IChoice>
+ */
+export function Choice(...params: IChoiceParams): IChoice | Finalized<IChoice> {
   let defaultDfn, choiceOptions;
   const choicesDefn: IChoiceCondition[] = [];
   for (const param of params) {
@@ -304,5 +264,13 @@ export function choiceConfiguration(...params: IChoiceParams): IChoice | Finaliz
     ...(choiceOptions?.name !== undefined
       ? { name: choiceOptions?.name, isFinalized: true }
       : { isFinalized: false }),
+  };
+}
+
+export function choiceWrapper(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
+  return (...params: IChoiceParams): IFinalizedStepFn => {
+    commit(Choice(...params));
+
+    return api().finalize();
   };
 }

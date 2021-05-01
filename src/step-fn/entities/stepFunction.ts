@@ -14,11 +14,12 @@ import {
   IStepFnFluentApi,
 } from "~/types";
 import { goTo } from "..";
-import { choice, fail, map, parallel, pass, succeed, task, wait } from "../states";
+import { choiceWrapper, failWrapper, mapWrapper, parallelWrapper, passWrapper, succeedWrapper, taskWrapper, waitWrapper } from "../states";
 
 export const isFluentApi = (
   obj: IStepFnSelector | IErrorHandlerPointer
 ): obj is IStepFnFluentApi | ICatchFluentStepFnApi => !isStepFunction(obj) && !Array.isArray(obj);
+
 export function isStepFunction(obj: IStepFnSelector | IErrorHandlerPointer): obj is IStepFn {
   return "getState" in obj || "finalize" in obj;
 }
@@ -68,19 +69,19 @@ export function StepFunction(...params: IStepFnState[] | [...IStepFnState[], ISt
   };
 
   function configuring(options: IStepFnOptions): IConfigurableStepFn | ICatchConfigurableStepFn {
-    const callable = <T>(fn: CallableConfiguration<T>) => fn(() => configuring(options), commit);
+    const configure = <T>(fn: CallableConfiguration<T>) => fn(() => configuring(options), commit);
 
     return {
       state,
-      task: callable(task),
-      succeed: callable(succeed),
-      map: callable(map),
-      fail: callable(fail),
-      choice: callable(choice),
-      wait: callable(wait),
-      parallel: callable(parallel),
-      pass: callable(pass),
-      goTo: callable(goTo),
+      task: configure(taskWrapper),
+      succeed: configure(succeedWrapper),
+      map: configure(mapWrapper),
+      fail: configure(failWrapper),
+      choice: configure(choiceWrapper),
+      wait: configure(waitWrapper),
+      parallel: configure(parallelWrapper),
+      pass: configure(passWrapper),
+      goTo: configure(goTo),
       finalize() {
         const lastIndex = state.length - 1;
         state = state.map((s, index) => {

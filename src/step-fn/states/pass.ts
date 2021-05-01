@@ -1,13 +1,13 @@
 import { Finalized, IConfigurableStepFn, IPass, IPassOptions, IStore } from "~/types";
 
-export function pass(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
+export function passWrapper(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (options?: IPassOptions) => {
-    commit(passConfiguration(options));
+    commit(Pass(options));
     return api();
   };
 }
 
-export function passConfiguration(options?: IPassOptions): IPass | Finalized<IPass> {
+export function Pass(options?: IPassOptions): IPass | Finalized<IPass> {
   return {
     type: "Pass",
     ...options,

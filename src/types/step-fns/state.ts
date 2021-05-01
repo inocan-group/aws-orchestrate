@@ -1,4 +1,3 @@
-import { IChoiceItemFluentApi } from "~/step-fn";
 import {
   ITask,
   ISucceed,
@@ -21,8 +20,12 @@ import {
   IPass,
   ParallelFluentApi,
   FluentApi,
+  IChoiceItemFluentApi,
 } from "~/types";
 
+/**
+ * A state unit of work that can be finalized or not
+ */
 export type Result<T extends IState> = Finalized<T> | T;
 
 export type IStateConfiguring = {
@@ -62,18 +65,19 @@ export type IStateConfiguring = {
    */
   choice(
     ...params:
-      | IChoiceItemFluentApi[]
+      | [IChoiceItemFluentApi]
       | [IChoiceItemFluentApi, IChoiceOptions & { name: string }]
       | (IChoiceDefaultItemParam | IChoiceItemParam)[]
       | [...(IChoiceDefaultItemParam | IChoiceItemParam)[], IChoiceOptions & { name: string }]
   ): Finalized<IChoice>;
   choice(
     ...params:
-      | IChoiceItemFluentApi[]
+      | [IChoiceItemFluentApi]
       | [IChoiceItemFluentApi, Omit<IChoiceOptions, "name">]
       | (IChoiceDefaultItemParam | IChoiceItemParam)[]
       | [...(IChoiceDefaultItemParam | IChoiceItemParam)[], Omit<IChoiceOptions, "name">]
   ): IChoice;
+
   /**
    * This state can be used to create parallel branches of execution in your state machine.
    */

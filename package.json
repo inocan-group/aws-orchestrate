@@ -51,6 +51,7 @@
     "@rollup/plugin-commonjs": "^18.0.0",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.2.1",
+    "@type-challenges/utils": "^0.1.1",
     "@types/jest": "^26.0.22",
     "@types/js-yaml": "4",
     "@types/mermaid": "8",

@@ -1,5 +1,5 @@
 /* eslint-disable no-use-before-define */
-import { ICatchConfig, ICatchFluentApi, IChoiceParams, IStepFnState } from "~/step-fn";
+import { ICatchConfig, ICatchFluentApi, IStepFnState } from "~/step-fn";
 import {
   IState,
   Finalized,
@@ -13,6 +13,7 @@ import {
   IParallelOptions,
   Result,
   ParallelFluentApi,
+  IChoiceParams,
 } from "~/types";
 
 export enum ParamsKind {

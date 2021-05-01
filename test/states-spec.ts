@@ -1,5 +1,6 @@
 import { State } from "~/step-fn";
 import { Finalized, IState, IStateConfiguring } from "~/types";
+import { Expect, ExpectExtends } from "@type-challenges/utils";
 
 const setEnvironmentVariables = () => {
   process.env.AWS_REGION = "us-east-1";
@@ -12,7 +13,7 @@ describe("States", () => {
   it("Defining states with name should return `Finalized<IState>`", () => {
     setEnvironmentVariables();
 
-    const stateDefinitions: ((api: IStateConfiguring) => IState | Finalized<IState>)[] = [
+    const stateDefinitions: ((api: IStateConfiguring) => Finalized<IState>)[] = [
       (s) => s.task("foo", { name: "fooTask" }),
       (s) => s.wait({ name: "fooWait" }),
       (s) => s.pass({ name: "fooPass" }),
@@ -24,11 +25,18 @@ describe("States", () => {
           .use([
             { type: "Task", resource: "fooMapTask", isFinalized: false, isTerminalState: false },
           ]),
-      (s) => s.choice(c => c.default([]), { name: "fooChoice" }),
-      (s) => s.parallel(p => p.addBranch((s1) => s1.task("task1")), { comment: "foo", name: "fooParallel" }),
+      (s) => s.choice((c) => c.default([]), { name: "fooChoice" }),
+      (s) =>
+        s.parallel((p) => p.addBranch((s1) => s1.task("task1")), {
+          comment: "foo",
+          name: "fooParallel",
+        }),
     ];
 
     const result = stateDefinitions.map((s) => State(s));
+
+    // @ts-ignore
+    type cases = [Expect<ExpectExtends<Finalized<IState>[], typeof result>>];
 
     // Flag should be true
     expect(result.every((r) => r.isFinalized)).toBeTrue();
@@ -39,7 +47,7 @@ describe("States", () => {
   it("Defining states without name should return unfinalized `IState`", () => {
     setEnvironmentVariables();
 
-    const stateDefinitions: ((api: IStateConfiguring) => IState | Finalized<IState>)[] = [
+    const stateDefinitions: ((api: IStateConfiguring) => IState)[] = [
       (s) => s.task("foo"),
       (s) => s.wait(),
       (s) => s.pass(),
@@ -51,11 +59,14 @@ describe("States", () => {
           .use([
             { type: "Task", resource: "fooMapTask", isFinalized: false, isTerminalState: false },
           ]),
-      (s) => s.choice(c => c.default([])),
+      (s) => s.choice((c) => c.default([])),
       (s) => s.parallel([]),
     ];
 
     const result = stateDefinitions.map((s) => State(s));
+
+    // @ts-ignore
+    type cases = [Expect<ExpectExtends<IState[], typeof result>>];
 
     // Flag should be false
     expect(result.every((r) => r.isFinalized)).toBeFalse();

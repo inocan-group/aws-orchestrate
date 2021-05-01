@@ -1,13 +1,13 @@
 import { Finalized, IConfigurableStepFn, IStore, ISucceed } from "~/types";
 
-export function succeed(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
+export function succeedWrapper(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (name?: string | undefined) => {
-    commit(succeedConfiguration(name));
+    commit(Succeed(name));
     return api().finalize();
   };
 }
 
-export function succeedConfiguration(name?: string | undefined): ISucceed | Finalized<ISucceed> {
+export function Succeed(name?: string | undefined): ISucceed | Finalized<ISucceed> {
   return {
     type: "Succeed",
     isTerminalState: true,
