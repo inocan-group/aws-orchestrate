@@ -13,9 +13,9 @@
   "license": "MIT",
   "author": "Ken Snyder<ken@ken.net>",
   "sideEffects": false,
-  "main": "dist/wrapper-fn/cjs/index.js",
-  "module": "dist/wrapper-fn/es/index.js",
-  "typings": "dist/wrapper-fn/typings/index.d.ts",
+  "main": "dist/cjs/index.js",
+  "module": "dist/es/index.js",
+  "typings": "dist/typings/index.d.ts",
   "files": [
     "dist"
   ],
@@ -98,6 +98,9 @@
     "vuepress": "^1.8.2",
     "vuepress-plugin-autometa": "^0.1.13",
     "vuepress-plugin-mermaidjs": "^1.8.0"
+  },
+  "optionalDependencies": {
+    "do-devops": "^0.7.0"
   },
   "peerDependencies": {
     "aws-log": "^0.11.1",
