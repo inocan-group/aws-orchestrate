@@ -11,7 +11,7 @@ describe("Step Function Builder Error Handler", () => {
   });
 
   it("Defining error step function should start with first state finalized", () => {
-    const waitState = State(s => s.wait({ timestamp: "asd"}));
+    const waitState = State((s) => s.wait({ timestamp: "asd" }));
     const catchConfig = Catch((e) => e.allErrors([waitState]));
     const fooStepFn = StepFunction({
       catch: catchConfig,
@@ -19,11 +19,14 @@ describe("Step Function Builder Error Handler", () => {
 
     const action = () => StateMachine("foo", { stepFunction: fooStepFn }).toJSON();
 
-    expect(action).toThrowError({ name: "ServerlessError", message: "The first state must be finalized" });
+    expect(action).toThrowError({
+      name: "ServerlessError",
+      message: "The first state must be finalized",
+    });
   });
 
   it("Defining error step function should start with first state finalized unless state is being defined by fluentAPI", () => {
-    const catchConfig = Catch((e) => e.allErrors((s) => s.task("foo")));
+    const catchConfig = Catch((e) => e.allErrors((sf) => sf.task("foo")));
     const fooStepFn = StepFunction({
       catch: catchConfig,
     }).task("task1");
@@ -42,7 +45,7 @@ describe("Step Function Builder Error Handler", () => {
 
     const stateMachine = StateMachine("fooStateMachine", {
       stepFunction: fooStepFn,
-      catch: Catch((c) => c.allErrors(finalizedStepFn, "$.foo")),
+      catch: (c) => c.allErrors(finalizedStepFn, "$.foo"),
     }).toJSON();
 
     const resultStates = Object.values(stateMachine.definition.States);
@@ -127,12 +130,16 @@ describe("Step Function Builder Error Handler", () => {
 
   it("Defining state `retry` error handler should be populated to the output state definition", () => {
     const retryOptions: RetryOptions = { maxAttempts: 5 };
-    const fooTask = State((s) => s.task("fooTask", { retry: Retry((api) => api.allErrors(retryOptions)) }));
-
-    const myStateMachine = StateMachine("fooStateMachine", { stepFunction: StepFunction(fooTask) }).toJSON();
-
-    expect((myStateMachine.definition.States["fooTask"] as IStepFunctionTask).Retry![0].MaxAttempts).toBe(
-      retryOptions.maxAttempts
+    const fooTask = State((s) =>
+      s.task("fooTask", { retry: Retry((api) => api.allErrors(retryOptions)) })
     );
+
+    const myStateMachine = StateMachine("fooStateMachine", {
+      stepFunction: StepFunction(fooTask),
+    }).toJSON();
+
+    expect(
+      (myStateMachine.definition.States["fooTask"] as IStepFunctionTask).Retry![0].MaxAttempts
+    ).toBe(retryOptions.maxAttempts);
   });
 });
