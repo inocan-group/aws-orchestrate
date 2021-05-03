@@ -10,20 +10,20 @@ import {
   IStepFnSelector,
 } from "~/types";
 import {
-  choiceConfiguration,
-  failConfiguration,
+  Choice,
+  Fail,
   goToConfiguration,
   isFinalizedStepFn,
   isFluentApi,
   isStateDefn,
   isStepFunction,
-  mapConfiguration,
-  parallelConfiguration,
-  passConfiguration,
+  Map as MapState,
+  Parallel,
+  Pass,
   StepFunction,
-  succeedConfiguration,
-  taskConfiguration,
-  waitConfiguration,
+  Succeed,
+  Task,
+  Wait,
 } from "..";
 
 /**
@@ -33,14 +33,14 @@ import {
  */
 export function State<T extends Finalized<IState> | IState>(cb: (api: IStateConfiguring) => T): T {
   const configuring = {
-    succeed: succeedConfiguration,
-    task: taskConfiguration,
-    map: mapConfiguration,
-    fail: failConfiguration,
-    choice: choiceConfiguration,
-    parallel: parallelConfiguration,
-    wait: waitConfiguration,
-    pass: passConfiguration,
+    succeed: Succeed,
+    task: Task,
+    map: MapState,
+    fail: Fail,
+    choice: Choice,
+    parallel: Parallel,
+    wait: Wait,
+    pass: Pass,
     goTo: goToConfiguration,
   } as IStateConfiguring;
 
@@ -79,7 +79,6 @@ export function parseStepFnSelector(selector: IStepFnSelector | IErrorHandlerPoi
   } else if (isFluentApi(selector)) {
     const configurationApi = StepFunction() as ICatchConfigurableStepFn;
     const sf = selector(configurationApi);
-    console.log("foo", selector);
     return !isFinalizedStepFn(sf) ? sf.finalize() : sf;
   } else {
     let stepFnOptions: IStepFnOptions = {};
@@ -113,7 +112,6 @@ export function parseAndFinalizeStepFn(selector: IStepFnSelector | IErrorHandler
     }
   } else if (isFluentApi(selector)) {
     const configurationApi = StepFunction() as ICatchConfigurableStepFn;
-    console.log(selector);
     const sf = selector(configurationApi);
     return isFinalizedStepFn(sf) ? sf : sf.finalize();
   } else {

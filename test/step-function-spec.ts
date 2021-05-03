@@ -11,11 +11,11 @@ describe("Step Function", () => {
   });
 
   it("Defining step function should be configured by step function shorthand", () => {
-    const task1 = State((s) => s.task("helloWorld", { name: "foo2042" }));
-    const task2 = State((s) => s.task("helloWorld", { name: "foo2042" }));
-    const task3 = State((s) => s.task("helloWorld", { name: "foo2042" }));
+    const s1 = State((s) => s.task("helloWorld", { name: "foo" }));
+    const s2 = State((s) => s.task("helloWorld", { name: "bar" }));
+    const s3 = State((s) => s.task("helloWorld", { name: "baz" }));
 
-    const stepFn = StepFunction(task1, task2, task3);
+    const stepFn = StepFunction(s1, s2, s3);
 
     expect(stepFn.state).toHaveLength(3);
   });

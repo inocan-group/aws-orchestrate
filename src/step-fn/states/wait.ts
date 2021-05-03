@@ -1,13 +1,13 @@
 import { Finalized, IConfigurableStepFn, IStore, IWait, IWaitOptions } from "~/types";
 
-export function wait(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
+export function waitWrapper(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (options?: IWaitOptions) => {
-    commit(waitConfiguration(options));
+    commit(Wait(options));
     return api();
   };
 }
 
-export function waitConfiguration(options?: IWaitOptions): IWait | Finalized<IWait> {
+export function Wait(options?: IWaitOptions): IWait | Finalized<IWait> {
   return {
     type: "Wait",
     ...options,

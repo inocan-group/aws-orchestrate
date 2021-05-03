@@ -1,4 +1,4 @@
-import { State } from "~/step-fn";
+import { Map, State } from "~/step-fn";
 import { IMapOptions } from "~/types";
 
 describe("Map State", () => {
@@ -11,8 +11,8 @@ describe("Map State", () => {
 
   it("Defining map should be able to be configured by fluent API`", () => {
     const mapOptions: IMapOptions = { name: "notifyAllUsers", maxConcurrency: 2 };
-    const notifyAllUsers = State((s) =>
-      s.map("$.users", mapOptions).use((s) => s.task("emailNotification").task("persistNotificationResults").succeed())
+    const notifyAllUsers = Map("$.users", mapOptions).use((s) =>
+      s.task("emailNotification").task("persistNotificationResults").succeed()
     );
 
     expect(notifyAllUsers.deployable.getState()).toHaveLength(3);
@@ -24,7 +24,9 @@ describe("Map State", () => {
     const persistNotificationResults = State((s) => s.task("persistNotificationResults123"));
 
     const notifyAllUsers = State((s) =>
-      s.map("$.users", { name: "notifyAllUsers" }).use([emailNotification, persistNotificationResults])
+      s
+        .map("$.users", { name: "notifyAllUsers" })
+        .use([emailNotification, persistNotificationResults])
     );
 
     expect(notifyAllUsers.deployable.getState()).toHaveLength(2);

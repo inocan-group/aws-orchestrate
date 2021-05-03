@@ -1,8 +1,6 @@
-import { State, StepFunction } from "~/step-fn";
-import { IParallelOptions } from "~/types";
+import { Parallel, State, StepFunction } from "~/step-fn";
 
 describe("Parallel State", () => {
-
   process.env.AWS_REGION = "us-east-1";
   process.env.AWS_STAGE = "dev";
   process.env.AWS_ACCOUNT = "1234 ";
@@ -23,42 +21,28 @@ describe("Parallel State", () => {
      * FluentAPI: You could define each branch/stepFn in fluent Api syntax separated by comma.
      * Optionally, accepts tail param as options hash
      */
-    const pFluent = State((s) =>
-      s.parallel((p) => p.addBranch([s1, s2]).addBranch([s3, s4]), opts)
-    );
-
-    /**
-     * Composable (1): Each array of states represents a step function (a branch)
-     *
-     */
-    const pShorthand = State((s) => s.parallel(sf1, sf2, opts));
-
-    /**
-     * Composable (2): Accepts passing step function as branch in the leading params
-     */
-    const branch1 = StepFunction(s1, s2);
-    const branch2 = StepFunction(s3, s4);
-    const pShorthand2 = State((s) => s.parallel(branch1, branch2, opts));
-
+    const pFluent = Parallel((p) => p.addBranch([s1, s2]).addBranch([s3, s4]), opts);
 
     expect(pFluent.branches).toHaveLength(2);
-    expect(pShorthand.branches).toHaveLength(2);
-    expect(pShorthand2.branches).toHaveLength(2);
   });
 
   it("Defining parallel should be able to be configured by step function shorthand", () => {
-    const parallelOptions: IParallelOptions = { comment: "foo" };
+    const opts = { comment: "foo" };
 
-    const customerEmailNotification = State((s) => s.task("customerEmailNotification"));
-    const employeeEmailNotification = State((s) => s.task("employeeEmailNotification"));
-    const branch1 = [customerEmailNotification, employeeEmailNotification];
+    /**
+     * Shorthand (1): Each array of states represents a step function (a branch)
+     *
+     */
+    const pShorthand = Parallel(sf1, sf2, opts);
 
-    const smsNotification = State((s) => s.task("smsNotification"));
-    const branch2 = [smsNotification];
+    /**
+     * Shorthand (2): Accepts passing step function as branch in the leading params
+     */
+    const branch1 = StepFunction(s1, s2);
+    const branch2 = StepFunction(s3, s4);
+    const pShorthand2 = Parallel(branch1, branch2, opts);
 
-    const notifyTasks = State((s) => s.parallel(branch1, branch2, parallelOptions));
-
-    expect(notifyTasks.branches).toHaveLength(2);
-    expect(notifyTasks).toContainEntries(Object.entries(parallelOptions));
+    expect(pShorthand.branches).toHaveLength(2);
+    expect(pShorthand2.branches).toHaveLength(2);
   });
 });

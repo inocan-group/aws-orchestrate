@@ -2,14 +2,6 @@
 import { IDictionary } from "common-types";
 import { IBaseOptions, IBaseState, IFinalizedStepFn, IState, IStepFnSelector, TerminalState } from "~/types";
 
-export interface IChoiceCallable {
-  (choices: (IChoiceDefaultItemParam | IChoiceItemParam)[], options?: IChoiceOptions): IFinalizedStepFn;
-}
-
-export interface IChoiceConfiguration {
-  (choices: (IChoiceDefaultItemParam | IChoiceItemParam)[], options?: IChoiceOptions): IChoice;
-}
-
 export interface IChoiceOptions extends IBaseOptions {
   default?: IDefaultChoice;
 }
@@ -95,27 +87,11 @@ export declare type IOperand =
   | IOperand_NumericLessThan
   | IOperand_NumericLessThanEquals;
 
-// TODO: this type had a generic type <T> but it was not used!
 export interface IComplexChoiceItem {
   and?: IOperand[];
   or?: IOperand[];
   not?: IOperand;
 }
-export interface IStepFnConditionApi<T extends any = unknown> {
-  stringEquals: (value: string, variable?: IChoiceVariable) => T;
-  stringGreaterThan: (value: string, variable?: IChoiceVariable) => T;
-  stringGreaterThanEquals: (value: string, variable?: IChoiceVariable) => T;
-  stringLessThan: (value: string, variable?: IChoiceVariable) => T;
-  stringLessThanEquals: (value: string, variable?: IChoiceVariable) => T;
-  numericEquals: (value: number, variable?: IChoiceVariable) => T;
-  numericGreaterThan: (value: number, variable?: IChoiceVariable) => T;
-  numericGreaterThanEquals: (value: number, variable?: IChoiceVariable) => T;
-  numericLessThan: (value: number, variable?: IChoiceVariable) => T;
-  numericLessThanEquals: (value: number, variable?: IChoiceVariable) => T;
-  booleanEquals: (value: boolean, variable?: IChoiceVariable) => T;
-}
-export interface IStepFnConditionApiParam {}
-
 export interface IChoiceDefaultItemParam {
   kind: "defaultChoice";
   stepFn: IStepFnSelector;
@@ -125,8 +101,47 @@ export interface IDefaultChoice {
   states: IState[];
 }
 
-export type IStepFnCondition = (
-  cb: IStepFnConditionApiParam,
-  stepFn: IStepFnSelector,
-  variable?: any
-) => IChoiceItemParam;
+export type IChoiceParams =
+  | [IChoiceItemFluentApi]
+  | [IChoiceItemFluentApi, IChoiceOptions]
+  | (IChoiceDefaultItemParam | IChoiceItemParam)[]
+  | [...(IChoiceDefaultItemParam | IChoiceItemParam)[], IChoiceOptions];
+
+  export interface IChoiceItemApi {
+    stringEquals(...params: ChoiceConditionItem<string>): this ;
+    booleanEquals(...params: ChoiceConditionItem<boolean>): this ;
+    stringGreaterThan(...params: ChoiceConditionItem<string>): this;
+    stringGreaterThanEquals(...params: ChoiceConditionItem<string>): this;
+    stringLessThan(...params: ChoiceConditionItem<string>): this;
+    stringLessThanEquals(...params: ChoiceConditionItem<string>): this;
+    numericEquals(...params: ChoiceConditionItem<number>): this;
+    numericGreaterThan(...params: ChoiceConditionItem<number>): this;
+    numericGreaterThanEquals(...params: ChoiceConditionItem<number>): this;
+    numericLessThan(...params: ChoiceConditionItem<number>): this;
+    numericLessThanEquals(...params: ChoiceConditionItem<number>): this;
+    default(stepFn: IStepFnSelector): this;
+  }
+  
+  export interface IChoiceItemParamApi {
+    stringEquals(...params: ChoiceConditionItem<string>): IChoiceItemParam;
+    booleanEquals(...params: ChoiceConditionItem<boolean>): IChoiceItemParam;
+    stringGreaterThan(...params: ChoiceConditionItem<string>): IChoiceItemParam;
+    stringGreaterThanEquals(...params: ChoiceConditionItem<string>): IChoiceItemParam;
+    stringLessThan(...params: ChoiceConditionItem<string>): IChoiceItemParam;
+    stringLessThanEquals(...params: ChoiceConditionItem<string>): IChoiceItemParam;
+    numericEquals(...params: ChoiceConditionItem<number>): IChoiceItemParam;
+    numericGreaterThan(...params: ChoiceConditionItem<number>): IChoiceItemParam;
+    numericGreaterThanEquals(...params: ChoiceConditionItem<number>): IChoiceItemParam;
+    numericLessThan(...params: ChoiceConditionItem<number>): IChoiceItemParam;
+    numericLessThanEquals(...params: ChoiceConditionItem<number>): IChoiceItemParam;
+    default(stepFn: IStepFnSelector): IChoiceDefaultItemParam;
+  }
+
+  type ChoiceConditionItem<T> = [T, IStepFnSelector] | [T, IChoiceVariable, IStepFnSelector];
+  
+  /**
+   * provides an object with __conditions__ as methods names to compose choice items in fluent api syntax
+   */
+  export interface IChoiceItemFluentApi {
+    (c: IChoiceItemApi): IChoiceItemApi;
+  }

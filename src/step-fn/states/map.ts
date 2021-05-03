@@ -2,16 +2,16 @@ import { ServerlessError } from "~/errors";
 import {
   IConfigurableStepFn,
   IMap,
-  IMapConfiguration,
   IMapOptions,
   IMapUseConfigurationWrapper,
+  IMapUseParams,
   IStepFnFluentApi,
   IStepFnShorthand,
   IStore,
 } from "~/types";
 import { parseAndFinalizeStepFn } from "../entities/state";
 
-export function map(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
+export function mapWrapper(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (itemsPath: string, options?: IMapOptions) => {
     return {
       use: (params: IStepFnFluentApi | IStepFnShorthand) => {
@@ -22,11 +22,16 @@ export function map(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   };
 }
 
-const mapUseConfiguration: IMapUseConfigurationWrapper<IMap> = (itemsPath, options?: IMapOptions) => (
-  params: IStepFnFluentApi | IStepFnShorthand
-) => {
+const mapUseConfiguration: IMapUseConfigurationWrapper<IMap> = (
+  itemsPath,
+  options?: IMapOptions
+) => (params: IStepFnFluentApi | IStepFnShorthand) => {
   if (!itemsPath.startsWith("$.")) {
-    throw new ServerlessError(400, `itemsPath ${itemsPath} is not allowed. It must start with "$."`, "bad-format");
+    throw new ServerlessError(
+      400,
+      `itemsPath ${itemsPath} is not allowed. It must start with "$."`,
+      "bad-format"
+    );
   }
   const finalizedStepFn = parseAndFinalizeStepFn(params);
   return {
@@ -35,12 +40,14 @@ const mapUseConfiguration: IMapUseConfigurationWrapper<IMap> = (itemsPath, optio
     itemsPath,
     ...options,
     isTerminalState: false,
-    ...(options?.name !== undefined ? { name: options.name, isFinalized: true } : { isFinalized: false }),
+    ...(options?.name !== undefined
+      ? { name: options.name, isFinalized: true }
+      : { isFinalized: false }),
   };
 };
 
-export const mapConfiguration: IMapConfiguration = (itemsPath, mapOptions) => {
+export function Map(itemsPath: string, mapOptions?: IMapOptions) {
   return {
-    use: (params) => mapUseConfiguration(itemsPath, mapOptions)(params),
+    use: (...params: IMapUseParams[]) => mapUseConfiguration(itemsPath, mapOptions)(...params),
   };
-};
+}

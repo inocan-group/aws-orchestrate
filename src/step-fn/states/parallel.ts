@@ -33,7 +33,12 @@ function parallelFluentApi(fn: FluentApi<ParallelFluentApi, ParallelFluentApi>) 
   return fn(api([]));
 }
 
-export function parallelConfiguration(
+/**
+ * 
+ * @param params it accepts parallel __branches__  in shorthand and fluent api syntax and option hash as the last param
+ * @returns  IParallel | Finalized<IParallel>
+ */
+export function Parallel(
   ...params:
     | [FluentApi<ParallelFluentApi, ParallelFluentApi>]
     | [FluentApi<ParallelFluentApi, ParallelFluentApi>, IParallelOptions]
@@ -74,7 +79,7 @@ export function parallelConfiguration(
   };
 }
 
-export function parallel(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
+export function parallelWrapper(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (
     ...params:
       | [FluentApi<ParallelFluentApi, ParallelFluentApi>]
@@ -82,7 +87,7 @@ export function parallel(api: () => IConfigurableStepFn, commit: IStore["commit"
       | IParallelBranchOptions[]
       | [...IParallelBranchOptions[], IParallelOptions]
   ) => {
-    commit(parallelConfiguration(...params));
+    commit(Parallel(...params));
 
     return api();
   };
