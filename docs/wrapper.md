@@ -192,7 +192,7 @@ This is the most common thing to see in configuration. Typically you'll want all
 
 Beyond specifying _per stage_ what your configuration is, we can state that we'd like a random percentage of logs logged. This is very handy in production where we might be tempted to turn off something like the _debug_ level but in doing so we miss out on some of the richness in what is in fact our most important environment.
 
-### More Advanced Example
+### A More Advanced Example
 
 In the following example we'll see both _stage_ based configuration as well as sampling:
 
@@ -210,6 +210,35 @@ const handler = wrapper(fn, logging: { dev, prod });
 ```
 
 Here you'll see that we've got different configurations for the `dev` and `prod` stages but in production we're only taking 25% of the logs at the **debug** severity level. That's it for now but the API is fully typed and self-documented and you can also refer to the `aws-log` README for details as well.
+
+### Global Configuration
+
+When it comes to configuring logging, we've shown how this can be done using the wrapper function's
+_options hash_ and this approach works and gives fine-grained control at the handler function level. Sometimes this is exactly what is wanted but often we want to choose a logging configuration
+across _all_ functions and while you can certainly do that with this approach it could get cumbersome. To address this, the logging feature will look for and ENV variable called `LOG_CONFIG` and if found it will use this if no function-specific config is found.
+
+Environment variables must always be _strings_ but to provide consistency in capability and structure from the programatic configuration we simple ask you put in a JSON stringified object. If you have a `env.yml` config you might put something like:
+
+```yaml
+global: &all_stages
+  LOG_CONFIG: '{ "debug": "all", "info": "all", warn: "all", error: "all" }'
+prod:
+  <<: *all_stages
+  LOG_CONFIG: '{ "debug": "sample-by-session", "info": "all", warn: "all", error: "all" }'
+```
+
+and if you choose to use the devops system that's part of this repo you can do the same in a `env.ts` file but with strong typing and autocomplete:
+
+```ts
+import { Env } from "aws-orchestrate";
+export default Env()
+  .global()
+    .LOG_CONFIG({debug: "all", info: "all", warn: "all", error: "all"})
+  .prod()
+    .LOG_CONFIG({debug: "sample-by-session", info: "all", warn: "all", error: "all"})
+);
+```
+
 
 ## Secret Management
 

@@ -13,17 +13,19 @@
   "license": "MIT",
   "author": "Ken Snyder<ken@ken.net>",
   "sideEffects": false,
-  "main": "dist/wrapper-fn/cjs/index.js",
-  "module": "dist/wrapper-fn/es/index.js",
-  "typings": "dist/wrapper-fn/typings/index.d.ts",
+  "main": "dist/cjs/index.js",
+  "module": "dist/es/index.js",
+  "typings": "dist/typings/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
     "autoindex": "yarn do autoindex",
     "build": "run-s clean autoindex build:bundle",
+    "build2": "run-s clean autoindex build:multi",
     "build:analyze": "node devops/build es2020 --analyze",
-    "build:bundle": "node devops/build es2020 --closure",
+    "build:bundle": "node devops/build es2020 commonjs --closure",
+    "build:multi": "node devops/multi-build es2020 --closure",
     "build:cjs": "tsc -P tsconfig.cjs.json",
     "build:es": "tsc -P tsconfig.es.json",
     "build:tsc": "run-p build:es build:cjs",
@@ -42,9 +44,7 @@
     "watch:cjs": "yarn tsc -P tsconfig.cjs.json -w",
     "watch:esnext": "yarn tsc -P tsconfig.esnext.json -w"
   },
-  "dependencies": {
-    "aws-log": "^0.11.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@ampproject/rollup-plugin-closure-compiler": "^0.26.0",
     "@jest/types": "^26.6.2",
@@ -65,17 +65,18 @@
     "@vuepress/plugin-medium-zoom": "^1.8.2",
     "@vuepress/plugin-pwa": "^1.8.2",
     "async-shelljs": "^0.1.4",
+    "aws-log": "^0.11.1",
     "aws-sdk": "2",
     "aws-ssm": "^0.3.13",
     "aws-xray-sdk-core": "^3.3.1",
-    "common-types": "^1.23.1",
-    "do-devops": "^0.6.1",
+    "common-types": "^1.24.5",
+    "do-devops": "^0.7.0",
     "eslint": "^7.24.0",
     "eslint-config-prettier": "^8.2.0",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-prettier": "^3.4.0",
     "eslint-plugin-promise": "^5.1.0",
-    "eslint-plugin-unicorn": "^29.0.0",
+    "eslint-plugin-unicorn": "^31.0.0",
     "inferred-types": "^0.3.0",
     "jest": "^26.6.3",
     "jest-extended": "^0.11.5",
@@ -99,9 +100,13 @@
     "vuepress-plugin-autometa": "^0.1.13",
     "vuepress-plugin-mermaidjs": "^1.8.0"
   },
+  "optionalDependencies": {
+    "do-devops": "^0.7.0"
+  },
   "peerDependencies": {
+    "aws-log": "^0.11.1",
     "aws-ssm": "^0.3.13",
-    "common-types": "^1.23.1",
+    "common-types": "^1.24.5",
     "inferred-types": "^0.3.0",
     "native-dash": "^1.12.0"
   }

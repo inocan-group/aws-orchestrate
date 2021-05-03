@@ -10,16 +10,12 @@
     "resolveJsonModule": true,
 
     "strict": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "allowSyntheticDefaultImports": true,
-    "types": [
-      "jest",
-      "node",
-      "jest-extended"
-    ],
+    "types": ["jest", "node", "jest-extended"],
 
     "baseUrl": ".",
     "declaration": true,
