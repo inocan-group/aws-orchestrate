@@ -68,7 +68,7 @@ describe("Step Function Builder Error Handler", () => {
       .succeed("foo3");
 
     const fooStepFn = StepFunction({
-      catch: Catch((c) => c.allErrors(finalizedStepFn)),
+      catch: (c) => c.allErrors(finalizedStepFn),
     }).task("task1");
 
     const stateMachine = StateMachine("fooStateMachine", {
