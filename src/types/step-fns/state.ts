@@ -20,7 +20,7 @@ import {
   IPass,
   ParallelFluentApi,
   FluentApi,
-  IChoiceItemFluentApi,
+  IChoiceItemConfigurator,
 } from "~/types";
 
 /**
@@ -65,15 +65,15 @@ export type IStateConfiguring = {
    */
   choice(
     ...params:
-      | [IChoiceItemFluentApi]
-      | [IChoiceItemFluentApi, IChoiceOptions & { name: string }]
+      | [IChoiceItemConfigurator]
+      | [IChoiceItemConfigurator, IChoiceOptions & { name: string }]
       | (IChoiceDefaultItemParam | IChoiceItemParam)[]
       | [...(IChoiceDefaultItemParam | IChoiceItemParam)[], IChoiceOptions & { name: string }]
   ): Finalized<IChoice>;
   choice(
     ...params:
-      | [IChoiceItemFluentApi]
-      | [IChoiceItemFluentApi, Omit<IChoiceOptions, "name">]
+      | [IChoiceItemConfigurator]
+      | [IChoiceItemConfigurator, Omit<IChoiceOptions, "name">]
       | (IChoiceDefaultItemParam | IChoiceItemParam)[]
       | [...(IChoiceDefaultItemParam | IChoiceItemParam)[], Omit<IChoiceOptions, "name">]
   ): IChoice;

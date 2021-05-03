@@ -106,6 +106,10 @@ function extractChoiceParams(arg1: IStepFnSelector | IChoiceVariable, arg2?: ISt
   return { stepFn: arg1 as IStepFnSelector, variable: undefined };
 }
 
+/**
+ *  Construct and child item of `Choice` State which starts with calling an operator as a fn name and 
+ *  it wraps a `condition` and a `step function`
+ */
 export function ChoiceItem(fluentApi: FluentApi<IChoiceItemParamApi, IChoiceItemParam>) {
   const api: IChoiceItemParamApi = {
     stringEquals(...[value, variable, stepFn]) {
@@ -149,7 +153,7 @@ export function ChoiceItem(fluentApi: FluentApi<IChoiceItemParamApi, IChoiceItem
   return fluentApi(api);
 }
 
-function choiceItemFluent(fluentApi: IChoiceItemConfigurator) {
+function configureChoiceItem(fluentApi: IChoiceItemConfigurator) {
   const choiceApi = (
     state: (IChoiceItemParam | IChoiceDefaultItemParam)[]
   ): IChoiceItemApi & { state: any } => {
@@ -247,6 +251,9 @@ const isFluentApi = (
 const isObjectDefinition = (obj: IChoiceItemParam | IChoiceOptions): obj is IChoiceItemParam =>
   obj !== undefined && "stepFn" in obj;
 
+/**
+ * A set of choice items which based on conditions follow a step function states
+ */
 export type IChoiceState = IChoice | Finalized<IChoice>;
 
 /**
@@ -261,7 +268,7 @@ export function Choice(...params: IChoiceParams): IChoiceState {
     if (isDefaultChoice(param)) {
       defaultDfn = getDefaultChoiceStates(param);
     } else if (isFluentApi(param)) {
-      const fluentResult = choiceItemFluent(param);
+      const fluentResult = configureChoiceItem(param);
       "state" in fluentResult &&
         // eslint-disable-next-line unicorn/no-array-for-each
         (fluentResult["state"] as (IChoiceItemParam | IChoiceDefaultItemParam)[]).forEach((ci) => {
