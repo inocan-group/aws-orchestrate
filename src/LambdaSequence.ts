@@ -317,7 +317,7 @@ export function handler(event, context, callback) {
       apiGateway = { ...{}, ...event }
       headers = apiGateway.headers
       delete apiGateway.headers
-      request = getBodyFromPossibleLambdaProxyRequest<T>(event) as T
+      request = event.body ? getBodyFromPossibleLambdaProxyRequest<T>(event) : ({} as T)
       sequence = LambdaSequence.notASequence()
       delete apiGateway.body
     } else if (isOrchestratedRequest(event)) {
