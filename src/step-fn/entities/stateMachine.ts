@@ -5,6 +5,7 @@ import {
   IStepFunctionCatcher,
   IStepFunction,
   IStepFunctionChoiceItem,
+  IStateMachine,
 } from "common-types";
 import { hash } from "native-dash";
 import { parseArn } from "~/shared";
@@ -18,8 +19,6 @@ import {
   IParallel,
   IPass,
   IState,
-  IStateMachineApi,
-  IStateMachineFactory,
   IStateMachineParams,
   IStepFn,
   IStepFnOptions,
@@ -38,6 +37,7 @@ import {
   IRetryFluentApi,
   Retry,
 } from "../error-handler";
+import { parsePartiallyQualifiedArn } from "~/shared/parse";
 
 export const isFinalizedState = <T extends IState>(obj: T | Finalized<T>): obj is Finalized<T> =>
   "name" in obj && obj.name !== undefined;
@@ -84,35 +84,70 @@ interface IStepFunctionParseContext {
   hashState: string;
 }
 
-export type IStateMachineBuilder<E extends string> = Omit<{
+export type IStateMachineBuilder<E extends string = ""> = Omit<
+  {
     state: Partial<IStateMachineParams>;
-  //   /**
-  //  * Error handler used for all children states unless their overrites this one using `catch` option explicitely
-  //  */
-  //    catch?: ICatchConfig | ICatchFluentApi;
-     /**
-      * The root step function desired to be the start point for our sÍtate machine
-      */
-     stepFunction: <T extends string>(stepFunction: IStepFn) => IStateMachineBuilder<E | T>;
-}, E>
+    //   /**
+    //  * Error handler used for all children states unless their overrites this one using `catch` option explicitely
+    //  */
+    //    catch?: ICatchConfig | ICatchFluentApi;
+    /**
+     * The root step function desired to be the start point for our sÍtate machine
+     */
+    stepFunction<T extends string = "">(stepFunction: IStepFn): IStateMachineBuilder<E | T>;
+    catch<T extends string = "">(val: ICatchConfig | ICatchFluentApi): IStateMachineBuilder<E | T>;
+    type<T extends string = "">(val: IStateMachine["type"]): IStateMachineBuilder<E | T>;
+    loggingConfig<T extends string = "">(
+      val: false | IStateMachine["loggingConfig"]
+    ): IStateMachineBuilder<E | T>;
+    name<T extends string = "">(val: string): IStateMachineBuilder<E | T>;
+  },
+  E
+>;
 
-export function StateMachine<T extends string = "state">(builder:(builder: IStateMachineBuilder<"">) => IStateMachineBuilder<T>) {
-  // const config = <T extends string>(_state: Partial<IStateMachineParams>) => {
-  //     const newState = { ...state, [offset]: opts };
-  //     return StateMachine<T | E>(newState);
-  //   };
-  // }
+export function StateMachine<T extends string = "state">(
+  builder: (builder: IStateMachineBuilder<T>) => IStateMachineBuilder<T>
+) {
+  let stateMachineShortName: string = "";
 
-  const api = (state: Partial<IStateMachineParams>) => {
+  const defaultLoggingConfig = () => {
+    return {
+      level: "ALL",
+      includeExecutionData: false,
+      destinations: [
+        parsePartiallyQualifiedArn(`state-machine-${stateMachineShortName}`, {
+          resource: "log-group",
+        }).arn,
+      ],
+    };
+  };
+
+  const api = <E extends string = "">(state: Partial<IStateMachineParams>) => {
     return {
       state,
-    stepFunction(stepFunction: IStepFn) {
-      return api({...state, stepFunction});
-    },
-  }
-  }
+      stepFunction(val: IStepFn) {
+        return api<E |"stepFunction">({ ...state, stepFunction: val });
+      },
+      catch(val: ICatchConfig | ICatchFluentApi) {
+        return api<E | "catch">({ ...state, catch: val });
+      },
+      type(val: IStateMachine["type"]) {
+        return api<E | "type">({ ...state, type: val });
+      },
+      loggingConfig(val: false | IStateMachine["loggingConfig"]) {
+        return api<E | "loggingConfig">({
+          ...state,
+          loggingConfig: val ? { ...defaultLoggingConfig, ...val } : undefined,
+        });
+      },
+      name(val: string) {
+        stateMachineShortName = val;
+        return api<E | "name">(state);
+      },
+    };
+  };
 
-  const builderOutput = builder(api({}));
+  const builderOutput = builder(api<T>({}));
   if (!("state" in builderOutput)) {
     throw new ServerlessError(400, "State machine configuration is not defined", "bad-request");
   }
@@ -122,9 +157,6 @@ export function StateMachine<T extends string = "state">(builder:(builder: IStat
   if (!params.stepFunction) {
     throw new ServerlessError(400, "No step function defined", "bad-request");
   }
-
-  // TODO
-  const stateMachineName = "foo";
 
   const { stepFunction, catch: statemachineCatchConfig, ...stateMachineOpts } = params;
   const finalizedStepFn = isFinalizedStepFn(stepFunction) ? stepFunction : stepFunction.finalize();
@@ -636,7 +668,7 @@ export function StateMachine<T extends string = "state">(builder:(builder: IStat
   });
 
   const stateMachine = {
-    name: stateMachineName,
+    name: parsePartiallyQualifiedArn(stateMachineShortName, { resource: "stateMachine" }).arn,
     definition,
     ...stateMachineOpts,
   };
@@ -650,4 +682,4 @@ export function StateMachine<T extends string = "state">(builder:(builder: IStat
       return {};
     },
   };
-};
+}

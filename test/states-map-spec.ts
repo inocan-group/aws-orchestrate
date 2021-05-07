@@ -23,11 +23,11 @@ describe("Map State", () => {
     const emailNotification = State((s) => s.task("emailNotification123"));
     const persistNotificationResults = State((s) => s.task("persistNotificationResults123"));
 
-    const notifyAllUsers = State((s) =>
-      s
-        .map("$.users", { name: "notifyAllUsers" })
-        .use([emailNotification, persistNotificationResults])
-    );
+    const notifyAllUsers = Map("$.users", { name: "notifyAllUsers" })
+        .use([emailNotification, persistNotificationResults]);
+
+    const notifyAllUsers = Map(m => m.use("$.users", [emailNotification, persistNotificationResults] , { name: "notifyAllUsers" });
+    
 
     expect(notifyAllUsers.deployable.getState()).toHaveLength(2);
   });
