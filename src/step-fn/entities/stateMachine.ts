@@ -20,6 +20,8 @@ import {
   IState,
   IStateMachineApi,
   IStateMachineFactory,
+  IStateMachineParams,
+  IStepFn,
   IStepFnOptions,
   ISucceed,
   ITask,
@@ -82,7 +84,48 @@ interface IStepFunctionParseContext {
   hashState: string;
 }
 
-export const StateMachine: IStateMachineFactory = (stateMachineName, params): IStateMachineApi => {
+export type IStateMachineBuilder<E extends string> = Omit<{
+    state: Partial<IStateMachineParams>;
+  //   /**
+  //  * Error handler used for all children states unless their overrites this one using `catch` option explicitely
+  //  */
+  //    catch?: ICatchConfig | ICatchFluentApi;
+     /**
+      * The root step function desired to be the start point for our sÍtate machine
+      */
+     stepFunction: <T extends string>(stepFunction: IStepFn) => IStateMachineBuilder<E | T>;
+}, E>
+
+export function StateMachine<T extends string = "state">(builder:(builder: IStateMachineBuilder<"">) => IStateMachineBuilder<T>) {
+  // const config = <T extends string>(_state: Partial<IStateMachineParams>) => {
+  //     const newState = { ...state, [offset]: opts };
+  //     return StateMachine<T | E>(newState);
+  //   };
+  // }
+
+  const api = (state: Partial<IStateMachineParams>) => {
+    return {
+      state,
+    stepFunction(stepFunction: IStepFn) {
+      return api({...state, stepFunction});
+    },
+  }
+  }
+
+  const builderOutput = builder(api({}));
+  if (!("state" in builderOutput)) {
+    throw new ServerlessError(400, "State machine configuration is not defined", "bad-request");
+  }
+
+  const params = builderOutput["state"] as IStateMachineParams;
+
+  if (!params.stepFunction) {
+    throw new ServerlessError(400, "No step function defined", "bad-request");
+  }
+
+  // TODO
+  const stateMachineName = "foo";
+
   const { stepFunction, catch: statemachineCatchConfig, ...stateMachineOpts } = params;
   const finalizedStepFn = isFinalizedStepFn(stepFunction) ? stepFunction : stepFunction.finalize();
   const processingStepFns: any = {};
