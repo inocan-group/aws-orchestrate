@@ -44,7 +44,6 @@
     "watch:cjs": "yarn tsc -P tsconfig.cjs.json -w",
     "watch:esnext": "yarn tsc -P tsconfig.esnext.json -w"
   },
-  "dependencies": {},
   "devDependencies": {
     "@ampproject/rollup-plugin-closure-compiler": "^0.26.0",
     "@jest/types": "^26.6.2",
