@@ -13,15 +13,14 @@ describe("Idempotence", () => {
     const task1 = State((s) => s.task("task1"));
     const task2 = State((s) => s.task("task2"));
     const pass1 = State((s) => s.pass());
-    const initialStateMachine = StateMachine("foo", {
-      stepFunction: StepFunction(task1, task2, pass1),
-    }).toJSON();
+    const initialStateMachine = StateMachine((s) =>
+      s.stepFunction(StepFunction(task1, task2, pass1)).name("foo")
+    ).toJSON();
     const statesOutput = Object.keys(initialStateMachine.definition.States);
-
     for (const _ of Array.from({ length: 20 }).fill(0)) {
-      const currentStateMachine = StateMachine("foo", {
-        stepFunction: StepFunction(task1, task2, pass1),
-      }).toJSON();
+      const currentStateMachine = StateMachine((s) =>
+        s.stepFunction(StepFunction(task1, task2, pass1)).name("foo")
+      ).toJSON();
       expect(Object.keys(currentStateMachine.definition.States)).toIncludeAllMembers(statesOutput);
     }
   });
@@ -33,17 +32,17 @@ describe("Idempotence", () => {
     const wait = State((s) => s.wait({ seconds: 60 }));
     const succeed = State((s) => s.succeed());
 
-    const initialStateMachine = StateMachine("foo", {
-      stepFunction: StepFunction(task1, task2, pass1, wait, succeed),
-    }).toJSON();
+    const initialStateMachine = StateMachine((s) =>
+      s.stepFunction(StepFunction(task1, task2, pass1, wait, succeed)).name("foo")
+    ).toJSON();
     const initialStatesOuput = Object.keys(initialStateMachine.definition.States);
     const initialOutputWaitState = initialStatesOuput.find((s) => s.startsWith("Wait-"));
 
     for (let index = 0; index < 20; index++) {
       const modifiedWaitState = { ...wait, seconds: (wait.seconds || 0 + index) * 2 };
-      const currentStateMachine = StateMachine("foo", {
-        stepFunction: StepFunction(task1, task2, pass1, modifiedWaitState, succeed),
-      }).toJSON();
+      const currentStateMachine = StateMachine((s) =>
+        s.stepFunction(StepFunction(task1, task2, pass1, modifiedWaitState, succeed)).name("foo")
+      ).toJSON();
       const currentStatesOutput = Object.keys(currentStateMachine.definition.States);
       const currentOutputWaitState = currentStatesOutput.find((s) => s.startsWith("Wait-"));
 
@@ -65,16 +64,16 @@ describe("Idempotence", () => {
     const conditionB = ChoiceItem((c) => c.stringEquals("b", [conditionBTask1, conditionBTask2]));
     const choice = State((s) => s.choice(conditionA, conditionB, { name: "myChoiceState" }));
 
-    const initialStateMachine = StateMachine("foo", {
-      stepFunction: StepFunction(task1, choice),
-    }).toJSON();
+    const initialStateMachine = StateMachine((s) =>
+      s.stepFunction(StepFunction(task1, choice))
+    ).toJSON();
     const initialStatesOuput = Object.keys(initialStateMachine.definition.States);
 
     for (const index of Array.from({ length: 20 }).fill(0)) {
       const modifiedChoice = { ...choice, comment: `foo-${index}` };
-      const currentStateMachine = StateMachine("foo", {
-        stepFunction: StepFunction(task1, modifiedChoice),
-      }).toJSON();
+      const currentStateMachine = StateMachine((s) =>
+        s.stepFunction(StepFunction(task1, modifiedChoice))
+      ).toJSON();
       expect(Object.keys(currentStateMachine.definition.States)).toIncludeAllMembers(
         initialStatesOuput
       );
@@ -89,12 +88,12 @@ describe("Idempotence", () => {
     const conditionBTask1 = State((s) => s.pass({ comment: "conditionBTask1" }));
     const conditionBTask2 = State((s) => s.pass({ comment: "conditionBTask2" }));
     const conditionA = ChoiceItem((c) => c.stringEquals("a", [conditionATask1, conditionATask2]));
-    const conditionB = ChoiceItem((c) => c.stringEquals("b", [conditionBTask1, conditionBTask2],));
+    const conditionB = ChoiceItem((c) => c.stringEquals("b", [conditionBTask1, conditionBTask2]));
     const choice = State((s) => s.choice(conditionA, conditionB));
 
-    const initialStateMachine = StateMachine("foo", {
-      stepFunction: StepFunction(waitTask, choice),
-    }).toJSON();
+    const initialStateMachine = StateMachine((s) =>
+      s.name("foo").stepFunction(StepFunction(waitTask, choice))
+    ).toJSON();
     const initialOutputState = Object.keys(initialStateMachine.definition.States);
     const initialWaitStateName = initialOutputState.find((s) => s.startsWith("Wait-"));
 
@@ -104,9 +103,9 @@ describe("Idempotence", () => {
       const modifiedChoice = State((s) =>
         s.choice(conditionC, conditionA, conditionB, { name: "myChoiceState" })
       );
-      const currentStateMachine = StateMachine("foo", {
-        stepFunction: StepFunction(waitTask, modifiedChoice),
-      }).toJSON();
+      const currentStateMachine = StateMachine((s) =>
+        s.name("foo").stepFunction(StepFunction(waitTask, modifiedChoice))
+      ).toJSON();
       const currentOutputState = Object.keys(currentStateMachine.definition.States);
 
       expect(currentOutputState).toIncludeAllMembers([initialWaitStateName]);
@@ -127,18 +126,18 @@ describe("Idempotence", () => {
     const conditionB = ChoiceItem((c) => c.stringEquals("b", [conditionBTask1, conditionBTask2]));
     const choice = State((s) => s.choice(conditionA, conditionB, { name: "myChoiceState" }));
 
-    const initialStateMachine = StateMachine("foo", {
-      stepFunction: StepFunction(task1, choice),
-    }).toJSON();
+    const initialStateMachine = StateMachine((s) =>
+      s.name("foo").stepFunction(StepFunction(task1, choice))
+    ).toJSON();
     const [initialOutputState, ...initialOutputRestState] = Object.keys(
       initialStateMachine.definition.States
     );
 
     for (const index of Array.from({ length: 20 }).fill(0)) {
       const modifiedTask = { ...task1, comment: `random${index}` };
-      const currentStateMachine = StateMachine("foo", {
-        stepFunction: StepFunction(modifiedTask, choice),
-      }).toJSON();
+      const currentStateMachine = StateMachine((s) =>
+        s.name("foo").stepFunction(StepFunction(modifiedTask, choice))
+      ).toJSON();
       const [currentOutputState, ...currentOutputRestState] = Object.keys(
         currentStateMachine.definition.States
       );
@@ -154,9 +153,9 @@ describe("Idempotence", () => {
     const pass3 = State((s) => s.pass({ comment: "pass3" }));
     const mapState = State((s) => s.map("$.items").use([pass1, pass2, pass3]));
 
-    const initialStateMachine = StateMachine("foo", {
-      stepFunction: StepFunction(task1, mapState),
-    }).toJSON();
+    const initialStateMachine = StateMachine((s) =>
+      s.name("foo").stepFunction(StepFunction(task1, mapState))
+    ).toJSON();
     const initialOutputState = Object.keys(initialStateMachine.definition.States);
     const initialOutputMapState = initialOutputState.find((s) => s.startsWith("Map-"));
     const [initialIteratorOutputTarget, ...initialIteratorOutputState] = Object.keys(
@@ -168,9 +167,9 @@ describe("Idempotence", () => {
     for (const index of Array.from({ length: 20 }).fill(0)) {
       const modifiedPass1 = { ...pass1, comment: `random${index}` };
       const currentMapState = State((s) => s.map("$.items").use([modifiedPass1, pass2, pass3]));
-      const currentStateMachine = StateMachine("foo", {
-        stepFunction: StepFunction(task1, currentMapState),
-      }).toJSON();
+      const currentStateMachine = StateMachine((s) =>
+        s.name("foo").stepFunction(StepFunction(task1, currentMapState))
+      ).toJSON();
       const currentOutputState = Object.keys(currentStateMachine.definition.States);
       const currentMapStateName = currentOutputState.find((s) => s.startsWith("Map-"));
 
@@ -192,9 +191,9 @@ describe("Idempotence", () => {
     const pass3 = State((s) => s.pass({ comment: "pass3" }));
     const mapState = State((s) => s.map("$.items").use([pass1, pass2, pass3]));
 
-    const initialStateMachine = StateMachine("foo", {
-      stepFunction: StepFunction(task1, mapState),
-    }).toJSON();
+    const initialStateMachine = StateMachine((s) =>
+      s.name("foo").stepFunction(StepFunction(task1, mapState))
+    ).toJSON();
     const initialOutputState = Object.keys(initialStateMachine.definition.States);
     const initialOutputMapState = initialOutputState.find((s) => s.startsWith("Map-"));
     const [initialIteratorOutputTarget, ...initialIteratorOutputState] = Object.keys(
@@ -209,9 +208,9 @@ describe("Idempotence", () => {
         s.map("$.items", { comment: "foo" }).use([modifiedPass1, pass2, pass3])
       );
       const task2 = State((s) => s.task("task2"));
-      const currentStateMachine = StateMachine("foo", {
-        stepFunction: StepFunction(task1, task2, currentMapState),
-      }).toJSON();
+      const currentStateMachine = StateMachine((s) =>
+        s.name("foo").stepFunction(StepFunction(task1, task2, currentMapState))
+      ).toJSON();
       const currentOutputState = Object.keys(currentStateMachine.definition.States);
       const currentMapStateName = currentOutputState.find((s) => s.startsWith("Map-"));
 
@@ -244,9 +243,9 @@ describe("Idempotence", () => {
       )
     );
 
-    const initialStateMachine = StateMachine("foo", {
-      stepFunction: StepFunction(parallelState),
-    }).toJSON();
+    const initialStateMachine = StateMachine((s) =>
+      s.name("foo").stepFunction(StepFunction(parallelState))
+    ).toJSON();
     const initialOutputBranches = (initialStateMachine.definition.States[
       "myParallelState"
     ] as IStepFunctionParallel).Branches;
@@ -268,9 +267,9 @@ describe("Idempotence", () => {
           }
         )
       );
-      const currentStateMachine = StateMachine("foo", {
-        stepFunction: StepFunction(modifiedParallelState),
-      }).toJSON();
+      const currentStateMachine = StateMachine((s) =>
+        s.name("foo").stepFunction(StepFunction(modifiedParallelState))
+      ).toJSON();
       const currentOutputBranches = (currentStateMachine.definition.States[
         "myParallelState"
       ] as IStepFunctionParallel).Branches;
@@ -300,9 +299,9 @@ describe("Idempotence", () => {
       )
     );
 
-    const initialStateMachine = StateMachine("foo", {
-      stepFunction: StepFunction(parallelState),
-    }).toJSON();
+    const initialStateMachine = StateMachine((s) =>
+      s.name("foo").stepFunction(StepFunction(parallelState))
+    ).toJSON();
     const initialOutputBranches = (initialStateMachine.definition.States[
       "myParallelState"
     ] as IStepFunctionParallel).Branches;
@@ -324,9 +323,9 @@ describe("Idempotence", () => {
           }
         )
       );
-      const currentStateMachine = StateMachine("foo", {
-        stepFunction: StepFunction(modifiedParallelState),
-      }).toJSON();
+      const currentStateMachine = StateMachine((s) =>
+        s.name("foo").stepFunction(StepFunction(modifiedParallelState))
+      ).toJSON();
       const currentOutputBranches = (currentStateMachine.definition.States[
         "myParallelState"
       ] as IStepFunctionParallel).Branches;
@@ -354,9 +353,9 @@ describe("Idempotence", () => {
     );
     const choice = State((s) => s.choice(conditionA, conditionB, { name: "myChoiceState" }));
 
-    const initialStateMachine = StateMachine("foo", {
-      stepFunction: StepFunction(choice),
-    }).toJSON();
+    const initialStateMachine = StateMachine((s) =>
+      s.name("foo").stepFunction(StepFunction(choice))
+    ).toJSON();
     const initialOutputMapIterator = Object.keys(
       // @ts-ignore
       (initialStateMachine.definition.States["myMap"] as IStepFunctionMap).Iterator.States
@@ -368,9 +367,9 @@ describe("Idempotence", () => {
       const modifiedChoice = State((s) =>
         s.choice(conditionC, conditionA, conditionB, { name: "myChoiceState" })
       );
-      const currentStateMachine = StateMachine("foo", {
-        stepFunction: StepFunction(modifiedChoice),
-      }).toJSON();
+      const currentStateMachine = StateMachine((s) =>
+        s.name("foo").stepFunction(StepFunction(modifiedChoice))
+      ).toJSON();
       const currentOutputMapIterator = Object.keys(
         // @ts-ignore
         (currentStateMachine.definition.States["myMap"] as IStepFunctionMap).Iterator.States
@@ -378,5 +377,13 @@ describe("Idempotence", () => {
 
       expect(currentOutputMapIterator).toIncludeAllMembers(initialOutputMapIterator);
     }
+  });
+
+  it("Creating a state machine without defininf a state should throw a exception", () => {
+
+    // eslint-disable-next-line unicorn/consistent-function-scoping
+    const action = () => StateMachine(s => s.stepFunction(StepFunction()));
+
+    expect(action).toThrowError("There is no state defined in the root step function definition");
   });
 });

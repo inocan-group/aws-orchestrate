@@ -87,26 +87,22 @@ interface IStepFunctionParseContext {
 export type IStateMachineBuilder<E extends string = ""> = Omit<
   {
     state: Partial<IStateMachineParams>;
-    //   /**
-    //  * Error handler used for all children states unless their overrites this one using `catch` option explicitely
-    //  */
-    //    catch?: ICatchConfig | ICatchFluentApi;
     /**
      * The root step function desired to be the start point for our sÍtate machine
      */
-    stepFunction<T extends string = "">(stepFunction: IStepFn): IStateMachineBuilder<E | T>;
-    catch<T extends string = "">(val: ICatchConfig | ICatchFluentApi): IStateMachineBuilder<E | T>;
-    type<T extends string = "">(val: IStateMachine["type"]): IStateMachineBuilder<E | T>;
-    loggingConfig<T extends string = "">(
+    stepFunction<T extends string = "stepFunction">(stepFunction: IStepFn): IStateMachineBuilder<E | T>;
+    catch<T extends string = "catch">(val: ICatchConfig | ICatchFluentApi): IStateMachineBuilder<E | T>;
+    type<T extends string = "type">(val: IStateMachine["type"]): IStateMachineBuilder<E | T>;
+    loggingConfig<T extends string = "loggingConfig">(
       val: false | IStateMachine["loggingConfig"]
     ): IStateMachineBuilder<E | T>;
-    name<T extends string = "">(val: string): IStateMachineBuilder<E | T>;
+    name<T extends string = "name">(val: string): IStateMachineBuilder<E | T>;
   },
   E
 >;
 
 export function StateMachine<T extends string = "state">(
-  builder: (builder: IStateMachineBuilder<T>) => IStateMachineBuilder<T>
+  builder: (builder: IStateMachineBuilder<T>) => IStateMachineBuilder<any>
 ) {
   let stateMachineShortName: string = "";
 
@@ -160,7 +156,57 @@ export function StateMachine<T extends string = "state">(
 
   const { stepFunction, catch: statemachineCatchConfig, ...stateMachineOpts } = params;
   const finalizedStepFn = isFinalizedStepFn(stepFunction) ? stepFunction : stepFunction.finalize();
+
+  if (!finalizedStepFn.getState()?.length) {
+    throw new ServerlessError(400, "There is no state defined in the root step function definition", "bad-request");
+  }
+
   const processingStepFns: any = {};
+
+    /**
+   * Parses an array of states to a  AWS (`common-types`) type definition in order to be used to communicate to Amazon Web Services
+   *
+   * @param state The array of states that compose the step function to be parsed
+   * @param options it can be used to alter how step function would be parsed. ex: namePreffix
+   * @param offset its used to have more context to generate a appropiate hash for idempotence purpose
+   */
+     function parseStepFunction(
+      state: Result<IState>[],
+      options: IStepFnOptions,
+      offset?: string | undefined
+    ) {
+      const definitionStates: [string, IStepFunctionStep][] = [];
+      const errorHandlerStates: [string, IStepFunctionStep][] = [];
+      const stepFnId =
+        offset !== undefined
+          ? `stepFn${
+              offset in processingStepFns ? Object.keys(processingStepFns[offset]).length + 1 : 1
+            }`
+          : "root";
+  
+      if (offset === undefined) {
+        processingStepFns[stepFnId] = state;
+      } else {
+        processingStepFns[offset] = {};
+        processingStepFns[offset][stepFnId] = state;
+      }
+  
+      let cachedStates: Record<string, true> = {};
+      const stepFnHash = hash(JSON.stringify(state));
+  
+      const validateState = (_: number) => <T extends IState>(
+        finalizedState: Finalized<T>
+      ): boolean => {
+        const stateHash = hash(finalizedState.name);
+        const fullStateHash = `${stepFnHash}${stateHash}`;
+  
+        if (cachedStates !== undefined && cachedStates[fullStateHash] !== undefined) {
+          throw new ServerlessError(400, "Finalized state must only be used once", "not-allowed");
+        } else {
+          cachedStates = { ...cachedStates, [fullStateHash]: true };
+          return true;
+        }
+      };
 
   const parseTask = (ctx: IStepFunctionParseContext) => (
     stateDefn: ITask | Finalized<ITask>,
@@ -293,31 +339,7 @@ export function StateMachine<T extends string = "state">(
     ]);
   };
 
-  const parseErrorHandler = (ctx: IStepFunctionParseContext) => (
-    error: string,
-    errorHandler: ErrDefn
-  ): [IStepFunctionCatcher[], IDictionary<IStepFunctionStep>] => {
-    const errorHandlers: IStepFunctionCatcher[] = [];
-    let errorStates: IDictionary<IStepFunctionStep> = {};
 
-    const finalizedStepFn = parseStepFnSelector(errorHandler.selector);
-    const { States } = parseStepFunction(
-      finalizedStepFn.getState(),
-      {
-        ...finalizedStepFn.getOptions(),
-        catch: undefined,
-      },
-      `errorHandler-${ctx.hashState}`
-    );
-    const [[next, _]] = Object.entries(States);
-
-    errorStates = { ...errorStates, ...States };
-    errorHandlers.push({
-      ErrorEquals: [error],
-      Next: next,
-    });
-    return [errorHandlers, errorStates];
-  };
 
   const parseParallel = (ctx: IStepFunctionParseContext) => (
     parallelDefinition: IParallel | Finalized<IParallel>,
@@ -536,50 +558,7 @@ export function StateMachine<T extends string = "state">(
     }
   };
 
-  /**
-   * Parses an array of states to a  AWS (`common-types`) type definition in order to be used to communicate to Amazon Web Services
-   *
-   * @param state The array of states that compose the step function to be parsed
-   * @param options it can be used to alter how step function would be parsed. ex: namePreffix
-   * @param offset its used to have more context to generate a appropiate hash for idempotence purpose
-   */
-  function parseStepFunction(
-    state: Result<IState>[],
-    options: IStepFnOptions,
-    offset?: string | undefined
-  ) {
-    const definitionStates: [string, IStepFunctionStep][] = [];
-    const errorHandlerStates: [string, IStepFunctionStep][] = [];
-    const stepFnId =
-      offset !== undefined
-        ? `stepFn${
-            offset in processingStepFns ? Object.keys(processingStepFns[offset]).length + 1 : 1
-          }`
-        : "root";
 
-    if (offset === undefined) {
-      processingStepFns[stepFnId] = state;
-    } else {
-      processingStepFns[offset] = {};
-      processingStepFns[offset][stepFnId] = state;
-    }
-
-    let cachedStates: Record<string, true> = {};
-    const stepFnHash = hash(JSON.stringify(state));
-
-    const validateState = (_: number) => <T extends IState>(
-      finalizedState: Finalized<T>
-    ): boolean => {
-      const stateHash = hash(finalizedState.name);
-      const fullStateHash = `${stepFnHash}${stateHash}`;
-
-      if (cachedStates !== undefined && cachedStates[fullStateHash] !== undefined) {
-        throw new ServerlessError(400, "Finalized state must only be used once", "not-allowed");
-      } else {
-        cachedStates = { ...cachedStates, [fullStateHash]: true };
-        return true;
-      }
-    };
 
     /**
      * Generate a hash of current step function being parsed __index__ and the state that calls this function
@@ -661,6 +640,32 @@ export function StateMachine<T extends string = "state">(
       StartAt: definitionStates[0][0],
     };
   }
+
+  const parseErrorHandler = (ctx: IStepFunctionParseContext) => (
+    error: string,
+    errorHandler: ErrDefn
+  ): [IStepFunctionCatcher[], IDictionary<IStepFunctionStep>] => {
+    const errorHandlers: IStepFunctionCatcher[] = [];
+    let errorStates: IDictionary<IStepFunctionStep> = {};
+
+    const finalizedStepFn = parseStepFnSelector(errorHandler.selector);
+    const { States } = parseStepFunction(
+      finalizedStepFn.getState(),
+      {
+        ...finalizedStepFn.getOptions(),
+        catch: undefined,
+      },
+      `errorHandler-${ctx.hashState}`
+    );
+    const [[next, _]] = Object.entries(States);
+
+    errorStates = { ...errorStates, ...States };
+    errorHandlers.push({
+      ErrorEquals: [error],
+      Next: next,
+    });
+    return [errorHandlers, errorStates];
+  };
 
   const definition = parseStepFunction(finalizedStepFn.getState(), {
     catch: statemachineCatchConfig,
