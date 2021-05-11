@@ -25,7 +25,7 @@ describe("States", () => {
       (s) => s.pass({ name: "fooPass" }),
       (s) => s.succeed("fooSucceed"),
       (s) => s.fail("unknown reason", { name: "fooFail" }),
-      (s) => s.map((m) => m.itemsPath("$.foo").name("fooMap").stepFunction(sf1)),
+      (s) => s.map((m) => m.itemsPath("$.foo").stepFunction(sf1).name("fooMap")),
       (s) => s.choice((c) => c.default([]), { name: "fooChoice" }),
       (s) =>
         s.parallel((p) => p.addBranch((s1) => s1.task("task1")), {

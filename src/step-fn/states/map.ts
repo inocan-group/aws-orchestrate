@@ -12,8 +12,8 @@ import {
 import { ICatchConfig, ICatchFluentApi } from "..";
 import { parseAndFinalizeStepFn } from "../entities/state";
 
-export function Map(
-  builder: (builder: IMapBuilder<"state">) => IMapBuilder<any>
+export function Map<T extends string>(
+  builder: (builder: IMapBuilder<"state">) => (IMapBuilder<T>)
 ): IMap {
   const api = <E extends string = "state">(state: Partial<IMapState>) => {
     return {

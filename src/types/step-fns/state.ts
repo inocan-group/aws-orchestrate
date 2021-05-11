@@ -49,8 +49,11 @@ export type IStateConfiguring = {
    *
    * While the Parallel state executes multiple branches of steps using the same input, a Map state will execute the same steps for multiple entries of an array in the state input.
    */
-  map(builder: (builder: IMapBuilder<"state">) => IMapBuilder<any>): IMap;
-  map(builder: (builder: IMapBuilder<"state">) => IMapBuilder<any>):  Finalized<IMap>;
+  map<T extends string>(
+    builder: (builder: IMapBuilder<"state">) => IMapBuilder<T | "name">
+  ): Finalized<IMap>;
+  map<T extends string>(builder: (builder: IMapBuilder<"state">) => IMapBuilder<T>): IMap;
+  // map(builder: <T extends string = "">(builder: IMapBuilder<"state">) => IMapBuilder<T>):  Finalized<IMap>;
   /**
    * This state stops the execution of the state machine and marks it as a failure.
    */
