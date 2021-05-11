@@ -2,12 +2,11 @@ import { IDictionary } from "common-types";
 import { ICatchConfig, ICatchFluentApi, IRetryConfig, IRetryFluentApi } from "~/step-fn";
 import type {
   IBaseState,
-  IConfigurableStepFn,
   IFinalizedStepFn,
   IOptionsWithInput,
   IStepFnShorthand,
 } from "~/types";
-import { IStepFnFluentApi } from "./stepFunction";
+import { IStepFn, IStepFnFluentApi } from "./stepFunction";
 
 export type IMapUseParams = IStepFnFluentApi | IStepFnShorthand;
 
@@ -27,25 +26,39 @@ export interface IMapOptions extends IOptionsWithInput {
   retry?: IRetryConfig | IRetryFluentApi;
   catch?: ICatchConfig | ICatchFluentApi;
 }
-
+export type IMapState = IMapOptions & { stepFunction: IStepFn; name?: string };
 export interface IMapUseConfiguration<T> {
   (params: IStepFnFluentApi | IStepFnShorthand): T;
 }
 
+export type PathVariable = `\$.${string}`;
+
+export type IMapBuilder<E extends string = ""> = Omit<
+  {
+    state: Partial<IMapState>;
+    /**
+     * The root step function desired to be the start point for our state machine
+     */
+    stepFunction<T extends string = "stepFunction">(stepFunction: IStepFn): IMapBuilder<E | T>;
+    itemsPath<T extends string = "itemsPath">(val: PathVariable): IMapBuilder<E | T>;
+    catch<T extends string = "catch">(val: ICatchConfig | ICatchFluentApi): IMapBuilder<E | T>;
+    options<T extends string = "options">(
+      val: Omit<IMapOptions, "iterator" | "itemsPath" | "catch">
+    ): IMapBuilder<E | T>;
+  },
+  E
+>;
+
 export interface IMapUseConfigurationWrapper<T> {
-  (itemsPath: string, options?: IMapOptions): (...params: IMapUseParams[]) => T;
+  (builder: (builder: IMapBuilder<"state">) => IMapBuilder<any>): T;
 }
 
 export interface IMapUseCallable<T> {
   use: IMapUseConfiguration<T>;
 }
-export interface IMapCallable {
-  (itemsPath: string, options?: IMapOptions): IMapUseCallable<IConfigurableStepFn>;
-}
-
-export interface IMapConfiguration {
-  (itemsPath: string, options?: IMapOptions): IMapUseCallable<IMap>;
-}
+// export interface IMapCallable {
+//   ((builder: (builder: IMapBuilder<"">) => IMapBuilder<any>)): IMapUseCallable<IConfigurableStepFn>;
+// }
 
 export type IMap = Omit<IMapOptions, "name"> &
   IBaseState & {

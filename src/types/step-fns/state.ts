@@ -7,8 +7,6 @@ import {
   IWait,
   IParallel,
   ITaskOptions,
-  IMapOptions,
-  IMapUseCallable,
   IFailOptions,
   IChoiceDefaultItemParam,
   IChoiceItemParam,
@@ -21,6 +19,7 @@ import {
   ParallelFluentApi,
   FluentApi,
   IChoiceItemConfigurator,
+  IMapBuilder,
 } from "~/types";
 
 /**
@@ -50,11 +49,8 @@ export type IStateConfiguring = {
    *
    * While the Parallel state executes multiple branches of steps using the same input, a Map state will execute the same steps for multiple entries of an array in the state input.
    */
-  map(
-    itemsPath: string,
-    options?: IMapOptions & { name: string }
-  ): IMapUseCallable<Finalized<IMap>>;
-  map(itemsPath: string, options?: Omit<IMapOptions, "name">): IMapUseCallable<IMap>;
+  map(builder: (builder: IMapBuilder<"">) => IMapBuilder<any>): IMap | Finalized<IMap>;
+  // map(itemsPath: string, options?: Omit<IMapOptions, "name">): IMapUseCallable<IMap>;
   /**
    * This state stops the execution of the state machine and marks it as a failure.
    */

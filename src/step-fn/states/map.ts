@@ -2,52 +2,84 @@ import { ServerlessError } from "~/errors";
 import {
   IConfigurableStepFn,
   IMap,
+  IMapBuilder,
   IMapOptions,
+  IMapState,
   IMapUseConfigurationWrapper,
-  IMapUseParams,
-  IStepFnFluentApi,
-  IStepFnShorthand,
+  IStepFn,
   IStore,
+  PathVariable,
 } from "~/types";
+import { ICatchConfig, ICatchFluentApi } from "..";
 import { parseAndFinalizeStepFn } from "../entities/state";
 
-export function mapWrapper(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
-  return (itemsPath: string, options?: IMapOptions) => {
+export const Map: IMapUseConfigurationWrapper<IMap> = (builder) => {
+  const api = <E extends string = "state">(state: Partial<IMapState>) => {
     return {
-      use: (params: IStepFnFluentApi | IStepFnShorthand) => {
-        commit(mapUseConfiguration(itemsPath, options)(params));
-        return api();
+      state,
+      itemsPath(val: PathVariable) {
+        return api<E | "itemsPath">({ ...state, itemsPath: val });
       },
+      stepFunction(val: IStepFn) {
+        return api<E | "stepFunction">({ ...state, stepFunction: val });
+      },
+      catch(val: ICatchConfig | ICatchFluentApi) {
+        return api<E | "catch">({ ...state, catch: val });
+      },
+      options(val: Omit<IMapOptions, "iterator" | "itemsPath" | "catch">) {
+        return api<E | "loggingConfig">({
+          ...state,
+          ...val,
+        });
+      }
     };
   };
-}
 
-const mapUseConfiguration: IMapUseConfigurationWrapper<IMap> = (
-  itemsPath,
-  options?: IMapOptions
-) => (params: IStepFnFluentApi | IStepFnShorthand) => {
-  if (!itemsPath.startsWith("$.")) {
+  const builderOutput = builder(api<"state">({}));
+  if (!("state" in builderOutput)) {
+    throw new ServerlessError(400, "State machine configuration is not defined", "bad-request");
+  }
+
+  const params = builderOutput["state"] as IMapState;
+
+  if (!params.stepFunction) {
+    throw new ServerlessError(400, "No step function defined", "bad-request");
+  }
+
+  const { stepFunction, itemsPath, name, ...rest } = params;
+
+  if (itemsPath && !itemsPath.startsWith("$.")) {
     throw new ServerlessError(
       400,
       `itemsPath ${itemsPath} is not allowed. It must start with "$."`,
       "bad-format"
     );
   }
-  const finalizedStepFn = parseAndFinalizeStepFn(params);
+  const finalizedStepFn = parseAndFinalizeStepFn(stepFunction);
   return {
     type: "Map",
     deployable: finalizedStepFn,
     itemsPath,
-    ...options,
+    ...rest,
     isTerminalState: false,
-    ...(options?.name !== undefined
-      ? { name: options.name, isFinalized: true }
-      : { isFinalized: false }),
+    ...(name !== undefined ? { name, isFinalized: true } : { isFinalized: false }),
   };
 };
 
-export function Map(itemsPath: string, mapOptions?: IMapOptions) {
-  return {
-    use: (...params: IMapUseParams[]) => mapUseConfiguration(itemsPath, mapOptions)(...params),
+// export function Map<T extends string = "state">(
+//   builder: (builder: IMapBuilder<T>) => IMapBuilder<any>
+// ) {
+//   return {
+//     use: (...params: IMapUseParams[]) => mapUseConfiguration(builder);
+//   };
+// }
+
+export function mapWrapper(
+  api: () => IConfigurableStepFn,
+  commit: IStore["commit"]
+) {
+  return (builder: (builder: IMapBuilder<"state">) => IMapBuilder<any>) => {
+    commit(Map(builder));
+    return api();
   };
 }
