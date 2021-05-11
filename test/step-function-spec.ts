@@ -23,9 +23,7 @@ describe("Step Function", () => {
   it("`task`, `map`, `pass`, `wait`, `parallel` states in step function should not be finalized", () => {
     const nonTerminalStepFns = [
       StepFunction().task("foo"),
-      StepFunction()
-        .map("$.foo")
-        .use((s) => s.task("foo2")),
+      StepFunction().map((m) => m.itemsPath("$.foo").stepFunction(StepFunction().task("foo"))),
       StepFunction().pass(),
       StepFunction().wait(),
       StepFunction().parallel([]),
@@ -93,9 +91,9 @@ describe("Step Function", () => {
     const persistNotificationResults = State((s) => s.task("persistNotificationResults"));
 
     const stepFnOptions = { namePrefix: "map-" };
+    const sf1 = StepFunction(emailNotification, persistNotificationResults, stepFnOptions);
     const notifyAllUsers = StepFunction(getUserInfo)
-      .map("$.users", { name: "notifyAllUsers" })
-      .use([emailNotification, persistNotificationResults, stepFnOptions])
+      .map((m) => m.itemsPath("$.users").stepFunction(sf1).name("notifyAllUsers"))
       .succeed();
 
     expect(notifyAllUsers.getState()).toHaveLength(3);

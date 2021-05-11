@@ -151,7 +151,9 @@ describe("Idempotence", () => {
     const pass1 = State((s) => s.pass({ comment: "pass1" }));
     const pass2 = State((s) => s.pass({ comment: "pass2" }));
     const pass3 = State((s) => s.pass({ comment: "pass3" }));
-    const mapState = State((s) => s.map("$.items").use([pass1, pass2, pass3]));
+    const mapState = State((s) =>
+      s.map((m) => m.itemsPath("$.items").stepFunction(StepFunction(pass1, pass2, pass3)))
+    );
 
     const initialStateMachine = StateMachine((s) =>
       s.name("foo").stepFunction(StepFunction(task1, mapState))
@@ -166,7 +168,9 @@ describe("Idempotence", () => {
 
     for (const index of Array.from({ length: 20 }).fill(0)) {
       const modifiedPass1 = { ...pass1, comment: `random${index}` };
-      const currentMapState = State((s) => s.map("$.items").use([modifiedPass1, pass2, pass3]));
+      const currentMapState = State((s) =>
+        s.map((m) => m.itemsPath("$.items").stepFunction(StepFunction(modifiedPass1, pass2, pass3)))
+      );
       const currentStateMachine = StateMachine((s) =>
         s.name("foo").stepFunction(StepFunction(task1, currentMapState))
       ).toJSON();
@@ -189,7 +193,9 @@ describe("Idempotence", () => {
     const pass1 = State((s) => s.pass({ comment: "pass1" }));
     const pass2 = State((s) => s.pass({ comment: "pass2" }));
     const pass3 = State((s) => s.pass({ comment: "pass3" }));
-    const mapState = State((s) => s.map("$.items").use([pass1, pass2, pass3]));
+    const mapState = State((s) =>
+      s.map((m) => m.itemsPath("$.items").stepFunction(StepFunction(pass1, pass2, pass3)))
+    );
 
     const initialStateMachine = StateMachine((s) =>
       s.name("foo").stepFunction(StepFunction(task1, mapState))
@@ -205,7 +211,12 @@ describe("Idempotence", () => {
     for (const [index, _] of Array.from({ length: 20 }).fill(0).entries()) {
       const modifiedPass1 = { ...pass1, comment: `random${index}` };
       const currentMapState = State((s) =>
-        s.map("$.items", { comment: "foo" }).use([modifiedPass1, pass2, pass3])
+        s.map((m) =>
+          m
+            .itemsPath("$.items")
+            .options({ comment: "foo" })
+            .stepFunction(StepFunction(modifiedPass1, pass2, pass3))
+        )
       );
       const task2 = State((s) => s.task("task2"));
       const currentStateMachine = StateMachine((s) =>
@@ -340,7 +351,9 @@ describe("Idempotence", () => {
 
   it("changing choice condition state definition nested with map should not affect map (children step fn) iterator state", () => {
     const nestedMapTask1 = State((s) => s.wait({ seconds: 60 }));
-    const mapState = State((s) => s.map("$.items", { name: "myMap" }).use([nestedMapTask1]));
+    const mapState = State((s) =>
+      s.map((m) => m.itemsPath("$.items").name("myMap").stepFunction(StepFunction(nestedMapTask1)))
+    );
 
     const conditionATask1 = State((s) => s.pass({ comment: "conditionATask1" }));
     const conditionATask2 = State((s) => s.pass({ comment: "conditionATask2" }));
@@ -380,9 +393,8 @@ describe("Idempotence", () => {
   });
 
   it("Creating a state machine without defininf a state should throw a exception", () => {
-
     // eslint-disable-next-line unicorn/consistent-function-scoping
-    const action = () => StateMachine(s => s.stepFunction(StepFunction()));
+    const action = () => StateMachine((s) => s.stepFunction(StepFunction()));
 
     expect(action).toThrowError("There is no state defined in the root step function definition");
   });

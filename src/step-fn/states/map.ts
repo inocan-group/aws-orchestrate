@@ -5,7 +5,6 @@ import {
   IMapBuilder,
   IMapOptions,
   IMapState,
-  IMapUseConfigurationWrapper,
   IStepFn,
   IStore,
   PathVariable,
@@ -13,7 +12,9 @@ import {
 import { ICatchConfig, ICatchFluentApi } from "..";
 import { parseAndFinalizeStepFn } from "../entities/state";
 
-export const Map: IMapUseConfigurationWrapper<IMap> = (builder) => {
+export function Map(
+  builder: (builder: IMapBuilder<"state">) => IMapBuilder<any>
+): IMap {
   const api = <E extends string = "state">(state: Partial<IMapState>) => {
     return {
       state,
@@ -26,12 +27,15 @@ export const Map: IMapUseConfigurationWrapper<IMap> = (builder) => {
       catch(val: ICatchConfig | ICatchFluentApi) {
         return api<E | "catch">({ ...state, catch: val });
       },
-      options(val: Omit<IMapOptions, "iterator" | "itemsPath" | "catch">) {
-        return api<E | "loggingConfig">({
+      name(val: string) {
+        return api<E | "name">({ ...state, name: val });
+      },
+      options(val: Omit<IMapOptions, "iterator" | "itemsPath" | "name" | "catch">) {
+        return api<E | "options">({
           ...state,
           ...val,
         });
-      }
+      },
     };
   };
 
@@ -64,20 +68,9 @@ export const Map: IMapUseConfigurationWrapper<IMap> = (builder) => {
     isTerminalState: false,
     ...(name !== undefined ? { name, isFinalized: true } : { isFinalized: false }),
   };
-};
+}
 
-// export function Map<T extends string = "state">(
-//   builder: (builder: IMapBuilder<T>) => IMapBuilder<any>
-// ) {
-//   return {
-//     use: (...params: IMapUseParams[]) => mapUseConfiguration(builder);
-//   };
-// }
-
-export function mapWrapper(
-  api: () => IConfigurableStepFn,
-  commit: IStore["commit"]
-) {
+export function mapWrapper(api: () => IConfigurableStepFn, commit: IStore["commit"]) {
   return (builder: (builder: IMapBuilder<"state">) => IMapBuilder<any>) => {
     commit(Map(builder));
     return api();

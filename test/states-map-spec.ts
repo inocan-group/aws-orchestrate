@@ -27,7 +27,7 @@ describe("Map State", () => {
 
     const sf1 = StepFunction(emailNotification, persistNotificationResults);
     const notifyAllUsers = Map((m) =>
-      m.itemsPath("$.users").stepFunction(sf1).options({ name: "notifyAllUsers" })
+      m.itemsPath("$.users").stepFunction(sf1).name("notifyAllUsers")
     );
 
     expect(notifyAllUsers.deployable.getState()).toHaveLength(2);
