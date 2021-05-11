@@ -1,5 +1,8 @@
 # AWS Orchestrate
 
+
+[![Wallaby.js](https://img.shields.io/badge/wallaby.js-powered-blue.svg?style=flat&logo=github)](https://wallabyjs.com/oss/)
+
 This library is intended to help projects intending to build a "micro-service architecture" to achieve those ambitions with some handy orchestration classes and types.
 
 ## `LambdaSequence` class
