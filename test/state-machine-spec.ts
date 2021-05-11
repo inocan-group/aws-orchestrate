@@ -16,7 +16,12 @@ describe("State Machine", () => {
     const thirdTask = State((s) => s.task("thirdTask"));
 
     const myStepFn = StepFunction(firstTask, secondTask, thirdTask);
-    const awesomeStateMachine = StateMachine((s) => s.stepFunction(myStepFn)).toJSON();
+    const awesomeStateMachine = StateMachine((s) =>
+      s
+        .stepFunction(myStepFn)
+        .name("foo")
+        .loggingConfig({ destinations: ["foo"] })
+    ).toJSON();
 
     const firstSequence = "firstTask";
     const secondSequence = (awesomeStateMachine.definition.States[
@@ -26,6 +31,10 @@ describe("State Machine", () => {
       secondSequence
     ] as IStepFunctionTask).Next!;
 
+    expect(awesomeStateMachine.name).toEqual("abcapp-dev-foo");
+    expect(awesomeStateMachine.loggingConfig).toEqual({
+      destinations: ["arn:aws:logs:us-east-1:1234:log-group:abcapp-dev-state-machine-foo"],
+    });
     expect(awesomeStateMachine.definition.StartAt).toEqual(firstSequence);
     expect(secondSequence).toEqual("secondTask");
     expect(thirdSequence).toEqual("thirdTask");
