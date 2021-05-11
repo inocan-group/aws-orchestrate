@@ -1,6 +1,12 @@
+---
+
+next: 
+---
 # Getting Started
 
 ## Installing
+
+Just like any other **npm** dependency you'll want to install like so:
 
 ```sh
 # npm
@@ -9,45 +15,33 @@ npm install --save aws-orchestrate
 yarn add aws-orchestrate
 ```
 
-## Basic Usage
+## Functional Overview
 
-Here is a _very_ brief overview of syntax used in the various functional areas. For more detail, use the menu choices in the header bar.
+We'll start with a brief overview of the various areas covered in this repo. And then each area will be covered in much greater detail in the following sections.
 
-### Wrapper
+### Wrapper Function
 
-To use the wrapper you would do something like the following:
+The wrapper function provides strong typing, logging, error handling, and much much more. It get's its name from the fact that it _wraps_ around your handler function like so:
 
-```typescript
-import { wrapper } from 'aws-orchestrate';
-
-const fn: IHandlerFunction<<Request, Response>> = async (request, context) {
-  // your handler function goes here
-}
-
-export handler = wrapper(fn)
+```ts
+const fn: IHandlerFunction = async (req, ctx) => { // your code ... }
+export handler = wrapper(fn);
 ```
 
+> [More on the Wrapper Function](./wrapper)
 
-### Orchestration
+### Step Function Builder
 
-The primary API for orchestration is via the `LambdaSequence` class and an example implementation might look like this:
+Step Functions are the main _orchestration_ feature in the AWS landscape. They are powerful and with the introduction of _express_ step functions they are economic now too. Another nice thing about Step Functions is that, even though the implementation is proprietary the _states_ language has been open sourced. This has led to vendors/startups like Supabase choosing this state language to produce their own orchestration layer.
 
-```typescript
-import { LambdaSequence } from 'aws-orchestrate';
+With all this "goodness" available, what's not to love? Well in part the JSON and/or YAML configuration can be quite hard to follow at times. Visualizations are nice when you can get them but Step Functions require a full deployment to get them up into the cloud and it's far too easy to make a silly mistake and have to rerun the deployment.
 
-const sequence = LambdaSequence
-  .add<IFn1Request>('fn1', { foo: 1, bar: 2})
-  .add<IFn2Request>('fn2', { baz: 1234 })
-  .onError('myErrorHandler', { 
-    foo: dynamic('fn1', 'foo'), 
-    baz: dynamic('fn2', 'baz') 
-  })
-  .addConditionally(myCondition, 'fn3', { mySecret: 'roses are red' })
-  .add('wrapThisUpFn')
-```
+Within this repo we provide a set of builder patterns that allow you to produce highly composable and strongly typed step functions which can be transpiled back to the same old JSON/YAML you've come to love (or hate). These make reuse much more possible and virtually ensure that you're step function will be valid structurally before you ever try to deploy it.
 
-This defined orchestration could then be executed and dictate a coordinated set of lambda executions which collaboratively achieve a functional goal.
+> [More on Step Function Builder](./step-fns)
 
-### HTTP Transactions
+### Serverless Devops
 
-Unlike the prior two examples, the HTTP Transaction is largely involved with the client web application using the exported `transaction` symbol. This functionality is still a proof of concept, more will be documented once this feature reaches maturity.
+This framework builds on top of the Serverless Framework which continues to grow but at it's heart it is a _deployment_ framework (and henceforth a devops framework). The "serverless devops" aspects of this repo attempt to provide a reduced level of cruft in getting your service/app up and running while also providing a strongly typed environment to do it with. Our goal is not _at all_ to compete with the Serverless Framework because all the heavy lifting is still done by it but rather we're adding a thin veneer on top which is intended to lower friction and produce better DX.
+
+> [More on Serverless Devops](./devops)
