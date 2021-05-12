@@ -30,10 +30,11 @@ describe("State Machine", () => {
     const thirdSequence = (awesomeStateMachine.definition.States[
       secondSequence
     ] as IStepFunctionTask).Next!;
+    console.log(awesomeStateMachine.loggingConfig);
 
     expect(awesomeStateMachine.name).toEqual("abcapp-dev-foo");
     expect(awesomeStateMachine.loggingConfig).toEqual({
-      destinations: ["arn:aws:logs:us-east-1:1234:log-group:abcapp-dev-state-machine-foo"],
+      destinations: ["arn:aws:logs:us-east-1:1234:log-group:abcapp-dev-state-machine-foo:*"],
     });
     expect(awesomeStateMachine.definition.StartAt).toEqual(firstSequence);
     expect(secondSequence).toEqual("secondTask");
