@@ -30,7 +30,6 @@ describe("State Machine", () => {
     const thirdSequence = (awesomeStateMachine.definition.States[
       secondSequence
     ] as IStepFunctionTask).Next!;
-    console.log(awesomeStateMachine.loggingConfig);
 
     expect(awesomeStateMachine.name).toEqual("abcapp-dev-foo");
     expect(awesomeStateMachine.loggingConfig).toEqual({
