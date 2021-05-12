@@ -117,8 +117,8 @@ export function StateMachine<T extends string = "state">(
       destinations: [
         parsePartiallyQualifiedArn(`state-machine-${stateMachineShortName}`, {
           resource: "log-group",
-          service: "logs"
-        }).arn,
+          service: "logs",
+        }).arn + ":*",
       ],
     };
   };
@@ -146,8 +146,8 @@ export function StateMachine<T extends string = "state">(
                   (d) =>
                     parsePartiallyQualifiedArn(`state-machine-${d}`, {
                       resource: "log-group",
-                      service: "logs"
-                    }).arn
+                      service: "logs",
+                    }).arn + ":*"
                 ),
               }
             : undefined,
@@ -700,7 +700,10 @@ export function StateMachine<T extends string = "state">(
     catch: statemachineCatchConfig,
     ...finalizedStepFn.getOptions(),
   });
-  const nameParts = parsePartiallyQualifiedArn(stateMachineShortName, { resource: "stateMachine", service: "states" });
+  const nameParts = parsePartiallyQualifiedArn(stateMachineShortName, {
+    resource: "stateMachine",
+    service: "states",
+  });
   const stateMachine = {
     name: `${nameParts.appName}-${nameParts.stage}-${nameParts.stepFunction}`,
     definition,
