@@ -19,7 +19,7 @@ import { getStatusCode } from "../statusCode";
 export function apiGatewaySuccess(body: any, options: IApiGatewaySuccessOptions = {}): IAwsApiGatewayResponse {
   const headers = { ...getResponseHeaders(), ...(options.headers ? options.headers : {}) };
   if (typeof body !== "string" && headers["Content-Type"] === "application/json") {
-    body = JSON.parse(body);
+    body = JSON.stringify(body);
   }
 
   const statusCode: number = getStatusCode() || (!body && body !== false) ? 204 : 200;
