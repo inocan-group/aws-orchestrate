@@ -61,7 +61,7 @@ export function extractRequestState<I, Q extends IQueryParameters, P extends IPa
 
     return {
       kind: "api-gateway",
-      request: JSON.parse(event.body) as I,
+      request: typeof event.body === "string" ? JSON.parse(event.body) : (event.body as I),
       identity,
       isApiGateway: true,
       apiGateway: event,

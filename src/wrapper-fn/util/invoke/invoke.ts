@@ -6,7 +6,7 @@ import { LambdaInvocationConfigurator, LambdaInvocationResponse } from "~/types"
 import type { Lambda } from "aws-sdk";
 import { ServerlessError } from "~/errors";
 
-export const configureLambda: LambdaInvocationConfigurator = (Lambda?: Lambda) => {
+export const configureLambda: LambdaInvocationConfigurator = (Lambda?: { new (): Lambda }) => {
   /**
    * **invoke**
    *
@@ -43,17 +43,20 @@ export const configureLambda: LambdaInvocationConfigurator = (Lambda?: Lambda) =
     }
 
     return new Promise((resolve) => {
-      Lambda.invoke(buildInvocationRequest(parseArn(functionArn), request), (error_, data) => {
-        if (error_) {
-          const { error } = logger().reloadContext();
-          const e = new Error(error_.message);
-          e.stack = error_.stack;
-          e.name = "InvocationError";
-          error(e, error_);
-          throw e;
+      new Lambda().invoke(
+        buildInvocationRequest(parseArn(functionArn), request),
+        (error_, data) => {
+          if (error_) {
+            const { error } = logger().reloadContext();
+            const e = new Error(error_.message);
+            e.stack = error_.stack;
+            e.name = "InvocationError";
+            error(e, error_);
+            throw e;
+          }
+          resolve(data);
         }
-        resolve(data);
-      });
+      );
     });
   };
 };
