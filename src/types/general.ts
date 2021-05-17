@@ -39,7 +39,7 @@ export interface IWrapperOptions {
    * import { StepFunctions } from "aws-sdk";
    * ```
    */
-  StepFunctions?: StepFunctions;
+  StepFunctions?: { new (): StepFunctions };
 
   /**
    * **Lambda**
@@ -54,7 +54,7 @@ export interface IWrapperOptions {
    * import { Lambda } from "aws-sdk";
    * ```
    */
-  Lambda?: Lambda;
+  Lambda?: { new (): Lambda } ;
 
   /**
    * **XRay**

@@ -22,19 +22,22 @@ export const configureStepFn: StepFunctionConfigurator = (StepFunctions) => {
         resource: "stateMachine",
       }).arn as unknown) as AwsArnStepFunction<"stateMachine">;
 
-      StepFunctions.startExecution(buildStepFunctionRequest(sfArn, request), (error, data) => {
-        if (error) {
-          const log = logger()
-            .reloadContext()
-            .addToLocalContext({ workflow: "aws-log/stepFunction" });
-          const e = new Error(error.message);
-          e.stack = error.stack;
-          e.name = "InvocationError";
-          log.error(`Problem starting the step function '${arn}'`, e);
-          reject(e);
+      new StepFunctions().startExecution(
+        buildStepFunctionRequest(sfArn, request),
+        (error, data) => {
+          if (error) {
+            const log = logger()
+              .reloadContext()
+              .addToLocalContext({ workflow: "aws-log/stepFunction" });
+            const e = new Error(error.message);
+            e.stack = error.stack;
+            e.name = "InvocationError";
+            log.error(`Problem starting the step function '${arn}'`, e);
+            reject(e);
+          }
+          resolve(data);
         }
-        resolve(data);
-      });
+      );
     });
   };
 };
