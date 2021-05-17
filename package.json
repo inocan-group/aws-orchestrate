@@ -1,7 +1,7 @@
 {
   "name": "aws-orchestrate",
   "description": "This library is intended to help projects intending to build a \"micro-service architecture\" to achieve those ambitions with some handy orchestration classes and types.",
-  "version": "0.17.3",
+  "version": "0.17.4",
   "homepage": "https://github.com/inocan-group/aws-orchestrate#readme",
   "bugs": {
     "url": "https://github.com/inocan-group/aws-orchestrate/issues"
@@ -65,7 +65,7 @@
     "@vuepress/plugin-medium-zoom": "^1.8.2",
     "@vuepress/plugin-pwa": "^1.8.2",
     "async-shelljs": "^0.1.4",
-    "aws-log": "^0.11.1",
+    "aws-log": "^0.11.2",
     "aws-sdk": "2",
     "aws-ssm": "^0.3.13",
     "aws-xray-sdk-core": "^3.3.1",
@@ -104,7 +104,7 @@
     "do-devops": "^0.7.0"
   },
   "peerDependencies": {
-    "aws-log": "^0.11.1",
+    "aws-log": "^0.11.2",
     "aws-ssm": "^0.3.13",
     "common-types": "^1.24.5",
     "inferred-types": "^0.3.0",
