@@ -1,5 +1,4 @@
 import { IDictionary } from "common-types";
-import { getCorrelationId, getContext } from "aws-log";
 import { IParsedArn } from "~/types";
 
 /**
@@ -14,20 +13,9 @@ import { IParsedArn } from "~/types";
  *    as the EVENT payload to the new Lambda function
  */
 export function buildInvocationRequest<
-  T extends IDictionary & {
-    headers?: IDictionary<string>;
-  }
+  T extends IDictionary 
 >(arn: IParsedArn, request: T): import("aws-sdk").Lambda.InvocationRequest {
   const FunctionName = `arn:aws:lambda:${arn.region}:${arn.account}:function:${arn.appName}-${arn.stage}-${arn.fn}`;
-  const correlationHeaders = {
-    "X-Correlation-Id": getCorrelationId(),
-    "x-calling-function": getContext().functionName as string,
-    "x-calling-request-id": getContext().requestId,
-  };
-
-  request.headers = request.headers
-    ? { ...correlationHeaders, ...request.headers }
-    : correlationHeaders;
   const Payload = JSON.stringify(request);
 
   return {
