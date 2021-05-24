@@ -101,6 +101,7 @@ export type IStateMachineBuilder<E extends string = ""> = Omit<
       val: false | IStateMachine["loggingConfig"]
     ): IStateMachineBuilder<E | T>;
     name<T extends string = "name">(val: string): IStateMachineBuilder<E | T>;
+    addTracing<T extends string = "addTracing">(): IStateMachineBuilder<E | T>;
   },
   E
 >;
@@ -156,6 +157,9 @@ export function StateMachine<T extends string = "state">(
       name(val: string) {
         stateMachineShortName = val;
         return api<E | "name">(state);
+      },
+      addTracing() {
+        return api<E | "addTracing">({ ...state, tracingConfig: { enabled: true } });
       },
     };
   };
