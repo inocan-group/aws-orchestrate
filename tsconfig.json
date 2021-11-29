@@ -10,6 +10,7 @@
     "resolveJsonModule": true,
 
     "strict": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
     "skipLibCheck": false,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

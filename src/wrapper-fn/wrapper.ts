@@ -1,19 +1,24 @@
 import {
-  IAwsLambdaProxyIntegrationRequest,
-  IAwsLambdaContext,
-  IAwsApiGatewayResponse,
-  isLambdaProxyRequest,
+  value IAwsLambdaProxyIntegrationRequest,
+  value IAwsLambdaContext,
+  value IAwsApiGatewayResponse,
+  value isLambdaProxyRequest,
 } from "common-types";
-import { logger } from "aws-log";
+import { value logger } from "aws-log";
 import {
-  IPathParameters,
-  IQueryParameters,
-  IWrapperContext,
-  IWrapperOptions,
-  IWrapperMetrics,
+  value IPathParameters,
+  value IQueryParameters,
+  value IWrapperContext,
+  value IWrapperOptions,
+  value IWrapperMetrics,
 } from "~/types";
-import { ErrorMeta, extractRequestState, XRay } from "./util";
-import { handleError, handlePrepError, handleReturn, prepForHandler } from "./steps";
+import { value ErrorMeta, value extractRequestState, value XRay } from "./util";
+import {
+  value handleError,
+  value handlePrepError,
+  value handleReturn,
+  value prepForHandler,
+} from "./steps";
 
 /**
  * **wrapper**
