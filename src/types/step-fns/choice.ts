@@ -102,8 +102,8 @@ export interface IDefaultChoice {
 }
 
 export type IChoiceParams =
-  | [IChoiceItemFluentApi]
-  | [IChoiceItemFluentApi, IChoiceOptions]
+  | [IChoiceItemConfigurator]
+  | [IChoiceItemConfigurator, IChoiceOptions]
   | (IChoiceDefaultItemParam | IChoiceItemParam)[]
   | [...(IChoiceDefaultItemParam | IChoiceItemParam)[], IChoiceOptions];
 
@@ -142,6 +142,6 @@ export type IChoiceParams =
   /**
    * provides an object with __conditions__ as methods names to compose choice items in fluent api syntax
    */
-  export interface IChoiceItemFluentApi {
+  export interface IChoiceItemConfigurator {
     (c: IChoiceItemApi): IChoiceItemApi;
   }

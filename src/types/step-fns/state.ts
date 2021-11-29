@@ -7,8 +7,6 @@ import {
   IWait,
   IParallel,
   ITaskOptions,
-  IMapOptions,
-  IMapUseCallable,
   IFailOptions,
   IChoiceDefaultItemParam,
   IChoiceItemParam,
@@ -20,7 +18,8 @@ import {
   IPass,
   ParallelFluentApi,
   FluentApi,
-  IChoiceItemFluentApi,
+  IChoiceItemConfigurator,
+  IMapBuilder,
 } from "~/types";
 
 /**
@@ -50,11 +49,11 @@ export type IStateConfiguring = {
    *
    * While the Parallel state executes multiple branches of steps using the same input, a Map state will execute the same steps for multiple entries of an array in the state input.
    */
-  map(
-    itemsPath: string,
-    options?: IMapOptions & { name: string }
-  ): IMapUseCallable<Finalized<IMap>>;
-  map(itemsPath: string, options?: Omit<IMapOptions, "name">): IMapUseCallable<IMap>;
+  map<T extends string>(
+    builder: (builder: IMapBuilder<"state">) => IMapBuilder<T | "name">
+  ): Finalized<IMap>;
+  map<T extends string>(builder: (builder: IMapBuilder<"state">) => IMapBuilder<T>): IMap;
+  // map(builder: <T extends string = "">(builder: IMapBuilder<"state">) => IMapBuilder<T>):  Finalized<IMap>;
   /**
    * This state stops the execution of the state machine and marks it as a failure.
    */
@@ -65,15 +64,15 @@ export type IStateConfiguring = {
    */
   choice(
     ...params:
-      | [IChoiceItemFluentApi]
-      | [IChoiceItemFluentApi, IChoiceOptions & { name: string }]
+      | [IChoiceItemConfigurator]
+      | [IChoiceItemConfigurator, IChoiceOptions & { name: string }]
       | (IChoiceDefaultItemParam | IChoiceItemParam)[]
       | [...(IChoiceDefaultItemParam | IChoiceItemParam)[], IChoiceOptions & { name: string }]
   ): Finalized<IChoice>;
   choice(
     ...params:
-      | [IChoiceItemFluentApi]
-      | [IChoiceItemFluentApi, Omit<IChoiceOptions, "name">]
+      | [IChoiceItemConfigurator]
+      | [IChoiceItemConfigurator, Omit<IChoiceOptions, "name">]
       | (IChoiceDefaultItemParam | IChoiceItemParam)[]
       | [...(IChoiceDefaultItemParam | IChoiceItemParam)[], Omit<IChoiceOptions, "name">]
   ): IChoice;

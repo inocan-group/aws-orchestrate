@@ -1,4 +1,4 @@
-import { State } from "~/step-fn";
+import { State, StepFunction } from "~/step-fn";
 import { Finalized, IState, IStateConfiguring } from "~/types";
 import { Expect, ExpectExtends } from "@type-challenges/utils";
 
@@ -13,18 +13,19 @@ describe("States", () => {
   it("Defining states with name should return `Finalized<IState>`", () => {
     setEnvironmentVariables();
 
+    const sf1 = StepFunction({
+      type: "Task",
+      resource: "fooMapTask",
+      isFinalized: false,
+      isTerminalState: false,
+    });
     const stateDefinitions: ((api: IStateConfiguring) => Finalized<IState>)[] = [
       (s) => s.task("foo", { name: "fooTask" }),
       (s) => s.wait({ name: "fooWait" }),
       (s) => s.pass({ name: "fooPass" }),
       (s) => s.succeed("fooSucceed"),
       (s) => s.fail("unknown reason", { name: "fooFail" }),
-      (s) =>
-        s
-          .map("$.foo", { name: "fooMap" })
-          .use([
-            { type: "Task", resource: "fooMapTask", isFinalized: false, isTerminalState: false },
-          ]),
+      (s) => s.map((m) => m.itemsPath("$.foo").stepFunction(sf1).name("fooMap")),
       (s) => s.choice((c) => c.default([]), { name: "fooChoice" }),
       (s) =>
         s.parallel((p) => p.addBranch((s1) => s1.task("task1")), {
@@ -54,11 +55,16 @@ describe("States", () => {
       (s) => s.succeed(),
       (s) => s.fail("unknown reason"),
       (s) =>
-        s
-          .map("$.foo")
-          .use([
-            { type: "Task", resource: "fooMapTask", isFinalized: false, isTerminalState: false },
-          ]),
+        s.map((m) =>
+          m.itemsPath("$.foo").stepFunction(
+            StepFunction({
+              type: "Task",
+              resource: "fooMapTask",
+              isFinalized: false,
+              isTerminalState: false,
+            })
+          )
+        ),
       (s) => s.choice((c) => c.default([])),
       (s) => s.parallel([]),
     ];

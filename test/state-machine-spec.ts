@@ -15,14 +15,26 @@ describe("State Machine", () => {
     const secondTask = State((s) => s.task("secondTask"));
     const thirdTask = State((s) => s.task("thirdTask"));
 
-    const awesomeStateMachine = StateMachine("fooStateMachine", {
-      stepFunction: StepFunction(firstTask, secondTask, thirdTask)
-    }).toJSON();
+    const myStepFn = StepFunction(firstTask, secondTask, thirdTask);
+    const awesomeStateMachine = StateMachine((s) =>
+      s
+        .stepFunction(myStepFn)
+        .name("foo")
+        .loggingConfig({ destinations: ["foo"] })
+    ).toJSON();
 
     const firstSequence = "firstTask";
-    const secondSequence = (awesomeStateMachine.definition.States[firstSequence] as IStepFunctionTask).Next!;
-    const thirdSequence = (awesomeStateMachine.definition.States[secondSequence] as IStepFunctionTask).Next!;
+    const secondSequence = (awesomeStateMachine.definition.States[
+      firstSequence
+    ] as IStepFunctionTask).Next!;
+    const thirdSequence = (awesomeStateMachine.definition.States[
+      secondSequence
+    ] as IStepFunctionTask).Next!;
 
+    expect(awesomeStateMachine.name).toEqual("abcapp-dev-foo");
+    expect(awesomeStateMachine.loggingConfig).toEqual({
+      destinations: ["arn:aws:logs:us-east-1:1234:log-group:abcapp-dev-state-machine-foo:*"],
+    });
     expect(awesomeStateMachine.definition.StartAt).toEqual(firstSequence);
     expect(secondSequence).toEqual("secondTask");
     expect(thirdSequence).toEqual("thirdTask");
@@ -32,25 +44,38 @@ describe("State Machine", () => {
     const finalizedState = State((s) => s.task("foo1", { name: "finalizedState" }));
 
     const action = () =>
-      StateMachine("fooStateMachine", { stepFunction: StepFunction(finalizedState, finalizedState) }).toJSON();
+      StateMachine((s) =>
+        s.name("fooStateMachine").stepFunction(StepFunction(finalizedState, finalizedState))
+      ).toJSON();
 
-    expect(action).toThrowError({ name: "ServerlessError", message: "Finalized state must only be used once" });
+    expect(action).toThrowError({
+      name: "ServerlessError",
+      message: "Finalized state must only be used once",
+    });
   });
 
   it("Defining state machine should show all choice conditions states in root definition ", () => {
     const fetchFromGravatar = State((s) => s.task("fetchAvatarUrlFromGravatar"));
     const saveIntoDb = State((s) => s.task("SaveIntoDb"));
     const defaultOpts: IStepFnOptions = { namePrefix: "default-" };
-    const defaultChoiceOption = ChoiceItem( c => c.default([fetchFromGravatar, saveIntoDb, defaultOpts]));
+    const defaultChoiceOption = ChoiceItem((c) =>
+      c.default([fetchFromGravatar, saveIntoDb, defaultOpts])
+    );
 
     const fetchFromUnavatar = State((s) => s.task("fetchFromUnavatar"));
     const unavatarOpts: IStepFnOptions = { namePrefix: "unavatar-" };
-    const unavatarChoice = ChoiceItem((c) => c.stringEquals("unavatar", "$.type", [fetchFromUnavatar, unavatarOpts]));
+    const unavatarChoice = ChoiceItem((c) =>
+      c.stringEquals("unavatar", "$.type", [fetchFromUnavatar, unavatarOpts])
+    );
 
-    const fetchProfileImgUrl = State((s) => s.choice(defaultChoiceOption, unavatarChoice, { name: "fooChoiceState" }));
+    const fetchProfileImgUrl = State((s) =>
+      s.choice(defaultChoiceOption, unavatarChoice, { name: "fooChoiceState" })
+    );
 
     const stepFn = StepFunction(fetchProfileImgUrl);
-    const stateMachine = StateMachine("fooStateMachine", { stepFunction: stepFn }).toJSON();
+    const stateMachine = StateMachine((s) =>
+      s.name("fooStateMachine").stepFunction(stepFn)
+    ).toJSON();
 
     const stateNames = Object.keys(stateMachine.definition.States);
 

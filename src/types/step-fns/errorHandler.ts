@@ -56,12 +56,11 @@ export interface IErrorTypeSelector {
   (e: IErrorType): string;
 }
 
-export type IErrorHandlerPointer = ICatchFluentStepFnApi | IStepFnShorthand | IFinalizedStepFn;
-
 export interface ICatchFluentStepFnApi {
   (sf: ICatchConfigurableStepFn): IConfigurableStepFn | IFinalizedStepFn;
-}
+};
 
+export type IErrorHandlerPointer = ICatchFluentStepFnApi | IStepFnShorthand | IFinalizedStepFn;
 
 export interface ErrDefn {
   selector: IErrorHandlerPointer;

@@ -167,6 +167,14 @@ export const emailCampaign = StateMachine("myAwesomeWorkflow", {
 });
 ```
 
+### Finalized State
+
+It refeers to the __named__ state. It means that this state has a static name and cannot be changed. In the case of `Task` States, these are always finalized by default because if you don't provide a name, it would take the resource fn name as the state name.
+
+### Terminal State
+
+When we set a `Choice`, `Succeed` or `Fail` State, it should not allow us to add more states after that at step function level. It means that the current step function definition has to end in one of those states. However take in mind that a step function can contain a state which has more states like `Map` or `Parallel`.
+
 ## Building Blocks
 
 In this section we'll review the most important _kinds_ of **state** you can include in a step function. While there are a few others you can use, they are edge cases and are easily found using the Typescript-powered intelisense (more on this in the [Examples](#examples) section).

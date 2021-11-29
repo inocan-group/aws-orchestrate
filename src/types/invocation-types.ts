@@ -29,7 +29,7 @@ export type IInvokeStepFunction = <T extends any>(
   request: T
 ) => Promise<StartExecutionOutput>;
 
-export type StepFunctionConfigurator = (StepFunctions?: StepFunctions) => IInvokeStepFunction;
+export type StepFunctionConfigurator = (StepFunctions?: { new (): StepFunctions }) => IInvokeStepFunction;
 
 export type IInvokeLambda = <T extends any>(
   arn: string,
@@ -37,4 +37,4 @@ export type IInvokeLambda = <T extends any>(
 ) => Promise<LambdaInvocationResponse>;
 
 /** pass in AWS Lambda class to enable the context's `invoke` method */
-export type LambdaInvocationConfigurator = (Lambda?: Lambda) => IInvokeLambda;
+export type LambdaInvocationConfigurator = (Lambda?:  { new (): Lambda }) => IInvokeLambda;

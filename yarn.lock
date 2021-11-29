@@ -2579,10 +2579,10 @@ autoprefixer@^9.5.1:
     postcss "^7.0.32"
     postcss-value-parser "^4.1.0"
 
-aws-log@^0.11.1:
-  version "0.11.1"
-  resolved "https://registry.yarnpkg.com/aws-log/-/aws-log-0.11.1.tgz#42575170bc1c9745129a6d4316e29a79f5da8e82"
-  integrity sha512-QZjsaKK8SkULYUSM2m+nBv0QrKA/lhjWQaulJBVqqnJcXdqROaV/s5poEJvFYOAk8kpY8Fc5rMIaUxcbdq/BFw==
+aws-log@^0.11.2:
+  version "0.11.2"
+  resolved "https://registry.yarnpkg.com/aws-log/-/aws-log-0.11.2.tgz#9b3f11e786833f9baecf0d665d3991a53562c965"
+  integrity sha512-1x170t0eebTXFatZzZvrJQIwNlZIDOvKSHBmTQCCm3gPZfhKLidxlHhFonqlC94gaprNpGerWOJgzvKdy5yhhg==
   dependencies:
     traverse "^0.6.6"
 
