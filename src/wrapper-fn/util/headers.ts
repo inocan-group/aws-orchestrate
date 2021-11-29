@@ -64,15 +64,18 @@ export function getContentType() {
  */
 export function setSecretHeaders(headers: IDictionary): boolean {
   const secrets: string[] = [];
-  const localSecrets = Object.keys(headers).reduce((headerSecrets: IDictionary, key: keyof typeof headers & string) => {
-    if (key.slice(0, 4) === "O-S-") {
-      const [module, name] = key.slice(4).split("/");
-      const dotPath = `${module}.${name}`;
-      set(headerSecrets, dotPath, headers[key]);
-      secrets.push(dotPath);
-    }
-    return headerSecrets;
-  }, {});
+  const localSecrets = Object.keys(headers).reduce(
+    (headerSecrets: IDictionary, key: keyof typeof headers & string) => {
+      if (key.slice(0, 4) === "O-S-") {
+        const [module, name] = key.slice(4).split("/");
+        const dotPath = `${module}.${name}`;
+        set(headerSecrets, dotPath, headers[key]);
+        secrets.push(dotPath);
+      }
+      return headerSecrets;
+    },
+    {}
+  );
 
   saveSecretsLocally(localSecrets);
   return secrets.length > 0;
@@ -85,30 +88,35 @@ export function setSecretHeaders(headers: IDictionary): boolean {
 export function getHeaderSecrets() {
   const log = logger().reloadContext();
   const modules = getLocalSecrets();
-  return Object.keys(modules).reduce((headerSecrets: IDictionary, module: keyof typeof modules & string) => {
-    const secrets = modules[module];
-    if (typeof secrets === "object") {
-      for (const secret of Object.keys(secrets)) {
-        headerSecrets[`O-S-${module}/${secret}`] = modules[module][secret];
-      }
-    } else {
-      log.warn(
-        `Attempt to generate header secrets but module "${module}" is not a hash of name/values. Ignoring this module but continuing.`,
-        {
-          module: module,
-          type: typeof secrets,
-          localModules: Object.keys(modules),
+  return Object.keys(modules).reduce(
+    (headerSecrets: IDictionary, module: keyof typeof modules & string) => {
+      const secrets = modules[module];
+      if (typeof secrets === "object") {
+        for (const secret of Object.keys(secrets)) {
+          headerSecrets[`O-S-${module}/${secret}`] = modules[module][secret];
         }
-      );
-    }
+      } else {
+        log.warn(
+          `Attempt to generate header secrets but module "${module}" is not a hash of name/values. Ignoring this module but continuing.`,
+          {
+            module: module,
+            type: typeof secrets,
+            localModules: Object.keys(modules),
+          }
+        );
+      }
 
-    return headerSecrets;
-  }, {});
+      return headerSecrets;
+    },
+    {}
+  );
 }
 
 export function setContentType(type: string) {
   if (!type.includes("/")) {
-    throw new Error(`The value sent to setContentType ("${type}") is not valid; it must be a valid MIME type.`);
+    throw new Error(
+      `The value sent to setContentType ("${type}") is not valid; it must be a valid MIME type.`
+    );
   }
 
   contentType = type;

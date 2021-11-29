@@ -23,8 +23,10 @@
     "autoindex": "yarn do autoindex",
     "clean": "rimraf dist",
     "clean:nuclear": "yarn rimraf node_modules yarn.lock && yarn cache clean && yarn && yarn upgrade",
-    "build": "run-s clean build:tsup",
-    "build:tsup": "npx tsup src/index.ts --format=esm,cjs --minify --clean --dts",
+    "build": "run-s clean build:bundle",
+    "build:bundle": "run-p build:wrapper build:devops",
+    "build:wrapper": "npx tsup src/index.ts --format=esm,cjs --minify --clean --dts",
+    "build:devops": "npx tsup src/devops/index.ts --format=esm,cjs --minify --clean --dts --out-dir dist/devops",
     "circular": "yarn madge --circular src/**/*.ts",
     "docs": "node_modules/.bin/vuepress dev docs",
     "docs:build": "node_modules/.bin/vuepress build docs",
@@ -34,9 +36,9 @@
     "lint:tsc": "tsc --noEmit",
     "test": "jest",
     "visualize": "yarn madge src --ts-config tsconfig.json --extensions ts -i /tmp/dep-visualize.png && open /tmp/dep-visualize.png",
-    "watch": "yarn run-p watch:esnext watch:cjs",
-    "watch:cjs": "yarn tsc -P tsconfig.cjs.json -w",
-    "watch:esnext": "yarn tsc -P tsconfig.esnext.json -w"
+    "watch": "run-p watch:wrapper watch:devops",
+    "watch:wrapper": "npx tsup src/index.ts --format=esm,cjs --minify --clean --dts --watch",
+    "watch:devops": "npx tsup src/devops/index.ts --format=esm,cjs --minify --clean --dts --out-dir dist/devops --watch"
   },
   "dependencies": {},
   "devDependencies": {

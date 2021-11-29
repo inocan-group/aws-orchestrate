@@ -1,5 +1,5 @@
 import { IAwsApiGatewayResponse } from "common-types";
-import { isServerlessError, ServerlessError } from "~/errors";
+import { isKnownError, isServerlessError, isUnknownError, ServerlessError } from "~/errors";
 import { IHandlerFunction, isApiGatewayResponse } from "~/types";
 import { wrapper } from "~/wrapper-fn";
 import { DEFAULT_ERROR_CODE } from "~/wrapper-fn/util";
@@ -59,7 +59,7 @@ describe("Handler Wrapper => ", () => {
       return { request, context, testing: true };
     });
     const results = await wrapped(simpleEvent, {} as any);
-    expect(results).toBeObject();
+    expect(typeof results).toBe("object");
     expect((results as IResponse).context.callbackWaitsForEmptyEventLoop).toBe(false);
   });
 
@@ -78,7 +78,7 @@ describe("Handler Wrapper => ", () => {
     const wrapped = wrapper(handlerFn);
     const results = (await wrapped(simpleEvent, {} as any)) as IResponse;
 
-    expect(results).toBeObject();
+    expect(typeof results).toBe("object");
 
     expect(results).toHaveProperty("request");
     expect(results).toHaveProperty("context");
@@ -108,9 +108,9 @@ describe("Handler Wrapper => ", () => {
     try {
       const event = SimpleApiGatewayEvent_V2(simpleEvent);
       result = await wrapped(event, {} as any);
-    } catch (error) {
+    } catch {
       throw new Error(
-        `a ServerlessError thrown in handler should not result in the wrapper throwing an error when called from API Gateway, instead got error: ${error.message}`
+        "a ServerlessError thrown in handler should not result in the wrapper throwing an error when called from API Gateway"
       );
     }
     expect(result).toHaveProperty("statusCode");
@@ -129,9 +129,13 @@ describe("Handler Wrapper => ", () => {
     try {
       await wrapped({ foo: "foo", bar: 888 }, {} as any);
     } catch (error) {
-      expect(error.code).toBe("unknown-error");
-      expect(error.name).toBe("UnknownError");
-      expect(error.httpStatus).toBe(DEFAULT_ERROR_CODE);
+      if (isUnknownError(error)) {
+        expect(error.code).toBe("unknown-error");
+        expect(error.name).toBe("UnknownError");
+        expect(error.httpStatus).toBe(DEFAULT_ERROR_CODE);
+      } else {
+        throw new Error("Error should have been an UnknownError");
+      }
     }
   });
 
@@ -143,9 +147,13 @@ describe("Handler Wrapper => ", () => {
       await wrapped({ foo: "foo", bar: 888 }, {} as any);
       throw new Error("handler should have failed");
     } catch (error) {
-      expect(error.code).toBe("unknown-error");
-      expect(error.name).toBe("UnknownError");
-      expect(error.httpStatus).toBe(400);
+      if (isUnknownError(error)) {
+        expect(error.code).toBe("unknown-error");
+        expect(error.name).toBe("UnknownError");
+        expect(error.httpStatus).toBe(400);
+      } else {
+        throw new Error("Error should have been an UnknownError");
+      }
     }
   });
 
@@ -156,8 +164,12 @@ describe("Handler Wrapper => ", () => {
     try {
       await wrapped({ foo: "foo", bar: 888 }, {} as any);
     } catch (error) {
-      expect(error.name).toBe("KnownError");
-      expect(error.httpStatus).toBe(404);
+      if (isKnownError(error)) {
+        expect(error.name).toBe("KnownError");
+        expect(error.httpStatus).toBe(404);
+      } else {
+        throw new Error("Error should have been an KnownError");
+      }
     }
   });
 
@@ -167,8 +179,12 @@ describe("Handler Wrapper => ", () => {
       await wrapped({ foo: "foo", bar: 777 }, {} as any);
       throw new Error("the above call should have errored out");
     } catch (error) {
-      expect(error.code).toBe("secret-code");
-      expect(error.httpStatus).toBe(401);
+      if (isKnownError(error)) {
+        expect(error.code).toBe("secret-code");
+        expect(error.httpStatus).toBe(401);
+      } else {
+        throw new Error("Error should have been an KnownError");
+      }
     }
   });
 });

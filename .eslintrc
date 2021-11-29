@@ -1,8 +1,5 @@
 {
-  "env": {
-    "es2021": true
-  },
-  "extends": ["plugin:import/warnings", "plugin:import/typescript", "plugin:unicorn/recommended"],
+  "extends": ["plugin:import/typescript", "plugin:unicorn/recommended"],
   "plugins": ["@typescript-eslint", "import", "promise", "unicorn"],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {

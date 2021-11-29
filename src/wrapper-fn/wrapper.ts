@@ -1,24 +1,19 @@
 import {
-  value IAwsLambdaProxyIntegrationRequest,
-  value IAwsLambdaContext,
-  value IAwsApiGatewayResponse,
-  value isLambdaProxyRequest,
+  IAwsLambdaProxyIntegrationRequest,
+  IAwsLambdaContext,
+  IAwsApiGatewayResponse,
+  isLambdaProxyRequest,
 } from "common-types";
-import { value logger } from "aws-log";
+import { logger } from "aws-log";
 import {
-  value IPathParameters,
-  value IQueryParameters,
-  value IWrapperContext,
-  value IWrapperOptions,
-  value IWrapperMetrics,
+  IPathParameters,
+  IQueryParameters,
+  IWrapperContext,
+  IWrapperOptions,
+  IWrapperMetrics,
 } from "~/types";
-import { value ErrorMeta, value extractRequestState, value XRay } from "./util";
-import {
-  value handleError,
-  value handlePrepError,
-  value handleReturn,
-  value prepForHandler,
-} from "./steps";
+import { ErrorMeta, extractRequestState, XRay } from "./util";
+import { handleError, handlePrepError, handleReturn, prepForHandler } from "./steps";
 
 /**
  * **wrapper**
@@ -68,7 +63,7 @@ export const wrapper = function <
 
     // FN EXECUTION and ERROR HANDLING
     xray.startHandler();
-    metrics = { ...metrics, kind: "prepped", ...{ prepTime: Date.now() - metrics.startTime } };
+    metrics = { ...metrics, kind: "prepped",  prepTime: Date.now() - metrics.startTime  };
     try {
       response = await fn(state.request, wrapperContext);
       xray.finishHandler();

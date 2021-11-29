@@ -2,6 +2,7 @@ import { isLambdaFunctionArn } from "common-types";
 import { buildInvocationRequest } from "~/wrapper-fn/util/invoke";
 import { parseArn } from "~/shared";
 import { getStage } from "aws-log";
+import { isServerlessError } from "~/errors";
 
 describe("invoke :: ARN Parsing →", () => {
   it("fully qualified ARN is parsed", () => {
@@ -54,9 +55,13 @@ describe("invoke :: ARN Parsing →", () => {
       console.log(result.arn);
       throw new Error("should not have gotten here");
     } catch (error) {
-      expect(error.message).toInclude("appName");
-      expect(error.name).toEqual("ServerlessError");
-      expect(error.classification).toBe("arn/missing-app-name");
+      if (isServerlessError(error)) {
+        expect(error.message).toInclude("appName");
+        expect(error.name).toEqual("ServerlessError");
+        expect(error.classification).toBe("arn/missing-app-name");
+      } else {
+        throw new Error("Error should have been an UnknownError");
+      }
     }
   });
 });
@@ -71,9 +76,9 @@ describe("invoke :: buildInvocationRequest() →", () => {
       foo: 1,
       bar: 2,
     });
-    expect(response.Payload).toBeString();
+    expect(typeof response.Payload).toBe("string");
     const payload = JSON.parse(response.Payload as string);
-    expect(payload.headers).toBeObject();
+    expect(typeof payload.headers).toBe("object");
     expect(payload.headers).toHaveProperty("X-Correlation-Id");
     expect(payload.headers["x-calling-function"]);
 

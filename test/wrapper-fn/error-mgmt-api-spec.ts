@@ -6,7 +6,7 @@ import {
 } from "common-types";
 import * as helpers from "../helpers/helpers";
 
-import { isUnknownError, ServerlessError, UnknownError } from "~/errors";
+import { isServerlessError, isUnknownError, ServerlessError, UnknownError } from "~/errors";
 import { wrapper } from "~/wrapper-fn";
 import { IErrorHandlerFunction, IHandlerFunction } from "~/types";
 
@@ -43,10 +43,14 @@ describe("Handling errors => ", () => {
         } as IAwsLambdaContext
       );
     } catch (error) {
-      expect(error.name).toBe("ServerlessError");
-      expect(error.httpStatus).toBe(ERROR_CODE);
-      expect(error.correlationId).toBe(CORRELATION_ID);
-      expect(error.awsRequestId).toBe(AWS_REQUEST_ID);
+      if (isServerlessError(error)) {
+        expect(error.name).toBe("ServerlessError");
+        expect(error.httpStatus).toBe(ERROR_CODE);
+        expect(error.correlationId).toBe(CORRELATION_ID);
+        expect(error.awsRequestId).toBe(AWS_REQUEST_ID);
+      } else {
+        throw new Error("Error should have been an UnknownError");
+      }
     }
   });
   it("throwing an Error should be caught by error handler and rethrown as UnknownError", async () => {
