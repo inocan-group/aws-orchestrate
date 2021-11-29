@@ -88,12 +88,9 @@
     "vuepress-plugin-autometa": "^0.1.13",
     "vuepress-plugin-mermaidjs": "^1.8.0"
   },
-  "optionalDependencies": {
-    "dd": "^0.14.1"
-  },
   "peerDependencies": {
     "aws-log": "^0.11.2",
-    "aws-ssm": "^0.3.13",
+    "aws-ssm": "^0.4.0",
     "common-types": "^1.24.5",
     "inferred-types": "^0.17.0",
     "native-dash": "^1.12.0"

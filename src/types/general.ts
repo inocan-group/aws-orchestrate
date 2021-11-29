@@ -1,7 +1,7 @@
 import { IAwsLambdaProxyIntegrationRequest, Omit, arn } from "common-types";
 import { IAwsLogConfig } from "aws-log";
 import type { Lambda, StepFunctions } from "aws-sdk";
-import type * as AwsXray from "aws-xray-sdk-core/lib/aws-xray";
+import type * as AwsXray from "aws-xray-sdk-core";
 
 /**
  * The API Gateway's _proxy integration request_ structure with the
@@ -54,7 +54,7 @@ export interface IWrapperOptions {
    * import { Lambda } from "aws-sdk";
    * ```
    */
-  Lambda?: { new (): Lambda } ;
+  Lambda?: { new (): Lambda };
 
   /**
    * **XRay**

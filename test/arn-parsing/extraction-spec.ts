@@ -69,9 +69,13 @@ describe("extractAccount()", () => {
       extractAccount(arn);
       throw new Error("invalid account should have thrown error");
     } catch (error) {
-      expect(error).toBeInstanceOf(ServerlessError);
-      expect(error.code).toBe("missing-account");
-      expect(error.httpStatus).toBe(500);
+      if (isServerlessError(error)) {
+        expect(error).toBeInstanceOf(ServerlessError);
+        expect(error.code).toBe("missing-account");
+        expect(error.httpStatus).toBe(500);
+      } else {
+        throw new Error("Error should have been an UnknownError");
+      }
     }
   });
 });
@@ -89,8 +93,12 @@ describe("extractRegion()", () => {
       extractRegion(arn);
       throw new Error("extraction should have produced error");
     } catch (error) {
-      expect(error).toBeInstanceOf(ServerlessError);
-      expect(error.code).toBe("invalid-region");
+      if (isServerlessError(error)) {
+        expect(error).toBeInstanceOf(ServerlessError);
+        expect(error.code).toBe("invalid-region");
+      } else {
+        throw new Error("Error should have been an UnknownError");
+      }
     }
   });
 
@@ -145,8 +153,13 @@ describe("extractStage()", () => {
     try {
       expect(extractStage(arnGen("function", "invalid"))).toThrow("Error");
     } catch (error) {
-      expect(error).toBeInstanceOf(ServerlessError);
-      expect(error.code).toBe("missing-stage");
+      if (isServerlessError(error)) {
+        //
+        expect(error).toBeInstanceOf(ServerlessError);
+        expect(error.code).toBe("missing-stage");
+      } else {
+        throw new Error("Error should have been an UnknownError");
+      }
     }
   });
 

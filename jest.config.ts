@@ -1,22 +1,22 @@
-import type { InitialOptionsTsJest } from "ts-jest/dist/types";
-// eslint-disable-next-line unicorn/import-style
+/* eslint-disable unicorn/import-style */
 import { resolve } from "path";
+import type { Config } from "@jest/types";
 
-const config: InitialOptionsTsJest = {
+const config: Config.InitialOptions = {
   verbose: true,
-  preset: "ts-jest/presets/js-with-ts",
-  testMatch: ["**/test/**/?(*-)+(spec|test).ts"],
+  testEnvironment: "jsdom",
+  // roots: ["tests", "src"],
+  transform: {
+    "^.+\\.tsx?$": "ts-jest",
+  },
+  testPathIgnorePatterns: ["/node_modules/", "/on-hold/"],
   moduleNameMapper: {
     "^[/]{0,1}~/(.*)$": resolve(process.cwd(), "src", "$1"),
   },
-  transform: {
-    "^.+\\.tsx?$": "ts-jest",
-    "^.+\\.jsx?$": "ts-jest",
-  },
 
-  transformIgnorePatterns: ["/node_modules/(?!(entity-decode))"],
-  setupFilesAfterEnv: ["jest-extended"],
-  testEnvironment: "node",
+  testMatch: ["**/?(*[-.])+(spec|test).ts"],
+  setupFilesAfterEnv: ["jest-extended/all"],
+  // setupFiles: ["./test/testSetup.ts"],
 };
 
 export default config;

@@ -1,5 +1,5 @@
 import { ILoggerApi } from "aws-log";
-import type * as AwsXray from "aws-xray-sdk-core/lib/aws-xray";
+import type * as AwsXray from "aws-xray-sdk-core";
 import { AwsStage } from "common-types";
 import { getArnComponentsFromEnv } from "~/shared/parse";
 import { IError, IWrapperMetricsClosure } from "~/types";
@@ -47,7 +47,7 @@ export class XRay {
   }
 
   /** closes the "Prep" subsegment to XRAY, optionally with an error */
-  public finishPrep<T extends IError>(error?: T) {
+  public finishPrep<T extends unknown>(error?: T) {
     if (this.segment && this.prep) {
       if (error) {
         this.prep.addError(error);

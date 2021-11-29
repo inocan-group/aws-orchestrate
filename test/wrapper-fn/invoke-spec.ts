@@ -78,9 +78,8 @@ describe("invoke :: buildInvocationRequest() →", () => {
     });
     expect(typeof response.Payload).toBe("string");
     const payload = JSON.parse(response.Payload as string);
-    expect(typeof payload.headers).toBe("object");
-    expect(payload.headers).toHaveProperty("X-Correlation-Id");
-    expect(payload.headers["x-calling-function"]);
+    expect(payload.foo).toBe(1);
+    expect(payload.bar).toBe(2);
 
     expect(response.FunctionName).toEqual(
       `arn:aws:lambda:us-east-1:9378553667040:function:${process.env.APP_NAME}-${process.env.AWS_STAGE}-myFunc`
