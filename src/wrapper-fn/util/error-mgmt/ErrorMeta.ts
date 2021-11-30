@@ -82,7 +82,9 @@ export class ErrorMeta<I, O> {
       try {
         this._defaultHandler = isLambdaFunctionArn(arg) ? arg : parseLambdaFunctionArn(arg).arn;
       } catch (parseError) {
-        const message = `While attempting to parse the passed in ARN [${arg}] for default error handling, an error occurred: ${parseError.message}`;
+        const message = `While attempting to parse the passed in ARN [${arg}] for default error handling, an error occurred: ${
+          (parseError as Error)?.message
+        }`;
         if (isServerlessError(parseError)) {
           parseError.message = message;
           throw parseError;

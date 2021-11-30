@@ -49,11 +49,11 @@ export async function handleError<
 
     const classification =
       typeof (error as IDictionary).classification === "string" &&
-      isTypeSubtype(((error as unknown) as IServerlessError).classification)
+      isTypeSubtype((error as unknown as IServerlessError).classification)
         ? (error as IDictionary).classification
         : "wrapper-fn/unknown-error";
     const err = isServerlessError(error) ? error : new UnknownError(error, context, classification);
-    err.underlyingError = underlyingError;
+    err.underlyingError = underlyingError as Error;
 
     metrics = {
       ...metrics,

@@ -237,7 +237,7 @@ export function parsePartiallyQualifiedArn(
   try {
     arn.arn = buildArn(arn as Omit<IParsedArn, "arn">);
   } catch (buildError) {
-    buildError.message = errMessage;
+    (buildError as Error).message = errMessage;
     throw buildError;
   }
 
