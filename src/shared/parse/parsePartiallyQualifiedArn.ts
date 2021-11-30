@@ -148,7 +148,7 @@ export function parsePartiallyQualifiedArn(
         missingMessage("account", partial, "AWS_ACCOUNT", env),
         "arn/missing-account"
       );
-      error.underlyingError = underlyingError;
+      error.underlyingError = underlyingError as Error;
     }
   }
 

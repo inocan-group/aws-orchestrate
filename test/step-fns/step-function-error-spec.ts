@@ -50,15 +50,20 @@ describe("Step Function Builder Error Handler", () => {
       s
         .name("fooStateMachine")
         .stepFunction(fooStepFn)
-        .catch((c) => c.allErrors(finalizedStepFn, "$.foo"))
+        // .catch((error) => error.allErrors(finalizedStepFn, "$.foo"))
+        // TODO: there appears to be a typing issue here; this solution is temp workaround
+        .catch((error: any) => error.allErrors(finalizedStepFn, "$.foo"))
     ).toJSON();
 
+    // TODO: this has no typing and I would think could be easily typed
     const resultStates = Object.values(stateMachine.definition.States);
 
     expect(
       resultStates
-        .filter((r) => r.Type === "Task" && r.Catch !== undefined)
-        .every((r: IStepFunctionStep) => {
+        // TODO: this is just to get this line to compile (there was only implicit typing before)
+        .filter((r: any) => r.Type === "Task" && r.Catch !== undefined)
+        // TODO: but now you're explicitly to `IStepFunctionStep` and this is causing issues
+        .every((r: any) => {
           return "Catch" in r
             ? () => {
                 const [defaultHandler] = r.Catch || [];
@@ -75,9 +80,9 @@ describe("Step Function Builder Error Handler", () => {
       .task("handler3", { name: "foo2" })
       .succeed("foo3");
 
-    const fooStepFn = StepFunction((s) => s.catch((c) => c.allErrors(finalizedStepFn))).task(
-      "task1"
-    );
+    const fooStepFn = StepFunction((s) =>
+      s.catch((error) => error.allErrors(finalizedStepFn))
+    ).task("task1");
 
     const stateMachine = StateMachine((s) =>
       s.name("fooStateMachine").stepFunction(fooStepFn)
