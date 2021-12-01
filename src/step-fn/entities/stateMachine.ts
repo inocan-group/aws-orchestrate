@@ -170,7 +170,7 @@ export function StateMachine<T extends string = "state">(
   }
 
   // TODO: this looks a questionable type ... needs more investigation!
-  // Note: this `builderOutput` takes a long time to resolve the 
+  // Note: this `builderOutput` takes a long time to resolve the
   const params = builderOutput.state as IStateMachineParams;
 
   if (!params.stepFunction) {
@@ -392,16 +392,13 @@ export function StateMachine<T extends string = "state">(
         // eslint-disable-next-line unicorn/consistent-destructuring
         const stateName = `${options.namePrefix || ""}${finalizedState.name}`;
 
-        // TODO: Why is index passed in and then not used?
-        const Branches = branches.map((branch, _index) => {
+        const Branches = branches.map((branch) => {
           const branchOpts = branch.deployable.getOptions();
           return parseStepFunction(
             branch.deployable.getState(),
             {
               ...options,
-              ...{
-                ...branchOpts,
-              },
+              ...branchOpts,
             },
             `parallel-${ctx.hashState}`
           );
