@@ -10,7 +10,7 @@ import {
 import { hash } from "native-dash";
 import { parseArn } from "~/shared";
 import {
-  ErrDefn,
+  IErrorHandler,
   Finalized,
   IChoice,
   IFail,
@@ -32,7 +32,7 @@ import { ServerlessError } from "~/errors";
 import {
   Catch,
   ICatchConfig,
-  ICatchFluentApi,
+  ICatchApiBuilder,
   IRetryConfig,
   IRetryFluentApi,
   Retry,
@@ -69,7 +69,7 @@ function toCamelCase(object: any, skip = false) {
   return result;
 }
 
-function getCatchConfig(obj: ICatchConfig | ICatchFluentApi) {
+function getCatchConfig(obj: ICatchConfig | ICatchApiBuilder) {
   return typeof obj === "function" ? Catch(obj) : obj;
 }
 
@@ -93,7 +93,7 @@ export type IStateMachineBuilder<E extends string = ""> = Omit<
     stepFunction<T extends string = "stepFunction">(
       stepFunction: IStepFn
     ): IStateMachineBuilder<E | T>;
-    catch(val: ICatchConfig | ICatchFluentApi): IStateMachineBuilder<E | "catch">;
+    catch(val: ICatchConfig | ICatchApiBuilder): IStateMachineBuilder<E | "catch">;
     type<T extends string = "type">(val: IStateMachine["type"]): IStateMachineBuilder<E | T>;
     loggingConfig<T extends string = "loggingConfig">(
       val: false | IStateMachine["loggingConfig"]
@@ -128,7 +128,7 @@ export function StateMachine<T extends string = "state">(
       stepFunction(val: IStepFn) {
         return api<E | "stepFunction">({ ...state, stepFunction: val });
       },
-      catch(val: ICatchConfig | ICatchFluentApi) {
+      catch(val: ICatchConfig | ICatchApiBuilder) {
         return api<E | "catch">({ ...state, catch: val });
       },
       type(val: IStateMachine["type"]) {
@@ -658,7 +658,7 @@ export function StateMachine<T extends string = "state">(
     (ctx: IStepFunctionParseContext) =>
     (
       error: string,
-      errorHandler: ErrDefn
+      errorHandler: IErrorHandler
     ): [IStepFunctionCatcher[], IDictionary<IStepFunctionStep>] => {
       const errorHandlers: IStepFunctionCatcher[] = [];
       let errorStates: IDictionary<IStepFunctionStep> = {};

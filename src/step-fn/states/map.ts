@@ -9,11 +9,11 @@ import {
   IStore,
   PathVariable,
 } from "~/types";
-import { ICatchConfig, ICatchFluentApi } from "..";
+import { ICatchConfig, ICatchApiBuilder } from "..";
 import { parseAndFinalizeStepFn } from "../entities/state";
 
 export function Map<T extends string>(
-  builder: (builder: IMapBuilder<"state">) => (IMapBuilder<T>)
+  builder: (builder: IMapBuilder<"state">) => IMapBuilder<T>
 ): IMap {
   const api = <E extends string = "state">(state: Partial<IMapState>) => {
     return {
@@ -24,7 +24,7 @@ export function Map<T extends string>(
       stepFunction(val: IStepFn) {
         return api<E | "stepFunction">({ ...state, stepFunction: val });
       },
-      catch(val: ICatchConfig | ICatchFluentApi) {
+      catch(val: ICatchConfig | ICatchApiBuilder) {
         return api<E | "catch">({ ...state, catch: val });
       },
       name(val: string) {

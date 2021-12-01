@@ -138,7 +138,7 @@ export async function handleOtherErrors<
         await context.invoke(errorMgmt.defaultHandler, request);
       } catch (errhandlerError) {
         metrics.underlyingError = true;
-        error.underlyingError = errhandlerError;
+        error.underlyingError = errhandlerError as Error;
         log.warn("The default error handler was invoked but it threw an error during invocation!", {
           error: errhandlerError,
           kind: "error-handler-error",

@@ -50,7 +50,7 @@ export interface IErrorType {
   custom(error: string): string;
 }
 
-export type IResultPath =  `\$.${string}`;
+export type IResultPath = `\$.${string}`;
 
 export interface IErrorTypeSelector {
   (e: IErrorType): string;
@@ -58,11 +58,15 @@ export interface IErrorTypeSelector {
 
 export interface ICatchFluentStepFnApi {
   (sf: ICatchConfigurableStepFn): IConfigurableStepFn | IFinalizedStepFn;
-};
+}
 
 export type IErrorHandlerPointer = ICatchFluentStepFnApi | IStepFnShorthand | IFinalizedStepFn;
 
-export interface ErrDefn {
+/**
+ * Provides configuration information so that errors can be (potentially)
+ * matched and handled.
+ */
+export interface IErrorHandler {
   selector: IErrorHandlerPointer;
   resultPath?: Partial<IResultPath>;
 }
@@ -75,4 +79,3 @@ export interface RetryOptions {
   /** A positive integer, representing the maximum number of retry attempts (default 3). If the error recurs more times than specified, retries cease and normal error handling resumes. A value of 0 is permitted and indicates that the error or errors should never be retried. */
   maxAttempts?: number;
 }
-

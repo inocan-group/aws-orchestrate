@@ -1,5 +1,5 @@
 /* eslint-disable no-use-before-define */
-import { ICatchConfig, ICatchFluentApi, IStepFnState } from "~/step-fn";
+import { ICatchConfig, ICatchApiBuilder, IStepFnState } from "~/step-fn";
 import {
   IState,
   Finalized,
@@ -37,7 +37,7 @@ export interface IStepFnOptions {
   /**
    * Error handler used for all children states unless their overrites this one using `catch` option explicitely
    */
-  catch?: ICatchConfig | ICatchFluentApi;
+  catch?: ICatchConfig | ICatchApiBuilder;
 }
 
 /**
@@ -148,7 +148,7 @@ export interface IStepFunctionFactory {
   /**
    * It accepts states (such as task, choice, etc) `IState` and a step function option hash `IStepFnOptions`
    */
-  catch?: ICatchConfig | ICatchFluentApi;
+  catch?: ICatchConfig | ICatchApiBuilder;
   (...params: IStepFnShorthand): IConfigurableStepFn;
 }
 

@@ -1,4 +1,4 @@
-import { ICatchConfig, ICatchFluentApi, IRetryConfig, IRetryFluentApi } from "~/step-fn";
+import { ICatchConfig, ICatchApiBuilder, IRetryConfig, IRetryFluentApi } from "~/step-fn";
 import {
   IBaseOptions,
   IBaseState,
@@ -17,7 +17,7 @@ export interface IParallelConfiguration {
 }
 
 export interface IParallelOptions extends IBaseOptions {
-  catch?: ICatchConfig | ICatchFluentApi;
+  catch?: ICatchConfig | ICatchApiBuilder;
   /** An array of objects, called Retriers that define a retry policy in case the state encounters runtime errors. */
   retry?: IRetryConfig | IRetryFluentApi;
 }

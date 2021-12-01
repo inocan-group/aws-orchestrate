@@ -2,7 +2,7 @@
 import { hash } from "native-dash";
 import { ServerlessError } from "~/errors";
 import {
-  ErrDefn,
+  IErrorHandler,
   Finalized,
   IConfigurableStepFn,
   IErrorHandlerPointer,
@@ -14,6 +14,7 @@ import {
   IStore,
   RetryOptions,
 } from "~/types";
+import { hasState } from "./type-guards";
 
 /**
  * Step Function Errors
@@ -126,57 +127,56 @@ export type ICatchApi<E extends string> = Omit<
   E
 >;
 
-function catchWrapper<T extends string>(state: Record<string, ErrDefn>) {
-  return <E extends string = "">(opts: ErrDefn, offset: string): ICatchApi<T | E> => {
-    const newState = { ...state, [offset]: opts };
-    return catchApi<T | E>(newState);
-  };
-}
-
 export type ICatchConfig = {
-  [errorTypes.all]?: ErrDefn;
-  [errorTypes.dataLimitExceeded]?: ErrDefn;
-  [errorTypes.permissions]?: ErrDefn;
-  [errorTypes.runtime]?: ErrDefn;
-  [errorTypes.taskFailed]?: ErrDefn;
-  [errorTypes.timeout]?: ErrDefn;
-} & { [key: string]: ErrDefn };
+  [errorTypes.all]?: IErrorHandler;
+  [errorTypes.dataLimitExceeded]?: IErrorHandler;
+  [errorTypes.permissions]?: IErrorHandler;
+  [errorTypes.runtime]?: IErrorHandler;
+  [errorTypes.taskFailed]?: IErrorHandler;
+  [errorTypes.timeout]?: IErrorHandler;
+} & { [key: string]: IErrorHandler };
 
-function catchApi<T extends string = "state">(state: Record<string, ErrDefn>) {
-  const config = catchWrapper<T>(state);
+function catchApi<TExclude extends string = "state">(state: Record<string, IErrorHandler>) {
+  const apiWrapper = <T extends string>(s: Record<string, IErrorHandler>, offset: string) => {
+    return (selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) => {
+      const newState: Record<string, IErrorHandler> = { ...s, [offset]: { selector, resultPath } };
+      return catchApi<T | TExclude>(newState) as unknown as ICatchApi<T | TExclude>;
+    };
+  };
+
   return {
     state,
-    allErrors<E extends string>(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config<"allErrors" | E>({ selector, resultPath }, errorTypes.all);
-    },
-    runtime(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config<"runtime">({ selector, resultPath }, errorTypes.runtime);
-    },
-    timeout(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config<"timeout">({ selector, resultPath }, errorTypes.timeout);
-    },
-    dataLimitExceeded(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config<"dataLimitExceeded">({ selector, resultPath }, errorTypes.dataLimitExceeded);
-    },
-    taskFailed(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config<"taskFailed">({ selector, resultPath }, errorTypes.taskFailed);
-    },
-    permissions(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config<"permissions">({ selector, resultPath }, errorTypes.permissions);
-    },
+    allErrors: apiWrapper<"allErrors">(state, errorTypes.all),
+    runtime: apiWrapper<"runtime">(state, errorTypes.runtime),
+    timeout: apiWrapper<"timeout">(state, errorTypes.timeout),
+    dataLimitExceeded: apiWrapper<"dataLimitExceeded">(state, errorTypes.dataLimitExceeded),
+    taskFailed: apiWrapper<"taskFailed">(state, errorTypes.taskFailed),
+    permissionsapiWrapper: apiWrapper<"permissions">(state, errorTypes.permissions),
+
     custom<C extends string>(
       customError: C,
       selector: IErrorHandlerPointer,
       resultPath?: Partial<IResultPath>
     ) {
-      return config({ selector, resultPath }, customError);
+      return apiWrapper<typeof customError>(state, customError)(selector, resultPath);
     },
-  };
+  } as unknown as ICatchApi<TExclude>;
 }
 
-export type ICatchFluentApi<TExclude extends ICatchApi<string>> = (
-  api: ICatchApi<never>
-) => TExclude;
+/**
+ * The builder API format provided to a consumer of this library. It's intention
+ * is to allow the user to configure a error handler. For example:
+ *
+ * ```ts
+ * const handler = Catch(h => h.allErrors(s => s.task('foobar')));
+ * ```
+ *
+ * where the consumer is providing the content within the `Catch()` function.
+ */
+export type ICatchApiBuilder<TExclude extends string = never> = (
+  api: ICatchApi<TExclude>
+) => ICatchApi<string>;
+
 export type IRetryFluentApi<T extends string = never> = (api: IRetryApi<"">) => IRetryApi<T>;
 
 /**
@@ -185,8 +185,13 @@ export type IRetryFluentApi<T extends string = never> = (api: IRetryApi<"">) => 
  *
  * @param api a callback that exposes methods to be used to defined an error handler.
  */
-export function Catch<TExclude extends string = "">(api: ICatchFluentApi<TExclude>) {
-  return api(catchApi<TExclude>({})).state;
+export function Catch<TExclude extends string = never>(api: ICatchApiBuilder<TExclude>) {
+  const handler = api(catchApi({}));
+  if (hasState(handler)) {
+    return handler.state;
+  } else {
+    throw new Error("Catch recieved an invalid return; needs an object with 'state'");
+  }
 }
 
 function retryWrapper<T extends string>(state: IRetryConfig) {
@@ -210,6 +215,7 @@ function getFirstState(finalizedStepFunction: IFinalizedStepFn) {
 
   return firstState.name;
 }
+
 export function goToConfiguration(
   finalizedState: Finalized<IState> | IFinalizedStepFn | string
 ): Finalized<IGoTo> {

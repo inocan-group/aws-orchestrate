@@ -1,5 +1,5 @@
 import { IDictionary } from "common-types";
-import { ICatchConfig, ICatchFluentApi, IRetryConfig, IRetryFluentApi } from "~/step-fn";
+import { ICatchConfig, ICatchApiBuilder, IRetryConfig, IRetryFluentApi } from "~/step-fn";
 import type { IBaseState, IFinalizedStepFn, IOptionsWithInput, IStepFnShorthand } from "~/types";
 import { IStepFn, IStepFnFluentApi } from "./stepFunction";
 
@@ -19,7 +19,7 @@ export interface IMapOptions extends IOptionsWithInput {
   maxConcurrency?: number;
   /** An array of objects, called Retriers that define a retry policy in case the state encounters runtime errors. */
   retry?: IRetryConfig | IRetryFluentApi;
-  catch?: ICatchConfig | ICatchFluentApi;
+  catch?: ICatchConfig | ICatchApiBuilder;
 }
 export type IMapState = IMapOptions & { stepFunction: IStepFn };
 export interface IMapUseConfiguration<T> {
@@ -36,7 +36,7 @@ export type IMapBuilder<E extends string = ""> = Omit<
      */
     stepFunction<T extends string = "stepFunction">(stepFunction: IStepFn): IMapBuilder<E | T>;
     itemsPath<T extends string = "itemsPath">(val: PathVariable): IMapBuilder<E | T>;
-    catch<T extends string = "catch">(val: ICatchConfig | ICatchFluentApi): IMapBuilder<E | T>;
+    catch<T extends string = "catch">(val: ICatchConfig | ICatchApiBuilder): IMapBuilder<E | T>;
     name<T extends string = "name">(val: string): IMapBuilder<E | T>;
     options<T extends string = "options">(
       val: Omit<IMapOptions, "iterator" | "itemsPath" | "name" | "catch">
