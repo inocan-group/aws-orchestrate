@@ -39,7 +39,7 @@ export const errorTypes: IErrorType = {
  * @param api a callback that exposes methods to be used to defined an error retry handler.
  */
 export function Retry<T extends string = never>(api: (api: IRetryApi<"">) => IRetryApi<T>) {
-  const result = (api(retryApi({})) as unknown) as IRetryApi<"">;
+  const result = api(retryApi({})) as unknown as IRetryApi<"">;
   return result.state;
 }
 
@@ -52,7 +52,9 @@ export type IRetryConfig = {
   [errorTypes.timeout]?: RetryOptions;
 } & { [key: string]: RetryOptions };
 
-export type IRetryConfigurator<E extends string, T extends string = ""> = (opts: RetryOptions) => IRetryApi<E | T>;
+export type IRetryConfigurator<E extends string, T extends string = ""> = (
+  opts: RetryOptions
+) => IRetryApi<E | T>;
 export type IRetryCustomConfigurator<E extends string, T extends string = ""> = (
   customError: string,
   opts: RetryOptions
@@ -100,10 +102,10 @@ function retryApi<T extends string = "state">(state: Record<string, RetryOptions
   };
 }
 
-export type ICatchConfigurator<E extends string, T extends string = ""> = (
+export type ICatchConfigurator<T extends string> = (
   selector: IErrorHandlerPointer,
   resultPath?: Partial<IResultPath>
-) => ICatchApi<E | T>;
+) => ICatchApi<T>;
 export type ICatchCustomConfigurator<E extends string, T extends string = ""> = (
   customError: string,
   selector: IErrorHandlerPointer,
@@ -113,12 +115,12 @@ export type ICatchCustomConfigurator<E extends string, T extends string = ""> = 
 export type ICatchApi<E extends string> = Omit<
   {
     state: ICatchConfig;
-    allErrors: ICatchConfigurator<E, "allErrors">;
-    runtime: ICatchConfigurator<E, "runtime">;
-    timeout: ICatchConfigurator<E, "timeout">;
-    dataLimitExceeded: ICatchConfigurator<E, "dataLimitExceeded">;
-    taskFailed: ICatchConfigurator<E, "taskFailed">;
-    permissions: ICatchConfigurator<E, "permissions">;
+    allErrors: ICatchConfigurator<E | "allErrors">;
+    runtime: ICatchConfigurator<E | "runtime">;
+    timeout: ICatchConfigurator<E | "timeout">;
+    dataLimitExceeded: ICatchConfigurator<E | "dataLimitExceeded">;
+    taskFailed: ICatchConfigurator<E | "taskFailed">;
+    permissions: ICatchConfigurator<E | "permissions">;
     custom: ICatchCustomConfigurator<E>;
   },
   E
@@ -144,31 +146,37 @@ function catchApi<T extends string = "state">(state: Record<string, ErrDefn>) {
   const config = catchWrapper<T>(state);
   return {
     state,
-    allErrors(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config<"allErrors">({selector, resultPath}, errorTypes.all);
+    allErrors<E extends string>(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
+      return config<"allErrors" | E>({ selector, resultPath }, errorTypes.all);
     },
     runtime(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config<"runtime">({selector, resultPath}, errorTypes.runtime);
+      return config<"runtime">({ selector, resultPath }, errorTypes.runtime);
     },
     timeout(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config<"timeout">({selector, resultPath}, errorTypes.timeout);
+      return config<"timeout">({ selector, resultPath }, errorTypes.timeout);
     },
     dataLimitExceeded(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config<"dataLimitExceeded">({selector, resultPath}, errorTypes.dataLimitExceeded);
+      return config<"dataLimitExceeded">({ selector, resultPath }, errorTypes.dataLimitExceeded);
     },
     taskFailed(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config<"taskFailed">({selector, resultPath}, errorTypes.taskFailed);
+      return config<"taskFailed">({ selector, resultPath }, errorTypes.taskFailed);
     },
     permissions(selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config<"permissions">({selector, resultPath}, errorTypes.permissions);
+      return config<"permissions">({ selector, resultPath }, errorTypes.permissions);
     },
-    custom<C extends string>(customError: C, selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) {
-      return config({selector, resultPath}, customError);
+    custom<C extends string>(
+      customError: C,
+      selector: IErrorHandlerPointer,
+      resultPath?: Partial<IResultPath>
+    ) {
+      return config({ selector, resultPath }, customError);
     },
   };
 }
 
-export type ICatchFluentApi<T extends string = never> = (api: ICatchApi<"">) => ICatchApi<T>;
+export type ICatchFluentApi<TExclude extends ICatchApi<string>> = (
+  api: ICatchApi<never>
+) => TExclude;
 export type IRetryFluentApi<T extends string = never> = (api: IRetryApi<"">) => IRetryApi<T>;
 
 /**
@@ -177,9 +185,8 @@ export type IRetryFluentApi<T extends string = never> = (api: IRetryApi<"">) => 
  *
  * @param api a callback that exposes methods to be used to defined an error handler.
  */
-export function Catch<T extends string = never>(api: ICatchFluentApi<T>) {
-  const result = (api(catchApi({})) as unknown) as ICatchApi<"">;
-  return result.state;
+export function Catch<TExclude extends string = "">(api: ICatchFluentApi<TExclude>) {
+  return api(catchApi<TExclude>({})).state;
 }
 
 function retryWrapper<T extends string>(state: IRetryConfig) {
@@ -203,15 +210,17 @@ function getFirstState(finalizedStepFunction: IFinalizedStepFn) {
 
   return firstState.name;
 }
-export function goToConfiguration(finalizedState: Finalized<IState> | IFinalizedStepFn | string): Finalized<IGoTo> {
+export function goToConfiguration(
+  finalizedState: Finalized<IState> | IFinalizedStepFn | string
+): Finalized<IGoTo> {
   const hashState = hash(JSON.stringify(finalizedState));
 
   const next =
     typeof finalizedState === "string" // is next state name
       ? finalizedState
-      : (isState(finalizedState) // is next state object
+      : isState(finalizedState) // is next state object
       ? finalizedState.name
-      : getFirstState(finalizedState)); // is finalized StepFn which has first state finalized
+      : getFirstState(finalizedState); // is finalized StepFn which has first state finalized
 
   return {
     type: "GoTo",

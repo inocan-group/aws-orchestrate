@@ -1,4 +1,4 @@
-import { IStepFunctionStep, IStepFunctionTask } from "common-types";
+import { IStepFunctionTask } from "common-types";
 import { State } from "~/step-fn/entities/state";
 import { StateMachine } from "~/step-fn/entities/stateMachine";
 import { StepFunction } from "~/step-fn/entities/stepFunction";
@@ -45,14 +45,12 @@ describe("Step Function Builder Error Handler", () => {
       .task("handler3", { name: "foo2" })
       .succeed("foo3");
     const fooStepFn = StepFunction().task("task1");
-
+    Catch((e) => e.allErrors(finalizedStepFn));
     const stateMachine = StateMachine((s) =>
       s
         .name("fooStateMachine")
         .stepFunction(fooStepFn)
-        // .catch((error) => error.allErrors(finalizedStepFn, "$.foo"))
-        // TODO: there appears to be a typing issue here; this solution is temp workaround
-        .catch((error: any) => error.allErrors(finalizedStepFn, "$.foo"))
+        .catch((error) => error.allErrors(finalizedStepFn, "$.foo"))
     ).toJSON();
 
     // TODO: this has no typing and I would think could be easily typed
@@ -61,7 +59,7 @@ describe("Step Function Builder Error Handler", () => {
     expect(
       resultStates
         // TODO: this is just to get this line to compile (there was only implicit typing before)
-        .filter((r: any) => r.Type === "Task" && r.Catch !== undefined)
+        .filter((r) => r.Type === "Task" && r.Catch !== undefined)
         // TODO: but now you're explicitly to `IStepFunctionStep` and this is causing issues
         .every((r: any) => {
           return "Catch" in r
@@ -80,9 +78,9 @@ describe("Step Function Builder Error Handler", () => {
       .task("handler3", { name: "foo2" })
       .succeed("foo3");
 
-    const fooStepFn = StepFunction((s) =>
-      s.catch((error) => error.allErrors(finalizedStepFn))
-    ).task("task1");
+    const fooStepFn = StepFunction({
+      catch: Catch((error) => error.allErrors(finalizedStepFn)),
+    }).task("task1");
 
     const stateMachine = StateMachine((s) =>
       s.name("fooStateMachine").stepFunction(fooStepFn)
@@ -92,8 +90,8 @@ describe("Step Function Builder Error Handler", () => {
 
     expect(
       resultStates
-        .filter((r) => r.Type === "Task" && r.Catch !== undefined)
-        .every((r: IStepFunctionStep) => {
+        .filter((r: any) => r.Type === "Task" && r.Catch !== undefined)
+        .every((r: any) => {
           return "Catch" in r
             ? () => {
                 const [defaultHandler] = r.Catch || [];
@@ -129,7 +127,7 @@ describe("Step Function Builder Error Handler", () => {
 
     expect(
       resultStates
-        .filter((r) => r.Type === "Task" && r.Catch !== undefined)
+        .filter((r: any) => r.Type === "Task" && r.Catch !== undefined)
         .every((r) => {
           const task = r as unknown as IStepFunctionTask;
           const [defaultHandler] = task.Catch || [];

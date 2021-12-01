@@ -1,9 +1,9 @@
+/* eslint-disable unicorn/prefer-object-from-entries */
 /* eslint-disable unicorn/consistent-function-scoping */
 import {
   IDictionary,
   IStepFunctionStep,
   IStepFunctionCatcher,
-  IStepFunction,
   IStepFunctionChoiceItem,
   IStateMachine,
 } from "common-types";
@@ -93,9 +93,7 @@ export type IStateMachineBuilder<E extends string = ""> = Omit<
     stepFunction<T extends string = "stepFunction">(
       stepFunction: IStepFn
     ): IStateMachineBuilder<E | T>;
-    catch<T extends string = "catch">(
-      val: ICatchConfig | ICatchFluentApi
-    ): IStateMachineBuilder<E | T>;
+    catch(val: ICatchConfig | ICatchFluentApi): IStateMachineBuilder<E | "catch">;
     type<T extends string = "type">(val: IStateMachine["type"]): IStateMachineBuilder<E | T>;
     loggingConfig<T extends string = "loggingConfig">(
       val: false | IStateMachine["loggingConfig"]
@@ -164,14 +162,13 @@ export function StateMachine<T extends string = "state">(
     };
   };
 
-  const builderOutput = builder(api<T>({}));
+  // We need to case into the same type but without omitting certains types, such as state
+  const builderOutput = builder(api({})) as IStateMachineBuilder<"">;
   if (!("state" in builderOutput)) {
     throw new ServerlessError(400, "State machine configuration is not defined", "bad-request");
   }
 
-  // TODO: this looks a questionable type ... needs more investigation!
-  // Note: this `builderOutput` takes a long time to resolve the
-  const params = builderOutput.state as IStateMachineParams;
+  const params = builderOutput.state;
 
   if (!params.stepFunction) {
     throw new ServerlessError(400, "No step function defined", "bad-request");
@@ -455,22 +452,20 @@ export function StateMachine<T extends string = "state">(
                 name: `Map-${ctx.hashState}`,
               } as Finalized<IMap>);
 
-        // TODO: why are you pulling `stepFn` off of finalized state if you are not using it?
         const {
           catch: stateErrorHandler,
-          deployable: _stepFn,
-          name: _,
+          deployable: iteratorStepFn,
           retry,
-          ...rest
+          ...stateOpts
         } = finalizedState;
         const retryconfig = retry ? getRetryConfig(retry) : undefined;
         // eslint-disable-next-line unicorn/consistent-destructuring
         const stateName = `${options.namePrefix || ""}${finalizedState.name}`;
         const Iterator = parseStepFunction(
-          mapDefinition.deployable.getState(),
+          iteratorStepFn.getState(),
           {
             ...options,
-            ...mapDefinition.deployable.getOptions(),
+            ...iteratorStepFn.getOptions(),
           },
           `map-${ctx.hashState}`
         );
@@ -500,7 +495,7 @@ export function StateMachine<T extends string = "state">(
         ctx.definitionStates.push([
           stateName,
           {
-            ...toCamelCase(rest),
+            ...toCamelCase(stateOpts),
             Iterator,
             Retry: retryconfig
               ? Object.keys(retryconfig).reduce((acc: IStepFunctionStep[], curr) => {
@@ -528,9 +523,8 @@ export function StateMachine<T extends string = "state">(
                 name: `Choice-${ctx.hashState}`,
               } as Finalized<IChoice>);
 
-        // TODO: why is `_index` here? it is not used
         // eslint-disable-next-line unicorn/no-array-for-each
-        finalizedState.choices?.forEach((c, _index) => {
+        finalizedState.choices?.forEach((c) => {
           const { finalizedStepFn, ...rest } = c;
 
           const rawStepFn = finalizedStepFn.getState();
@@ -601,69 +595,58 @@ export function StateMachine<T extends string = "state">(
 
     const ctx = { definitionStates, errorHandlerStates, stepFnId };
     // eslint-disable-next-line unicorn/no-array-for-each
-    state.forEach(
-      (stateDefn, index) => {
-        const call = (fn: Function) =>
-          fn({ ...ctx, hashState: hashState(index), validateState: validateState(index) })(
-            stateDefn,
-            options
-          );
+    state.forEach((stateDefn, index) => {
+      const call = (fn: Function) =>
+        fn({ ...ctx, hashState: hashState(index), validateState: validateState(index) })(
+          stateDefn,
+          options
+        );
 
-        const parseStateDefn: Record<string, Function> = {
-          Task: parseTask,
-          Succeed: parseSucceed,
-          Fail: parseFail,
-          Map: parseMap,
-          Choice: parseChoice,
-          Wait: parseWait,
-          Parallel: parseParallel,
-          Pass: parsePass,
-          GoTo: parseGoTo,
-        };
-        call(parseStateDefn[stateDefn.type]);
-      },
-      {
-        States: {},
-      } as IStepFunction
-    );
+      const parseStateDefn: Record<string, Function> = {
+        Task: parseTask,
+        Succeed: parseSucceed,
+        Fail: parseFail,
+        Map: parseMap,
+        Choice: parseChoice,
+        Wait: parseWait,
+        Parallel: parseParallel,
+        Pass: parsePass,
+        GoTo: parseGoTo,
+      };
+      call(parseStateDefn[stateDefn.type]);
+    });
 
     const terminalStates = new Set(["Choice", "Succeed", "Fail"]);
 
-    const stepFunctionDefn = definitionStates.reduce(
-      (acc: IDictionary<IStepFunctionStep>, curr, index) => {
-        const [stateName, stateDefn] = curr;
-        acc[stateName] = stateDefn;
-        const hasNextState = index + 1 in definitionStates;
+    const stepFunctionDefn = definitionStates.reduce((acc, curr, index) => {
+      const [stateName, stateDefn] = curr;
+      acc[stateName] = stateDefn;
+      const hasNextState = index + 1 in definitionStates;
 
-        if (
-          !terminalStates.has(stateDefn.Type) &&
-          !("Next" in stateDefn && stateDefn.Next !== "") &&
-          hasNextState &&
-          !("End" in stateDefn && stateDefn.End)
-        ) {
-          (acc[stateName] as any).Next = definitionStates[index + 1][0];
-        }
+      if (
+        !terminalStates.has(stateDefn.Type) &&
+        !("Next" in stateDefn && stateDefn.Next !== "") &&
+        hasNextState &&
+        !("End" in stateDefn && stateDefn.End)
+      ) {
+        (acc[stateName] as any).Next = definitionStates[index + 1][0];
+      }
 
-        return acc;
-      },
-      {}
-    );
+      return acc;
+    }, {} as IDictionary<IStepFunctionStep>);
 
-    const errorHandler = ctx.errorHandlerStates.reduce(
-      (acc: IDictionary<IStepFunctionStep>, curr, index) => {
-        const [stateName, stateDefn] = curr;
-        acc[stateName] = stateDefn;
+    const errorHandler = ctx.errorHandlerStates.reduce((acc, curr, index) => {
+      const [stateName, stateDefn] = curr;
+      acc[stateName] = stateDefn;
 
-        const hasNextState = index + 1 in definitionStates;
-        if (hasNextState) {
-          (acc[stateName] as any).Next = definitionStates[index + 1][0];
-          (acc[stateName] as any).End = undefined;
-        }
+      const hasNextState = index + 1 in definitionStates;
+      if (hasNextState) {
+        (acc[stateName] as any).Next = definitionStates[index + 1][0];
+        (acc[stateName] as any).End = undefined;
+      }
 
-        return acc;
-      },
-      {}
-    );
+      return acc;
+    }, {} as IDictionary<IStepFunctionStep>);
 
     return {
       States: { ...stepFunctionDefn, ...errorHandler },
