@@ -63,7 +63,7 @@ export const wrapper = function <
 
     // FN EXECUTION and ERROR HANDLING
     xray.startHandler();
-    metrics = { ...metrics, kind: "prepped",  prepTime: Date.now() - metrics.startTime  };
+    metrics = { ...metrics, kind: "prepped", prepTime: Date.now() - metrics.startTime };
     try {
       response = await fn(state.request, wrapperContext);
       xray.finishHandler();
@@ -83,7 +83,13 @@ export const wrapper = function <
         success: false,
         duration: Date.now() - metrics.startTime,
       };
-      return handleError<I, O, Q, P>(handlerFnError, state.request, wrapperContext, metrics, xray);
+      return handleError<I, O, Q, P>(
+        handlerFnError as Error,
+        state.request,
+        wrapperContext,
+        metrics,
+        xray
+      );
     }
   };
 };
