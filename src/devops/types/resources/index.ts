@@ -1,32 +1,13 @@
 // #autoindex
-
 // #region autoindexed files
 
-// index last changed at: 12th Dec, 2021, 05:18 PM ( GMT-8 )
+// index last changed at: 12th Dec, 2021, 02:34 PM ( GMT-8 )
 // export: named; exclusions: index, private.
-// files: env-types, serverless-api-gateway, serverless-authorizers, serverless-events, serverless-function, serverless-global, serverless-http-api, serverless-iam, serverless-logging, serverless-open-api, serverless-package, serverless-provider, serverless-stack, serverless-tracing, serverless-vpc, step-functions.
-// directories: resources.
+// files: dynamodb, serverless-resources.
 
 // local file exports
-export * from "./env-types";
-export * from "./serverless-api-gateway";
-export * from "./serverless-authorizers";
-export * from "./serverless-events";
-export * from "./serverless-function";
-export * from "./serverless-global";
-export * from "./serverless-http-api";
-export * from "./serverless-iam";
-export * from "./serverless-logging";
-export * from "./serverless-open-api";
-export * from "./serverless-package";
-export * from "./serverless-provider";
-export * from "./serverless-stack";
-export * from "./serverless-tracing";
-export * from "./serverless-vpc";
-export * from "./step-functions";
-
-// directory exports
-export * from "./resources/index";
+export * from "./dynamodb";
+export * from "./serverless-resources";
 
 // Note:
 // -----

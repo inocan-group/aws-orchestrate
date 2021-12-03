@@ -1,35 +1,41 @@
-// import type { IServerlessYaml } from "common-types";
-// import type { IServerlessBuilder } from "../types/serverless-types";
+import { DefaultStages, IServerlessStack, IStackApi } from "../types/serverless-stack";
+import merge from "merge-deep";
 
-import type { IServerlessProvider, IServerlessResources } from "common-types";
+function createApi<N extends string, S extends readonly string[], E extends string = never>(
+  stack: Readonly<IServerlessStack<N, any>>,
+  updates?: Partial<IServerlessStack<N, S>>
+): IStackApi<N, S, E> {
+  const newStack = (updates ? merge(stack, updates) : stack) as unknown as IServerlessStack<N, S>;
 
-export type FeatureSandbox = `f_${string}`;
-export type UserSandbox = `u_${string}`;
+  return {
+    stack: newStack,
+    resources: (resources) => {
+      return resources ? createApi<N, S, E>(stack, { resources }) : createApi<N, S, E>(stack);
+    },
+    prepareLambda: () => createApi<N, S, E | "prepareLambda">(stack),
+    addStepFunction: () => createApi<N, S, E>(stack),
+  } as IStackApi<N, S, E>;
+}
 
-export type days = number;
-
-export type DefaultStages = ["local" | "dev" | "stage" | "prod" | FeatureSandbox | UserSandbox];
-
-export type IServerlessStack<N extends string, S extends readonly string[] = DefaultStages> = {
-  /** name of the stack */
-  name: N;
-  /**  */
-  stages: S;
-  stateMachines?: [];
-  provider: IServerlessProvider;
-  resources: IServerlessResources;
-};
-
-export function createStack<S extends string, _F extends readonly string[] = readonly []>(
-  name: S,
+export function createStack<N extends string, S extends readonly string[] = DefaultStages>(
+  /** the name of the stack you are configuring */
+  name: N,
+  /** the AWS profile which will be used for credentialization */
   profile: string
 ) {
-  const stack: IServerlessStack<S> = {
+  const stack: Readonly<IServerlessStack<N, S>> = {
     name,
     provider: {
       name: "aws",
-      stage: "dev",
+      stage: "dev" as keyof S,
       profile,
     },
+    resources: {},
+    functions: {},
+    stepFunctions: {},
+    iam: {},
+    plugins: [],
   };
+
+  return createApi<N, S>(stack);
 }
