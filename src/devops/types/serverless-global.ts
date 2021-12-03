@@ -3,13 +3,13 @@ import {
   IArnStringReference,
   ICloudformationReference,
   IServerlessFunction,
-} from "./serverless-function";
-import { IServerlessLogging } from "./serverless-logging";
-import { IServerlessPackage } from "./serverless-package";
-import { IServerlessProvider } from "./serverless-provider";
-import { IServerlessResources } from "./resources/serverless-resources";
-import { IServerlessTracing } from "./serverless-tracing";
-import { IStateMachine } from "./step-functions";
+  IServerlessProvider,
+  IServerlessLogging,
+  IServerlessPackage,
+  IServerlessResources,
+  IServerlessTracing,
+  IStateMachine,
+} from "./index";
 
 export interface IServerlessAccountInfo {
   name: string;

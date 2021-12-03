@@ -1,4 +1,5 @@
 import { arn, minutes, scalar } from "common-types";
+import { DefaultStages } from "..";
 import {
   AWSRuntime,
   ServerlessFunctionMemorySize,
@@ -13,7 +14,7 @@ import {
   IServerlessVpcConfig,
 } from "./index";
 
-export interface IServerlessProvider<S extends readonly string[]> {
+export interface IServerlessProvider<S extends readonly string[] = DefaultStages> {
   /** The name of your service. This name will be the prefix for all your functions  */
   name: string;
   runtime?: AWSRuntime;

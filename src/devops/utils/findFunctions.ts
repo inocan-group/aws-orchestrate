@@ -1,4 +1,4 @@
-import { createWrappedNode, Project, SyntaxKind } from "ts-morph";
+import { Project } from "ts-morph";
 import { sync } from "globby";
 
 export async function findFunctions() {
@@ -9,18 +9,18 @@ export async function findFunctions() {
 
   for (const source of candidates) {
     const file = project.getSourceFile(source);
-    const exports = file.getVariableDeclarations();
+    const exports = file?.getVariableDeclarations();
     console.log({ exports });
 
-    for (const exp of exports) {
-      const n = exp.compilerNode;
+    // for (const exp of exports) {
+    //   const n = exp.compilerNode;
 
-      const compilerTypeChecker = exp.getProject().getTypeChecker();
-      const type = createWrappedNode(n, { typeChecker: compilerTypeChecker })
-        .asKindOrThrow(SyntaxKind.VariableDeclaration)
-        .getType()
-        .getText();
-      console.log(`${source}::${exp.getKindName()} -> ${type}`);
-    }
+    //   const compilerTypeChecker = exp.getProject().getTypeChecker();
+    //   const type = createWrappedNode(n, { typeChecker: compilerTypeChecker })
+    //     .asKindOrThrow(SyntaxKind.VariableDeclaration)
+    //     .getType()
+    //     .getText();
+    //   console.log(`${source}::${exp.getKindName()} -> ${type}`);
+    // }
   }
 }

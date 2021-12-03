@@ -1,13 +1,6 @@
-import { seconds, sql } from "../aliases";
-import { arn } from "../aws";
-import { ICloudWatchConfigEvent } from "../aws/aws-events";
-import { IDictionary } from "../basics";
-import {
-  IServerlessHttpAuthorizer,
-  IServerlessRequest,
-  IServerlessStatusCode,
-  IServerlessVariable,
-} from "./serverless";
+import { arn, IDictionary, seconds, sql, ICloudWatchConfigEvent } from "common-types";
+
+import { IServerlessHttpAuthorizer, IServerlessRequest, IServerlessStatusCode } from "./index";
 import { IHttpApiComplex, IHttpApiSimple } from "./serverless-http-api";
 
 export interface IServerlessEvent {
@@ -136,10 +129,7 @@ export interface IServerlessEvent {
     origin?: {
       DomainName?: string;
       OriginPath?: string;
-      CustomOrginConfig?: Record<
-        "OriginProtocolPolicy" | string,
-        "match-viewer" | string
-      >;
+      CustomOrginConfig?: Record<"OriginProtocolPolicy" | string, "match-viewer" | string>;
     };
   };
 }
@@ -237,7 +227,7 @@ export interface IServerlessEventHttp {
    */
   private?: boolean;
   /** An AWS API Gateway custom authorizer function */
-  authorizer?: IServerlessHttpAuthorizer | IServerlessVariable;
+  authorizer?: IServerlessHttpAuthorizer | string;
 
   /** configure method request and integration request settings */
   request?: IServerlessRequest;
