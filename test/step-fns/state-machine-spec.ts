@@ -21,15 +21,15 @@ describe("State Machine", () => {
         .stepFunction(myStepFn)
         .name("foo")
         .loggingConfig({ destinations: ["foo"] })
-    ).toJSON();
+    ).value;
 
     const firstSequence = "firstTask";
-    const secondSequence = (awesomeStateMachine.definition.States[
-      firstSequence
-    ] as IStepFunctionTask).Next!;
-    const thirdSequence = (awesomeStateMachine.definition.States[
-      secondSequence
-    ] as IStepFunctionTask).Next!;
+    const secondSequence = (
+      awesomeStateMachine.definition.States[firstSequence] as IStepFunctionTask
+    ).Next!;
+    const thirdSequence = (
+      awesomeStateMachine.definition.States[secondSequence] as IStepFunctionTask
+    ).Next!;
 
     expect(awesomeStateMachine.name).toEqual("abcapp-dev-foo");
     expect(awesomeStateMachine.loggingConfig).toEqual({
@@ -46,7 +46,7 @@ describe("State Machine", () => {
     const action = () =>
       StateMachine((s) =>
         s.name("fooStateMachine").stepFunction(StepFunction(finalizedState, finalizedState))
-      ).toJSON();
+      ).value;
 
     expect(action).toThrowError({
       name: "ServerlessError",
@@ -73,9 +73,7 @@ describe("State Machine", () => {
     );
 
     const stepFn = StepFunction(fetchProfileImgUrl);
-    const stateMachine = StateMachine((s) =>
-      s.name("fooStateMachine").stepFunction(stepFn)
-    ).toJSON();
+    const stateMachine = StateMachine((s) => s.name("fooStateMachine").stepFunction(stepFn)).value;
 
     const stateNames = Object.keys(stateMachine.definition.States);
 

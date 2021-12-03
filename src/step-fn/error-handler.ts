@@ -2,7 +2,7 @@
 import { hash } from "native-dash";
 import { ServerlessError } from "~/errors";
 import {
-  IErrorHandler,
+  ICatchErrorHandler,
   Finalized,
   IConfigurableStepFn,
   IErrorHandlerPointer,
@@ -14,7 +14,7 @@ import {
   IStore,
   RetryOptions,
 } from "~/types";
-import { hasState } from "./type-guards";
+import { hasErrorConfigState } from "./type-guards";
 
 /**
  * Step Function Errors
@@ -128,18 +128,21 @@ export type ICatchApi<E extends string> = Omit<
 >;
 
 export type ICatchConfig = {
-  [errorTypes.all]?: IErrorHandler;
-  [errorTypes.dataLimitExceeded]?: IErrorHandler;
-  [errorTypes.permissions]?: IErrorHandler;
-  [errorTypes.runtime]?: IErrorHandler;
-  [errorTypes.taskFailed]?: IErrorHandler;
-  [errorTypes.timeout]?: IErrorHandler;
-} & { [key: string]: IErrorHandler };
+  [errorTypes.all]?: ICatchErrorHandler;
+  [errorTypes.dataLimitExceeded]?: ICatchErrorHandler;
+  [errorTypes.permissions]?: ICatchErrorHandler;
+  [errorTypes.runtime]?: ICatchErrorHandler;
+  [errorTypes.taskFailed]?: ICatchErrorHandler;
+  [errorTypes.timeout]?: ICatchErrorHandler;
+} & { [key: string]: ICatchErrorHandler };
 
-function catchApi<TExclude extends string = "state">(state: Record<string, IErrorHandler>) {
-  const apiWrapper = <T extends string>(s: Record<string, IErrorHandler>, offset: string) => {
+function catchApi<TExclude extends string = "state">(state: Record<string, ICatchErrorHandler>) {
+  const apiWrapper = <T extends string>(s: Record<string, ICatchErrorHandler>, offset: string) => {
     return (selector: IErrorHandlerPointer, resultPath?: Partial<IResultPath>) => {
-      const newState: Record<string, IErrorHandler> = { ...s, [offset]: { selector, resultPath } };
+      const newState: Record<string, ICatchErrorHandler> = {
+        ...s,
+        [offset]: { selector, resultPath },
+      };
       return catchApi<T | TExclude>(newState) as unknown as ICatchApi<T | TExclude>;
     };
   };
@@ -187,7 +190,7 @@ export type IRetryFluentApi<T extends string = never> = (api: IRetryApi<"">) => 
  */
 export function Catch<TExclude extends string = never>(api: ICatchApiBuilder<TExclude>) {
   const handler = api(catchApi({}));
-  if (hasState(handler)) {
+  if (hasErrorConfigState(handler)) {
     return handler.state;
   } else {
     throw new Error("Catch recieved an invalid return; needs an object with 'state'");

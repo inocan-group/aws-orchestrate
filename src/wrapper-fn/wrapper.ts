@@ -57,7 +57,7 @@ export const wrapper = function <
       wrapperContext = prepForHandler<I, O, Q, P>(state, context, errorMeta, log, options);
       xray.finishPrep();
     } catch (prepError) {
-      xray.finishPrep(prepError);
+      xray.finishPrep(prepError as Error | string);
       return handlePrepError(prepError, context, isLambdaProxyRequest(event), log);
     }
 

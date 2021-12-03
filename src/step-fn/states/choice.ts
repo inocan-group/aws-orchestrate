@@ -28,6 +28,7 @@ import {
   IChoiceItemParamApi,
 } from "~/types";
 import { parseAndFinalizeStepFn } from "..";
+import { hasState } from "../type-guards";
 
 function stringEquals(value: string): Partial<IOperand_StringEquals> {
   return {
@@ -107,7 +108,7 @@ function extractChoiceParams(arg1: IStepFnSelector | IChoiceVariable, arg2?: ISt
 }
 
 /**
- *  Construct and child item of `Choice` State which starts with calling an operator as a fn name and 
+ *  Construct and child item of `Choice` State which starts with calling an operator as a fn name and
  *  it wraps a `condition` and a `step function`
  */
 export function ChoiceItem(fluentApi: FluentApi<IChoiceItemParamApi, IChoiceItemParam>) {
@@ -269,21 +270,23 @@ export function Choice(...params: IChoiceParams): IChoiceState {
       defaultDfn = getDefaultChoiceStates(param);
     } else if (isFluentApi(param)) {
       const fluentResult = configureChoiceItem(param);
-      "state" in fluentResult &&
-        // eslint-disable-next-line unicorn/no-array-for-each
-        (fluentResult["state"] as (IChoiceItemParam | IChoiceDefaultItemParam)[]).forEach((ci) => {
-          if (isDefaultChoice(ci)) {
-            defaultDfn = getDefaultChoiceStates(ci);
-            return;
-          }
-          const { stepFn, ...rest } = ci;
-          const finalizedStepFn = parseAndFinalizeStepFn(stepFn);
+      if (!hasState<(IChoiceItemParam | IChoiceDefaultItemParam)[]>(fluentResult)) {
+        throw new Error("Invalid choice item definition");
+      }
+      // eslint-disable-next-line unicorn/no-array-for-each
+      fluentResult["state"].forEach((ci) => {
+        if (isDefaultChoice(ci)) {
+          defaultDfn = getDefaultChoiceStates(ci);
+          return;
+        }
+        const { stepFn, ...rest } = ci;
+        const finalizedStepFn = parseAndFinalizeStepFn(stepFn);
 
-          choicesDefn.push({
-            ...rest,
-            finalizedStepFn,
-          });
+        choicesDefn.push({
+          ...rest,
+          finalizedStepFn,
         });
+      });
     } else if (isObjectDefinition(param)) {
       const { stepFn, ...rest } = param;
       const finalizedStepFn = parseAndFinalizeStepFn(stepFn);

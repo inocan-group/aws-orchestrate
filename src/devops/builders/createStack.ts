@@ -24,12 +24,16 @@ export function createStack<S extends string, _F extends readonly string[] = rea
   name: S,
   profile: string
 ) {
-  const stack: IServerlessStack<S> = {
+  // TODO: We were not returning anything. Is this fn really needed?
+  const stack: Partial<IServerlessStack<S>> = {
     name,
     provider: {
       name: "aws",
       stage: "dev",
       profile,
+      httpApi: {},
     },
   };
+
+  return stack;
 }

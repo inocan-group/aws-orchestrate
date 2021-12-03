@@ -9,6 +9,7 @@ import {
   ParallelFluentApi,
 } from "~/types";
 import { parseAndFinalizeStepFn } from "../entities/state";
+import { hasState } from "../type-guards";
 
 export const isOptions = (
   obj: IParallelBranchOptions | IParallelOptions | FluentApi<ParallelFluentApi, ParallelFluentApi>
@@ -34,7 +35,7 @@ function parallelFluentApi(fn: FluentApi<ParallelFluentApi, ParallelFluentApi>) 
 }
 
 /**
- * 
+ *
  * @param params it accepts parallel __branches__  in shorthand and fluent api syntax and option hash as the last param
  * @returns  IParallel | Finalized<IParallel>
  */
@@ -58,13 +59,16 @@ export function Parallel(
       });
     } else {
       const fluentResult = parallelFluentApi(param);
-      "state" in fluentResult &&
+      if (hasState<IParallelBranchOptions[]>(fluentResult)) {
         // eslint-disable-next-line unicorn/no-array-for-each
-        (fluentResult["state"] as IParallelBranchOptions[]).forEach((deployable) => {
+        fluentResult.state.forEach((deployable) => {
           branches.push({
             deployable,
           });
         });
+      } else {
+        throw new Error("Parallel: invalid branch");
+      }
     }
   }
 

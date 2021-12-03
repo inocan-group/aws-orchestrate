@@ -69,7 +69,6 @@
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-promise": "^5.1.0",
     "eslint-plugin-unicorn": "^39.0.0",
-    "inferred-types": "^0.17.0",
     "jest": "^27.4.0",
     "jest-extended": "^1.2.0",
     "madge": "^5.0.0",
@@ -92,7 +91,6 @@
     "aws-log": "^0.11.2",
     "aws-ssm": "^0.4.0",
     "common-types": "^1.24.5",
-    "inferred-types": "^0.17.0",
     "native-dash": "^1.12.0"
   }
 }

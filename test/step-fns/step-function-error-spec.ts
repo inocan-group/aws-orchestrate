@@ -20,7 +20,7 @@ describe("Step Function Builder Error Handler", () => {
       catch: catchConfig,
     }).task("task1");
 
-    const action = () => StateMachine((s) => s.name("foo").stepFunction(fooStepFn)).toJSON();
+    const action = () => StateMachine((s) => s.name("foo").stepFunction(fooStepFn)).value;
 
     expect(action).toThrowError({
       name: "ServerlessError",
@@ -34,7 +34,7 @@ describe("Step Function Builder Error Handler", () => {
       catch: catchConfig,
     }).task("task1");
 
-    const action = () => StateMachine((s) => s.name("foo").stepFunction(fooStepFn)).toJSON();
+    const action = () => StateMachine((s) => s.name("foo").stepFunction(fooStepFn)).value;
 
     expect(action).not.toThrowError();
   });
@@ -51,17 +51,14 @@ describe("Step Function Builder Error Handler", () => {
         .name("fooStateMachine")
         .stepFunction(fooStepFn)
         .catch((error) => error.allErrors(finalizedStepFn, "$.foo"))
-    ).toJSON();
+    ).value;
 
-    // TODO: this has no typing and I would think could be easily typed
     const resultStates = Object.values(stateMachine.definition.States);
 
     expect(
       resultStates
-        // TODO: this is just to get this line to compile (there was only implicit typing before)
         .filter((r) => r.Type === "Task" && r.Catch !== undefined)
-        // TODO: but now you're explicitly to `IStepFunctionStep` and this is causing issues
-        .every((r: any) => {
+        .every((r) => {
           return "Catch" in r
             ? () => {
                 const [defaultHandler] = r.Catch || [];
@@ -84,7 +81,7 @@ describe("Step Function Builder Error Handler", () => {
 
     const stateMachine = StateMachine((s) =>
       s.name("fooStateMachine").stepFunction(fooStepFn)
-    ).toJSON();
+    ).value;
 
     const resultStates = Object.values(stateMachine.definition.States);
 
@@ -121,13 +118,13 @@ describe("Step Function Builder Error Handler", () => {
 
     const stateMachine = StateMachine((s) =>
       s.name("fooStateMachine").stepFunction(fooStepFn)
-    ).toJSON();
+    ).value;
 
     const resultStates = Object.values(stateMachine.definition.States);
 
     expect(
       resultStates
-        .filter((r: any) => r.Type === "Task" && r.Catch !== undefined)
+        .filter((r) => r.Type === "Task" && r.Catch !== undefined)
         .every((r) => {
           const task = r as unknown as IStepFunctionTask;
           const [defaultHandler] = task.Catch || [];
@@ -144,7 +141,7 @@ describe("Step Function Builder Error Handler", () => {
 
     const myStateMachine = StateMachine((s) =>
       s.name("fooStateMachine").stepFunction(StepFunction(fooTask))
-    ).toJSON();
+    ).value;
 
     expect(
       (myStateMachine.definition.States["fooTask"] as IStepFunctionTask).Retry![0].MaxAttempts
