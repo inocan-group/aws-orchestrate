@@ -66,7 +66,7 @@ export type IErrorHandlerPointer = ICatchFluentStepFnApi | IStepFnShorthand | IF
  * Provides configuration information so that errors can be (potentially)
  * matched and handled.
  */
-export interface IErrorHandler {
+export interface ICatchErrorHandler {
   selector: IErrorHandlerPointer;
   resultPath?: Partial<IResultPath>;
 }

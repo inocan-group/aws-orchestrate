@@ -47,7 +47,7 @@ export class XRay {
   }
 
   /** closes the "Prep" subsegment to XRAY, optionally with an error */
-  public finishPrep<T extends unknown>(error?: T) {
+  public finishPrep<T extends string | Error>(error?: T) {
     if (this.segment && this.prep) {
       if (error) {
         this.prep.addError(error);

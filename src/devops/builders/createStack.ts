@@ -29,6 +29,7 @@ export function createStack<N extends string, S extends readonly string[] = Defa
       name: "aws",
       stage: "dev" as keyof S,
       profile,
+      httpApi: {},
     },
     resources: {},
     functions: {},

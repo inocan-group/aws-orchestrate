@@ -11,6 +11,7 @@ import {
 } from "~/types";
 import { ICatchConfig, ICatchApiBuilder } from "..";
 import { parseAndFinalizeStepFn } from "../entities/state";
+import { hasState } from "../type-guards";
 
 export function Map<T extends string>(
   builder: (builder: IMapBuilder<"state">) => IMapBuilder<T>
@@ -44,7 +45,11 @@ export function Map<T extends string>(
     throw new ServerlessError(400, "State machine configuration is not defined", "bad-request");
   }
 
-  const params = builderOutput["state"] as IMapState;
+  if (!hasState<IMapState>(builderOutput)) {
+    throw new Error("Map: invalid state");
+  }
+
+  const params = builderOutput.state;
 
   if (!params.stepFunction) {
     throw new ServerlessError(400, "No step function defined", "bad-request");

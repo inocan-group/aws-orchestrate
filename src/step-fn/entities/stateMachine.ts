@@ -10,7 +10,7 @@ import {
 import { hash } from "native-dash";
 import { parseArn } from "~/shared";
 import {
-  IErrorHandler,
+  ICatchErrorHandler,
   Finalized,
   IChoice,
   IFail,
@@ -658,7 +658,7 @@ export function StateMachine<T extends string = "state">(
     (ctx: IStepFunctionParseContext) =>
     (
       error: string,
-      errorHandler: IErrorHandler
+      errorHandler: ICatchErrorHandler
     ): [IStepFunctionCatcher[], IDictionary<IStepFunctionStep>] => {
       const errorHandlers: IStepFunctionCatcher[] = [];
       let errorStates: IDictionary<IStepFunctionStep> = {};
@@ -698,8 +698,9 @@ export function StateMachine<T extends string = "state">(
 
   return {
     toJSON() {
-      return JSON.parse(JSON.stringify(stateMachine));
+      return JSON.stringify(stateMachine);
     },
+    value: stateMachine,
     visualize() {
       // TODO:
       return {};
