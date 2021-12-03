@@ -13,9 +13,26 @@
   "license": "MIT",
   "author": "Ken Snyder<ken@ken.net>",
   "sideEffects": false,
-  "main": "dist/cjs/index.js",
-  "module": "dist/es/index.js",
-  "typings": "dist/typings/index.d.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "typings": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./devops": {
+      "import": "./dist/devops/index.mjs",
+      "require": "./dist/devops/index.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "src/*": [
+        "dist/index.d.ts"
+      ]
+    }
+  },
   "files": [
     "dist"
   ],
@@ -24,8 +41,8 @@
     "clean": "rimraf dist",
     "build": "run-s clean build:bundle",
     "build:bundle": "run-p build:wrapper build:devops",
-    "build:wrapper": "npx tsup src/index.ts --format=esm,cjs --minify --clean --dts",
-    "build:devops": "npx tsup src/devops/index.ts --format=esm,cjs --minify --clean --dts --out-dir dist/devops",
+    "build:wrapper": "npx tsup src/index.ts --format=esm,cjs --minify --dts",
+    "build:devops": "npx tsup src/devops/index.ts --format=esm,cjs --minify --dts --out-dir dist/devops",
     "circular": "yarn madge --circular src/**/*.ts",
     "docs": "node_modules/.bin/vuepress dev docs",
     "docs:build": "node_modules/.bin/vuepress build docs",
