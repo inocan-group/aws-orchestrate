@@ -1,5 +1,7 @@
 import { DefaultStages, IServerlessStack, IStackApi } from "../types/serverless-stack";
 import merge from "merge-deep";
+import { IFunctionPrepConfig, IPrepareFunctions, prepareFunctions } from ".";
+import { findHandlerFunctions } from "~/devops/utils";
 
 function createApi<N extends string, S extends readonly string[], E extends string = never>(
   stack: Readonly<IServerlessStack<N, any>>,
@@ -12,7 +14,17 @@ function createApi<N extends string, S extends readonly string[], E extends stri
     resources: (resources) => {
       return resources ? createApi<N, S, E>(stack, { resources }) : createApi<N, S, E>(stack);
     },
-    prepareLambda: () => createApi<N, S, E | "prepareLambda">(stack),
+    prepareLambda: (cb?: (api: IPrepareFunctions) => IPrepareFunctions) => {
+      const _lambdaConfig: Readonly<IFunctionPrepConfig> = cb
+        ? cb(prepareFunctions()).config
+        : {
+            defaults: {},
+            additionalFunctions: [],
+          };
+      const fns = await findHandlerFunctions();
+
+      return createApi<N, S, E | "prepareLambda">(stack);
+    },
     addStepFunction: () => createApi<N, S, E>(stack),
   } as IStackApi<N, S, E>;
 }

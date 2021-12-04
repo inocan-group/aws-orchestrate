@@ -24,6 +24,7 @@ specifiers:
   brilliant-errors: ^0.4.3
   common-types: ^1.30.0
   dd: ^0.14.1
+  destr: ^1.1.0
   eslint: ^8.3.0
   eslint-config-prettier: ^8.3.0
   eslint-plugin-import: ^2.25.3
@@ -54,6 +55,7 @@ specifiers:
 
 dependencies:
   brilliant-errors: 0.4.3_common-types@1.30.0
+  destr: 1.1.0
   globby: 11.0.4
   merge-deep: 3.0.3
   ts-morph: 13.0.2
@@ -5236,7 +5238,6 @@ packages:
 
   /destr/1.1.0:
     resolution: {integrity: sha512-Ev/sqS5AzzDwlpor/5wFCDu0dYMQu/0x2D6XfAsQ0E7uQmamIgYJ6Dppo2T2EOFVkeVYWjc+PCLKaqZZ57qmLg==}
-    dev: true
 
   /destroy/1.0.4:
     resolution: {integrity: sha1-l4hXRCxEdJ5CBmE+N5RiBYJqvYA=}
