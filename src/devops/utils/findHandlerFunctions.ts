@@ -7,7 +7,7 @@ import { parseSourceFile } from "./ast";
  *
  * Finds all handler functions given the passed in glob pattern
  */
-export async function findHandlerFunctions(glob: string | string[]) {
+export function findHandlerFunctions(glob: string | string[]) {
   const g = Array.isArray(glob) ? glob : [glob];
   const candidates = sync(g);
 

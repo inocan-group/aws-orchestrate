@@ -34,13 +34,21 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "bin"
   ],
+  "bin": {
+    "tls": "./bin/tls.js"
+  },
   "scripts": {
     "autoindex": "npx dd autoindex",
     "clean": "rimraf dist",
+    "change": "npx changeset ",
+    "status": "npx changeset status",
+    "version": "npx changeset version",
     "build": "run-s clean build:bundle",
-    "build:bundle": "run-p build:wrapper build:devops",
+    "build:bundle": "run-p build:wrapper build:devops build:cli",
+    "build:cli": "npx tsup src/cli/tls.ts --format=esm,cjs --minify --out-dir bin",
     "build:wrapper": "npx tsup src/index.ts --format=esm,cjs --minify --dts",
     "build:devops": "npx tsup src/devops/index.ts --format=esm,cjs --minify --dts --out-dir dist/devops",
     "circular": "yarn madge --circular src/**/*.ts",
@@ -53,8 +61,9 @@
     "test": "jest",
     "visualize": "yarn madge src --ts-config tsconfig.json --extensions ts -i /tmp/dep-visualize.png && open /tmp/dep-visualize.png",
     "watch": "run-p watch:wrapper watch:devops",
-    "watch:wrapper": "npx tsup src/index.ts --format=esm,cjs --minify --clean --dts --watch",
-    "watch:devops": "npx tsup src/devops/index.ts --format=esm,cjs --minify --clean --dts --out-dir dist/devops --watch"
+    "watch:wrapper": "npx tsup src/index.ts --format=esm,cjs --minify --dts --watch",
+    "watch:cli": "npx tsup src/cli/tls.ts --format=esm,cjs --minify --watch",
+    "watch:devops": "npx tsup src/devops/index.ts --format=esm,cjs --minify --dts --out-dir dist/devops --watch"
   },
   "dependencies": {
     "brilliant-errors": "^0.4.3",
@@ -86,7 +95,7 @@
     "aws-xray-sdk-core": "^3.3.4",
     "common-types": "^1.30.0",
     "dd": "^0.14.1",
-    "eslint": "^8.3.0",
+    "eslint": "^8.4.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-import": "^2.25.3",
     "eslint-plugin-prettier": "^4.0.0",
@@ -99,10 +108,10 @@
     "mermaid": "^8.13.4",
     "native-dash": "^1.21.0",
     "npm-run-all": "^4.1.5",
-    "prettier": "^2.5.0",
+    "prettier": "^2.5.1",
     "rimraf": "^3.0.2",
     "test-console": "^2.0.0",
-    "ts-jest": "^27.0.7",
+    "ts-jest": "^27.1.0",
     "ts-node": "^10.4.0",
     "tsup": "^5.10.1",
     "typescript": "^4.5.2",

@@ -4,7 +4,7 @@ import { findHandlerFunctions } from "~/devops/utils";
 
 describe("findFunctions()", () => {
   it("all TS files with valid exports are returned", async () => {
-    const fns = await findHandlerFunctions(join(process.cwd(), "test/data/handlers/**/*.ts"));
+    const fns = findHandlerFunctions(join(process.cwd(), "test/data/handlers/**/*.ts"));
     const files = fns.map((i) => i.file);
     expect(files).toInclude("./test/data/handlers/foo.ts");
     expect(files).toInclude("./test/data/handlers/for-real/foo.ts");

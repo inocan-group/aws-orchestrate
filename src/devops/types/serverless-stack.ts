@@ -1,3 +1,4 @@
+import { IPrepareFunctions } from "../builders/compute/prepareFunctions";
 import type {
   IServerlessProvider,
   IServerlessResources,
@@ -47,7 +48,9 @@ export type IStackApi<
      * Provide default values for your Lambda functions and then automatically
      * retrieve them from the repo.
      */
-    prepareLambda: () => IStackApi<N, S, E | "prepareLambda">;
+    prepareLambda: (
+      cb: (api: IPrepareFunctions) => IPrepareFunctions
+    ) => IStackApi<N, S, E | "prepareLambda">;
     /**
      * Add a step function to your configuration
      */

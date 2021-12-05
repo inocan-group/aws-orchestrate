@@ -11,9 +11,17 @@ export type IGenericFunctionConfig = Omit<
 >;
 
 export type IFunctionPrepConfig = {
+  /** the directory to start search for _handler_ functions */
   handlerLocation: string | string[];
+  /** the _default_ configuration for Lambda functions */
   defaults: Partial<IGenericFunctionConfig>;
+  /**
+   * additional functions beyond the auto-discovered functions which
+   * should be included in the stack.
+   */
   additionalFunctions: IServerlessFunction[];
+  /** the location where the handler functions will be transpiled to */
+  buildDirectory: string;
 };
 
 export type IPrepareFunctions<E extends string = never> = Omit<
@@ -49,13 +57,21 @@ export type IPrepareFunctions<E extends string = never> = Omit<
     additionalFunctions: (
       fns: IServerlessFunction[]
     ) => IPrepareFunctions<E | "additionalFunctions">;
+
+    /**
+     * By default the assumed directory for your transpiled TS is `dist/`
+     * but you can change this.
+     */
+    buildDirectory: (dir: string) => IPrepareFunctions<E | "buildDirectory">;
   },
   E
 >;
 
 /**
- * A higher order function where the first caller is responsible for providing
- * context on IAM and Resources, and the second is then able to configure the
+ * Allows a caller to gain access to an API for changing Lambda function
+ * configuration. The resultant configuraton will not _yet_ call the AST to
+ * find the functions but will provide all the information needed to combine
+ * with this when the user is finished stating the configuration.
  */
 export function prepareFunctions() {
   const api = <E extends string>(
@@ -63,6 +79,7 @@ export function prepareFunctions() {
       handlerLocation: "src/handlers",
       defaults: {},
       additionalFunctions: [],
+      buildDirectory: "dist/",
     } as IFunctionPrepConfig
   ): IPrepareFunctions<E> =>
     ({
@@ -78,6 +95,10 @@ export function prepareFunctions() {
       additionalFunctions: (fns) => {
         state.additionalFunctions = fns;
         return api<E | "additionalFunctions">(state);
+      },
+      buildDirectory: (dir) => {
+        state.buildDirectory = dir;
+        return api<E | "buildDirectory">(state);
       },
     } as IPrepareFunctions<E>);
 

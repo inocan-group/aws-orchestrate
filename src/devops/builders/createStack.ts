@@ -1,6 +1,7 @@
+/* eslint-disable unicorn/consistent-function-scoping */
 import { DefaultStages, IServerlessStack, IStackApi } from "../types/serverless-stack";
 import merge from "merge-deep";
-import { IFunctionPrepConfig, IPrepareFunctions, prepareFunctions } from ".";
+import { IPrepareFunctions, prepareFunctions } from ".";
 import { findHandlerFunctions } from "~/devops/utils";
 
 function createApi<N extends string, S extends readonly string[], E extends string = never>(
@@ -10,18 +11,30 @@ function createApi<N extends string, S extends readonly string[], E extends stri
   const newStack = (updates ? merge(stack, updates) : stack) as unknown as IServerlessStack<N, S>;
 
   return {
-    stack: newStack,
+    stack: newStack as IServerlessStack<N, S>,
     resources: (resources) => {
       return resources ? createApi<N, S, E>(stack, { resources }) : createApi<N, S, E>(stack);
     },
-    prepareLambda: (cb?: (api: IPrepareFunctions) => IPrepareFunctions) => {
-      const _lambdaConfig: Readonly<IFunctionPrepConfig> = cb
-        ? cb(prepareFunctions()).config
-        : {
-            defaults: {},
-            additionalFunctions: [],
-          };
-      const fns = await findHandlerFunctions();
+    prepareLambda: (cb: (api: IPrepareFunctions) => IPrepareFunctions) => {
+      const config = cb(prepareFunctions()).config;
+
+      const autoFns = findHandlerFunctions(config.handlerLocation).map((f) => {
+        function fnToBuildDir(src: string): string {
+          const locations = Array.isArray(config.handlerLocation)
+            ? config.handlerLocation
+            : [config.handlerLocation];
+          for (const l of locations) {
+            src = src.replace(l, config.buildDirectory).replace(".ts", ".js");
+          }
+          return src;
+        }
+        return {
+          handler: fnToBuildDir(f.file) + ".handler",
+          comments: f.comments,
+          vars: f.variables,
+        };
+      });
+      console.log(autoFns);
 
       return createApi<N, S, E | "prepareLambda">(stack);
     },
