@@ -1,4 +1,4 @@
-import { VariableDeclaration, ts, Type, WriterFunction } from "ts-morph";
+import { VariableDeclaration, WriterFunction, Type, ts } from "ts-morph";
 
 /**
  * A simplified set of information about a given variable
@@ -34,6 +34,17 @@ export interface IParsedVariable {
   statedType?: string | WriterFunction;
   /** the Typescript type definition */
   type: Type<ts.Type>;
+  /** The type described in string form */
+  typeAsString: any;
+  /** The assigned value of variable */
+  value: any;
+  /** the _kind_ of variable */
+  valueKind: string | undefined;
+  /**
+   * Boolean flag indicating whether the type informtion is
+   * implicit (true) or explicitly stated (false)
+   */
+  isImplicitlyTyped: boolean;
 }
 
 /**
@@ -43,16 +54,23 @@ export interface IParsedVariable {
  */
 export function parseVariables(v: VariableDeclaration | VariableDeclaration[]): IParsedVariable[] {
   const vars = Array.isArray(v) ? v : [v];
-  return vars.map((i) => ({
-    file: i.getSourceFile().getBaseName(),
-    name: i.getName(),
-    text: i.getText(),
-    isExported: i.isExported(),
-    isNamedExport: i.isNamedExport(),
-    isDefaultExport: i.isDefaultExport(),
-    start: i.getStart(),
-    end: i.getEnd(),
-    statedType: i.getStructure().type,
-    type: i.getType(),
-  }));
+  return vars.map((i) => {
+    const initializer = i.getInitializer();
+    return {
+      file: i.getSourceFile().getBaseName(),
+      name: i.getName(),
+      text: i.getText(),
+      value: initializer?.getText() ? eval(`(${initializer?.getText()})`) : undefined,
+      valueKind: initializer?.getKindName(),
+      isExported: i.isExported(),
+      isNamedExport: i.isNamedExport(),
+      isDefaultExport: i.isDefaultExport(),
+      start: i.getStart(),
+      end: i.getEnd(),
+      statedType: i.getStructure().type,
+      type: i.getType(),
+      typeAsString: i.getType().getText(),
+      isImplicitlyTyped: !i.getStructure().type && i.getType().getText() ? true : false,
+    };
+  });
 }
