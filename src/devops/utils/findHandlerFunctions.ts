@@ -1,6 +1,6 @@
 import { Project } from "ts-morph";
 import { sync } from "globby";
-import { parseSourceFile } from "./ast";
+import { parseSourceFile } from "./ast/index";
 
 /**
  * **findHandlerFunctions**
