@@ -9,12 +9,15 @@ import {
   parseExports,
   parseImports,
   parseVariables,
+  parseFunctions,
+  IParsedFunction,
 } from ".";
 
 export type IParsedSourceFile = {
   file: string;
   imports: Omit<IParsedImport, "file">[];
   exports: Omit<IParsedExport, "file">[];
+  functions: Omit<IParsedFunction, "file">[];
   variables: Omit<IParsedVariable, "file">[];
   comments: Omit<IParsedComment, "file">[];
 };
@@ -27,6 +30,7 @@ export function parseSourceFile(source: SourceFile | string): IParsedSourceFile 
   }
   const imports = parseImports(source.getImportDeclarations()).map((i) => omit(i, "file"));
   const exports = parseExports(source.getExportAssignments()).map((i) => omit(i, "file"));
+  const functions = parseFunctions(source.getFunctions()).map((i) => omit(i, "file"));
   const variables = parseVariables(source.getVariableDeclarations()).map((i) => omit(i, "file"));
   const comments = parseComments(source).map((i) => omit(i, "file"));
 
@@ -37,6 +41,7 @@ export function parseSourceFile(source: SourceFile | string): IParsedSourceFile 
     imports,
     exports,
     variables,
+    functions,
     comments,
   };
 }

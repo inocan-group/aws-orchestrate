@@ -52,12 +52,13 @@ export interface IParsedVariable {
  *
  * given a `VariableDeclaration` passes back a relevant subset of information.
  */
-export function parseVariables(v: VariableDeclaration | VariableDeclaration[]): IParsedVariable[] {
-  const vars = Array.isArray(v) ? v : [v];
-  return vars.map((i) => {
+export function parseVariables(v: VariableDeclaration[]): IParsedVariable[] {
+  return v.map((i) => {
     const initializer = i.getInitializer();
+
     return {
       file: i.getSourceFile().getBaseName(),
+      kind: i.getKindName(),
       name: i.getName(),
       text: i.getText(),
       value: initializer?.getText() ? eval(`(${initializer?.getText()})`) : undefined,

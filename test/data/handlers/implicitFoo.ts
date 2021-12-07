@@ -1,5 +1,3 @@
-import { IHandlerFunction } from "~/types/wrapper-types";
-
 export const config = {
   description: "Something profound",
   memorySize: 1024,
@@ -18,9 +16,11 @@ export const config = {
 /**
  * This is a test description along with parameter info detailed
  *
- * @param _request
+ * @param _request this is the request param
  * @param _context
+ *
+ * @returns zippo; nothing happening
  */
-export const fn: IHandlerFunction<void, void> = async (_request, _context) => {
+export async function fn(_request: any, _context: any): Promise<void> {
   //
-};
+}

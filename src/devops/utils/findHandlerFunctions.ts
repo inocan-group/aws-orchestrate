@@ -16,5 +16,9 @@ export function findHandlerFunctions(glob: string | string[]) {
   return project
     .getSourceFiles()
     .map((s) => parseSourceFile(s))
-    .filter((s) => s.variables.some((v) => v.isNamedExport && v.name === "fn"));
+    .filter(
+      (s) =>
+        s.functions.some((f) => f.isNamedExport && f.name === "fn") ||
+        s.variables.some((v) => v.isNamedExport && v.name === "fn")
+    );
 }

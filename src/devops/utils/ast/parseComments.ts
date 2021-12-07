@@ -5,8 +5,8 @@ export type IParsedComment = {
   commentPosition: "leading" | "trailing";
   stmtKind: string;
   stmt: string;
-  variableName: string;
-  variableComponents: string[][][];
+  symbolName: string;
+  symbolType: "function" | "variable" | "unknown";
   kind: SyntaxKind;
   text: string;
   pos: number;
@@ -16,24 +16,21 @@ export type IParsedComment = {
 
 export function parseComments(source: SourceFile) {
   const comments = source.getStatementsWithComments().reduce((acc, stmt) => {
+    const variableName = stmt
+      .getChildrenOfKind(SyntaxKind.VariableDeclarationList)
+      .map((i) => i.getChildrenOfKind(SyntaxKind.VariableDeclaration)[0].getName())[0];
+    const fnName = stmt.getChildrenOfKind(SyntaxKind.FunctionKeyword)[0]?.getSymbol()?.getName();
     const leading = stmt
       .getLeadingCommentRanges()
       .filter((i) => i)
-      .map((r) => {
+      .flatMap((r) => {
         return {
           file: source.getBaseName(),
           commentPosition: "leading",
           stmtKind: stmt.getKindName(),
           stmt: stmt.getText(),
-          variableName: stmt
-            .getChildrenOfKind(SyntaxKind.VariableDeclarationList)
-            .map(
-              (i) =>
-                i.getChildrenOfKind(SyntaxKind.VariableDeclaration).map((ii) => ii.getName())[0]
-            )[0],
-          variableComponents: stmt
-            .getChildrenOfKind(SyntaxKind.VariableDeclarationList)
-            .map((i) => i.getChildren().map((ii) => [ii.getKindName(), ii.getText()])),
+          symbolName: fnName || variableName,
+          symbolType: fnName ? "function" : variableName ? "variable" : "unknown",
           kind: r.getKind(),
           text: r.getText(),
           pos: r.getPos(),
@@ -50,15 +47,8 @@ export function parseComments(source: SourceFile) {
           commentPosition: "trailing",
           stmtKind: stmt.getKindName(),
           stmt: stmt.getText(),
-          variableName: stmt
-            .getChildrenOfKind(SyntaxKind.VariableDeclarationList)
-            .map(
-              (i) =>
-                i.getChildrenOfKind(SyntaxKind.VariableDeclaration).map((ii) => ii.getName())[0]
-            )[0],
-          variableComponents: stmt
-            .getChildrenOfKind(SyntaxKind.VariableDeclarationList)
-            .map((i) => i.getChildren().map((ii) => [ii.getKindName(), ii.getText()])),
+          symbolName: fnName || variableName,
+          symbolType: fnName ? "function" : variableName ? "variable" : "unknown",
           kind: r.getKind(),
           text: r.getText(),
           pos: r.getPos(),
