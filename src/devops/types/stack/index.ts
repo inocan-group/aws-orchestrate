@@ -1,20 +1,13 @@
 // #autoindex
-
 // #region autoindexed files
 
 // index last changed at: 12th Dec, 2021, 09:07 AM ( GMT-8 )
 // export: named; exclusions: index, private.
-// files: env-types, step-functions.
-// directories: resources, sls, stack.
+// files: functions, serverless-stack.
 
 // local file exports
-export * from "./env-types";
-export * from "./step-functions";
-
-// directory exports
-export * from "./resources/index";
-export * from "./sls/index";
-export * from "./stack/index";
+export * from "./functions";
+export * from "./serverless-stack";
 
 // Note:
 // -----

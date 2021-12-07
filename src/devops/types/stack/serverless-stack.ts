@@ -1,11 +1,11 @@
-import { IPrepareFunctions } from "../builders/compute/prepareFunctions";
+import { IPrepareFunctions } from "~/devops/types";
 import type {
   IServerlessProvider,
   IServerlessResources,
   IServerlessStepFunctions,
   IServerlessFunctionConfig,
   IServerlessIamConfig,
-} from "../types";
+} from "..";
 
 /**
  * A "feature branch" based sandbox environment in the cloud
