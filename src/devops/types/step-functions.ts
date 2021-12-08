@@ -1,5 +1,5 @@
 import { arn, datetime, IDictionary } from "common-types";
-import { IServerlessEvent } from "./serverless-events";
+import type { IServerlessEvent } from "~/devops/types/sls";
 
 export interface IServerlessStepFunctions {
   stateMachines?: Record<string, IStateMachine>;

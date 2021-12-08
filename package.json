@@ -17,20 +17,13 @@
   "module": "dist/index.mjs",
   "typings": "dist/index.d.ts",
   "exports": {
-    ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    },
     "./devops": {
       "import": "./dist/devops/index.mjs",
       "require": "./dist/devops/index.js"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      "src/*": [
-        "dist/index.d.ts"
-      ]
+    },
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
     }
   },
   "files": [
@@ -38,7 +31,7 @@
     "bin"
   ],
   "bin": {
-    "tls": "./bin/tls.js"
+    "tsls": "./bin/tsls.js"
   },
   "scripts": {
     "autoindex": "npx dd autoindex",
@@ -48,7 +41,7 @@
     "version": "npx changeset version",
     "build": "run-s clean build:bundle",
     "build:bundle": "run-p build:wrapper build:devops build:cli",
-    "build:cli": "npx tsup src/cli/tls.ts --format=esm,cjs --minify --out-dir bin",
+    "build:cli": "npx tsup src/cli/tsls.ts --format=esm,cjs --minify --out-dir bin",
     "build:wrapper": "npx tsup src/wrapper-fn/index.ts --format=esm,cjs --minify --dts",
     "build:devops": "npx tsup src/devops/index.ts --format=esm,cjs --minify --dts --out-dir dist/devops",
     "circular": "yarn madge --circular src/**/*.ts",
@@ -67,6 +60,7 @@
   },
   "dependencies": {
     "brilliant-errors": "^0.4.3",
+    "common-types": "^1.31.0",
     "destr": "^1.1.0",
     "globby": "^11.0.4",
     "merge-deep": "^3.0.3",
@@ -79,7 +73,7 @@
     "@types/js-yaml": "^4.0.5",
     "@types/merge-deep": "^3.0.0",
     "@types/mermaid": "^8.2.7",
-    "@types/node": "^14.18.0",
+    "@types/node": "16",
     "@types/rimraf": "^3.0.2",
     "@types/test-console": "^1.1.1",
     "@typescript-eslint/eslint-plugin": "^5.6.0",
@@ -93,8 +87,8 @@
     "aws-sdk": "^2.1043.0",
     "aws-ssm": "^0.4.0",
     "aws-xray-sdk-core": "^3.3.4",
-    "common-types": "^1.30.0",
     "dd": "^0.15.4",
+    "dotenv": "^10.0.0",
     "eslint": "^8.4.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-import": "^2.25.3",
@@ -111,6 +105,8 @@
     "npm-run-all": "^4.1.5",
     "prettier": "^2.5.1",
     "rimraf": "^3.0.2",
+    "serverless": "^2.68.0",
+    "simple-git": "^2.48.0",
     "test-console": "^2.0.0",
     "ts-jest": "^27.1.0",
     "ts-node": "^10.4.0",
@@ -125,6 +121,7 @@
     "aws-log": "^0.11.2",
     "aws-ssm": "^0.4.0",
     "common-types": "^1.30.0",
-    "native-dash": "^1.21.0"
+    "native-dash": "^1.21.0",
+    "simple-git": "^2.48.0"
   }
 }

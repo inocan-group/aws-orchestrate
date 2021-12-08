@@ -1,22 +1,50 @@
 /* eslint-disable unicorn/consistent-function-scoping */
-import { DefaultStages, IServerlessStack, IStackApi } from "../types/serverless-stack";
 import merge from "merge-deep";
-import { IPrepareFunctions, prepareFunctions } from ".";
+import type {
+  DefaultStages,
+  IServerlessStack,
+  IStackApi,
+  IPrepareFunctions,
+  IFunctionPrepConfig,
+  IStackOptions,
+} from "~/devops/types/stack";
 import { findHandlerFunctions } from "~/devops/utils";
+import { hasConfigProperty } from "..";
+import { prepareFunctions } from "./compute";
 
+/**
+ * **createStack**
+ *
+ * Creates a AWS Stack using the Serverless Framework.
+ *
+ * Example:
+ * ```ts
+ * const stack = createStack("my-stack", "profile")
+ *    .addResource(r => r.dynamoTable('Customer'))
+ *    .prepareLambda(l => l.defaults({ memorySize: 1024 }))
+ * ```
+ */
 function createApi<N extends string, S extends readonly string[], E extends string = never>(
   stack: Readonly<IServerlessStack<N, any>>,
+  options: IStackOptions,
   updates?: Partial<IServerlessStack<N, S>>
 ): IStackApi<N, S, E> {
   const newStack = (updates ? merge(stack, updates) : stack) as unknown as IServerlessStack<N, S>;
 
   return {
     stack: newStack as IServerlessStack<N, S>,
-    resources: (resources) => {
-      return resources ? createApi<N, S, E>(stack, { resources }) : createApi<N, S, E>(stack);
+    addResource: (resources) => {
+      return resources
+        ? createApi<N, S, E>(stack, options, { resources })
+        : createApi<N, S, E>(stack, options);
     },
-    prepareLambda: (cb: (api: IPrepareFunctions) => IPrepareFunctions) => {
-      const config = cb(prepareFunctions()).config;
+    addStepFunction: () => createApi<N, S, E>(stack, options),
+    prepareLambda: (cb: <T extends string>(api: IPrepareFunctions) => IPrepareFunctions<T>) => {
+      const api = cb(prepareFunctions());
+      if (!hasConfigProperty<IFunctionPrepConfig>(api)) {
+        throw new Error("Function prep provided no config!");
+      }
+      const config = api.config;
 
       const autoFns = findHandlerFunctions(config.handlerLocation).map((f) => {
         function fnToBuildDir(src: string): string {
@@ -36,9 +64,8 @@ function createApi<N extends string, S extends readonly string[], E extends stri
       });
       console.log(autoFns);
 
-      return createApi<N, S, E | "prepareLambda">(stack);
+      return createApi<N, S, E | "prepareLambda">(stack, options);
     },
-    addStepFunction: () => createApi<N, S, E>(stack),
   } as IStackApi<N, S, E>;
 }
 
@@ -46,7 +73,8 @@ export function createStack<N extends string, S extends readonly string[] = Defa
   /** the name of the stack you are configuring */
   name: N,
   /** the AWS profile which will be used for credentialization */
-  profile: string
+  profile: string,
+  stackOptions: IStackOptions = {} as IStackOptions
 ) {
   const stack: Readonly<IServerlessStack<N, S>> = {
     name,
@@ -54,7 +82,6 @@ export function createStack<N extends string, S extends readonly string[] = Defa
       name: "aws",
       stage: "dev" as keyof S,
       profile,
-      httpApi: {},
     },
     resources: {},
     functions: {},
@@ -63,5 +90,5 @@ export function createStack<N extends string, S extends readonly string[] = Defa
     plugins: [],
   };
 
-  return createApi<N, S>(stack);
+  return createApi<N, S>(stack, stackOptions);
 }

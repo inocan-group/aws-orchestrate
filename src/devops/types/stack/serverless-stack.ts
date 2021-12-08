@@ -1,33 +1,32 @@
-import { IPrepareFunctions } from "~/devops/types";
+import { DefaultStages, IPrepareFunctions } from "~/devops/types";
 import type {
   IServerlessProvider,
-  IServerlessResources,
+  IStackResources,
   IServerlessStepFunctions,
   IServerlessFunctionConfig,
   IServerlessIamConfig,
-} from "..";
-
-/**
- * A "feature branch" based sandbox environment in the cloud
- */
-export type FeatureSandbox = `f_${string}`;
-/**
- * A "user" based sandbox environment in the cloud
- */
-export type UserSandbox = `u_${string}`;
+} from "~/devops/types";
 
 export type days = number;
 
-/**
- * The _default_ environment **stages** which a serverless stack will be brought through.
- */
-export type DefaultStages = ["local" | "dev" | "stage" | "prod" | FeatureSandbox | UserSandbox];
+export type IStackOptions = {
+  /**
+   * Part of the devops process is to analyze the source code and identify
+   * lambda functions, step-functions, and other AWS resources. When this is
+   * detected, Typescript types will be created to aid developers.
+   *
+   * By default, these types will be saved to `src/types/devops-types.ts` but this
+   * can be changed to whatever you prefer. When overriding the default, state a
+   * relative path starting from the root of the repo.
+   */
+  typeFile?: string;
+};
 
 export type IServerlessStack<N extends string, S extends readonly string[] = DefaultStages> = {
   /** name of the stack */
   name: N;
   provider: IServerlessProvider<S>;
-  resources: IServerlessResources;
+  resources: IStackResources;
   functions: Record<string, IServerlessFunctionConfig>;
   stepFunctions: IServerlessStepFunctions;
   iam: IServerlessIamConfig;
@@ -48,8 +47,8 @@ export type IStackApi<
      * Provide default values for your Lambda functions and then automatically
      * retrieve them from the repo.
      */
-    prepareLambda: (
-      cb: (api: IPrepareFunctions) => IPrepareFunctions
+    prepareLambda: <T extends string>(
+      cb: (api: IPrepareFunctions) => IPrepareFunctions<T>
     ) => IStackApi<N, S, E | "prepareLambda">;
     /**
      * Add a step function to your configuration
@@ -57,9 +56,11 @@ export type IStackApi<
     addStepFunction: () => IStackApi<N, S, E>;
 
     /**
-     *
+     * Adds a named resource to the stack
      */
-    resources: (resources?: IServerlessResources) => IStackApi<N, S, E | "resources">;
+    addResource: <R extends string>(name: R) => {
+      return addResourceApi(name) as any;
+    }
   },
   E
 >;

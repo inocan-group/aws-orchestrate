@@ -1,0 +1,7 @@
+lockfileVersion: 5.3
+
+specifiers:
+  common-types: ^1.31.0
+
+devDependencies:
+  common-types: link:../../../../../../../Users/ken/pnpm-global/5/node_modules/common-types

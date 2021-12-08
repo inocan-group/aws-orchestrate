@@ -1,15 +1,15 @@
 import { arn, IDictionary } from "common-types";
-import {
+import type {
   IArnStringReference,
   ICloudformationReference,
   IServerlessFunction,
   IServerlessProvider,
   IServerlessLogging,
   IServerlessPackage,
-  IServerlessResources,
+  IStackResources,
   IServerlessTracing,
   IStateMachine,
-} from "./index";
+} from "~/devops/types";
 
 export interface IServerlessAccountInfo {
   name: string;
@@ -188,7 +188,7 @@ export interface IServerlessYaml<T = IServerlessConfigCustom> extends IServerles
   custom?: T;
   plugins?: string[];
   provider: IServerlessProvider;
-  resources?: IServerlessResources;
+  resources?: IStackResources;
   functions?: Record<string, IServerlessFunction>;
   stepFunctions?: {
     stateMachines: Record<string, IStateMachine>;

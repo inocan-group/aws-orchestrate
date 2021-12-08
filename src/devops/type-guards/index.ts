@@ -1,18 +1,18 @@
 // #autoindex
-
 // #region autoindexed files
 
-// index last changed at: 4th Apr, 2021, 09:51 AM ( GMT-7 )
+// index last changed at: 12th Dec, 2021, 09:05 PM ( GMT-8 )
 // export: named; exclusions: index, private.
-// files: Env.
+// files: hasConfigProperty, isResource.
 
 // local file exports
-export * from "./Env";
+export * from "./hasConfigProperty";
+export * from "./isResource";
 
 // Note:
 // -----
-// This file was created by running: "do devops autoindex"; it assumes you have
-// the 'do-devops' pkg installed as a dev dep.
+// This file was created by running: "dd devops autoindex"; it assumes you have
+// the 'do-devops' pkg (that's "dd" on npm) installed as a dev dep.
 //
 // By default it assumes that exports are named exports but this can be changed by
 // adding a modifier to the '// #autoindex' syntax:
@@ -31,7 +31,12 @@ export * from "./Env";
 //
 //    - autoindex:named, exclude: foo,bar,baz
 //
-// Also be aware that all of your content outside the defined region in this file
+// Inversely, if you state a file to be an "orphan" then autoindex files
+// below this file will not reference this autoindex file:
+//
+//    - autoindex:named, orphan
+// 
+// Also be aware that all of your content outside the "// #region" section in this file
 // will be preserved in situations where you need to do something paricularly awesome.
 // Keep on being awesome.
 

@@ -1,14 +1,15 @@
 // #autoindex
 // #region autoindexed files
 
-// index last changed at: 12th Dec, 2021, 11:44 AM ( GMT-8 )
+// index last changed at: 12th Dec, 2021, 09:21 PM ( GMT-8 )
 // export: named; exclusions: index, private.
-// files: addDynamoTable, addEventBus, addS3Bucket.
+// files: addEventBus, addResourceApi, addS3Bucket, dynamoTable.
 
 // local file exports
-export * from "./addDynamoTable";
 export * from "./addEventBus";
+export * from "./addResourceApi";
 export * from "./addS3Bucket";
+export * from "./dynamoTable";
 
 // Note:
 // -----

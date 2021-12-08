@@ -1,12 +1,13 @@
 // #autoindex
 // #region autoindexed files
 
-// index last changed at: 12th Dec, 2021, 03:23 PM ( GMT-8 )
+// index last changed at: 12th Dec, 2021, 04:36 PM ( GMT-8 )
 // export: named; exclusions: index, private.
-// files: findHandlerFunctions.
+// files: buildLambdaTypes, findHandlerFunctions.
 // directories: ast.
 
 // local file exports
+export * from "./buildLambdaTypes";
 export * from "./findHandlerFunctions";
 
 // directory exports

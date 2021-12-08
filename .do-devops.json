@@ -1,0 +1,11 @@
+{
+  "kind": "project",
+  "projectConfig": true,
+  "general": {},
+  "aws": {},
+  "autoindex": {
+    "whitelistGlobs": ["src/**/index.ts", "test/**/index.ts"],
+    "blacklistGlobs": ["!**/*.d.ts", "!**/node_modules"],
+    "sfc": false
+  }
+}

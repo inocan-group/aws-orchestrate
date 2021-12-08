@@ -2,14 +2,14 @@
 
 // #region autoindexed files
 
-// index last changed at: 12th Dec, 2021, 03:23 PM ( GMT-8 )
+// index last changed at: 12th Dec, 2021, 03:21 PM ( GMT-8 )
 // export: named; exclusions: index, private.
-// directories: builders, constants, environment-vars, types, utils.
+// directories: builders, constants, type-guards, types, utils.
 
 // directory exports
 export * from "./builders/index";
 export * from "./constants/index";
-export * from "./environment-vars/index";
+export * from "./type-guards/index";
 export * from "./types/index";
 export * from "./utils/index";
 
