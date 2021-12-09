@@ -6,7 +6,6 @@ import type {
   IServerlessProvider,
   IServerlessLogging,
   IServerlessPackage,
-  IStackResources,
   IServerlessTracing,
   IStateMachine,
 } from "~/devops/types";
@@ -188,7 +187,7 @@ export interface IServerlessYaml<T = IServerlessConfigCustom> extends IServerles
   custom?: T;
   plugins?: string[];
   provider: IServerlessProvider;
-  resources?: IStackResources;
+  resources?: any;
   functions?: Record<string, IServerlessFunction>;
   stepFunctions?: {
     stateMachines: Record<string, IStateMachine>;

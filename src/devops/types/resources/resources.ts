@@ -1,5 +1,4 @@
 import {
-  arn,
   AwsResourceType,
   IDynamoDbTableResource,
   IAwsS3Bucket,
@@ -8,13 +7,28 @@ import {
   IAwsCognitoIdentityPool,
   IAwsCognitoUserPool,
   IAwsIamRole,
+  IAwsCloudwatchAnomalyDetector,
+  IAwsEventRule,
+  IAwsEventSchema,
 } from "common-types";
-import { IServerlessIamRolePolicy, IStackRuntime } from "..";
+import { IPermissionsRunTime, IResourceRunTime, IServerlessIamRolePolicy, IStackRuntime } from "..";
 
 export interface IGenericResource<T extends string = string> {
   Type: T;
   Properties: Record<string, any>;
 }
+
+/**
+ * **ResourceProps<T,E>**
+ *
+ * Type utility which exposes an AWS resource for consumer to fill in. Because
+ * sensible defaults are used, the properties will all be made optional and if
+ * the second generic -- `E` -- is used then these properties will NOT be provided
+ * to the consumer.
+ */
+export type ResourceProps<T extends IGenericResource, E extends string = never> = E extends never
+  ? Partial<T["Properties"]>
+  : Partial<Omit<T["Properties"], E>>;
 
 /**
  * Type utility which adds two optional properties so that
@@ -33,14 +47,19 @@ export type AtDesignTime<T extends IGenericResource> = T & {
    * optionally allow a function to be added which will transform
    * `properties` when deploying.
    */
-  runTime?: (rt: IStackRuntime) => Record<string, any>;
+  runTime?: (
+    // eslint-disable-next-line no-use-before-define
+    rt: IStackRuntime<IResourceRunTime<T["Properties"]>>
+  ) => T["Properties"];
 
   /**
    * Optionally allows any resource to be configured with a set of IAM role permissions
    * which would allow access to this resource. Permissions provided here will
    * be offered to consumers who chose the resource.
    */
-  permissions?: (rt: IStackRuntime & { resourceArn: arn }) => IServerlessIamRolePolicy[];
+  permissions?: (
+    rt: IStackRuntime<IPermissionsRunTime<T["Properties"]>>
+  ) => IServerlessIamRolePolicy[];
 };
 
 /**
@@ -64,6 +83,10 @@ export type ResourceProperties<
   ? AtDesignTime<IAwsS3Bucket<R>>
   : T extends AwsResourceType.eventBridgeEventBus
   ? AtDesignTime<IAwsEventBus<R>>
+  : T extends AwsResourceType.eventBridgeRule
+  ? AtDesignTime<IAwsEventRule<R>>
+  : T extends AwsResourceType.eventBridgeSchema
+  ? AtDesignTime<IAwsEventSchema<R>>
   : T extends AwsResourceType.cognitoIdentityPool
   ? AtDesignTime<IAwsCognitoIdentityPool<R>>
   : T extends AwsResourceType.cognitoUserPool
@@ -72,6 +95,8 @@ export type ResourceProperties<
   ? AtDesignTime<IAwsIamRole<R>>
   : T extends AwsResourceType.cloudwatchAlarm
   ? AtDesignTime<IAwsCloudwatchAlarm<R>>
+  : T extends AwsResourceType.cloudwatchAnomalyDetector
+  ? AtDesignTime<IAwsCloudwatchAnomalyDetector<R>>
   : AtDesignTime<IGenericResource<T>>;
 
 /**
@@ -83,5 +108,6 @@ export type ResourceProperties<
 export type IStackResource<R extends string, T extends string> = {
   name: R;
   type: T;
-  properties: ResourceProperties<R, T>;
+  resource: ResourceProperties<R, T>;
+  toString: () => string;
 };

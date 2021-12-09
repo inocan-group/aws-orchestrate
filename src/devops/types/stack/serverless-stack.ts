@@ -1,7 +1,6 @@
 import { DefaultStages, IPrepareFunctions } from "~/devops/types";
 import type {
   IServerlessProvider,
-  IStackResources,
   IServerlessStepFunctions,
   IServerlessFunctionConfig,
   IServerlessIamConfig,
@@ -26,7 +25,7 @@ export type IServerlessStack<N extends string, S extends readonly string[] = Def
   /** name of the stack */
   name: N;
   provider: IServerlessProvider<S>;
-  resources: IStackResources;
+  resources: any[];
   functions: Record<string, IServerlessFunctionConfig>;
   stepFunctions: IServerlessStepFunctions;
   iam: IServerlessIamConfig;
@@ -58,9 +57,7 @@ export type IStackApi<
     /**
      * Adds a named resource to the stack
      */
-    addResource: <R extends string>(name: R) => {
-      return addResourceApi(name) as any;
-    }
+    resources: any;
   },
   E
 >;

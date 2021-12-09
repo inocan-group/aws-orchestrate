@@ -63,7 +63,6 @@
     "common-types": "^1.31.0",
     "destr": "^1.1.0",
     "globby": "^11.0.4",
-    "merge-deep": "^3.0.3",
     "ts-morph": "^13.0.2"
   },
   "devDependencies": {
@@ -71,7 +70,6 @@
     "@type-challenges/utils": "^0.1.1",
     "@types/jest": "^27.0.3",
     "@types/js-yaml": "^4.0.5",
-    "@types/merge-deep": "^3.0.0",
     "@types/mermaid": "^8.2.7",
     "@types/node": "16",
     "@types/rimraf": "^3.0.2",

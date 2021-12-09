@@ -1,39 +1,108 @@
-import { DynamoBillingMode, IDynamoDbTableResource } from "common-types";
-import { isResource, isRunTimeResource } from "~/devops/type-guards";
-import type { RunTime } from "~/devops/types";
+import { AwsResourceType, IDynamoDbTableResource } from "common-types";
+import type { AtDesignTime, IStackResource, ResourceProps } from "~/devops/types";
+import { DevopsError } from "~/errors";
 
-export type DynamoDbManaged = {
-  Type: never;
-  Properties: {
-    TableName: never;
-  };
-};
-
-export type DynamoUnmanaged = DynamoDbManaged & IDynamoDbTableResource;
-
-export function dynamoTable<TResource extends string>(
-  table: TResource,
-  config?: IDynamoDbTableResource<TResource> | RunTime<IDynamoDbTableResource<TResource>>
+/**
+ * **DynamoTable**
+ *
+ * Adds a DynamoDB Table to as a resource to your stack
+ * ```ts
+ * // by itself
+ * const resource = DynamoTable("customers");
+ * // or in stack definition
+ * const stack = createStack("my-stack", "profile")
+ *  .addResources(DynamoTable("customers"));
+ * ```
+ */
+export function DynamoTable<R extends string>(
+  table: R,
+  config?: ResourceProps<IDynamoDbTableResource<R>, "TableName">
 ) {
-  if (isResource(config) || isRunTimeResource(config)) {
-    return config;
-  }
-
-  const defaultConfig: RunTime<IDynamoDbTableResource<TResource>> = (rt) => ({
-    Type: "AWS::DynamoDB::Table",
+  const defaultConfig: AtDesignTime<IDynamoDbTableResource<R>> = {
+    Type: AwsResourceType.dynamoTable,
     Properties: {
-      TableName: `${table}-${rt.stage}`,
-      BillingMode: "PAY_PER_REQUEST",
-      AttributeDefinitions: [],
-      KeySchema: [],
+      TableName: `${table}-{{stage}}`,
+      AttributeDefinitions: [
+        { AttributeName: "pk", AttributeType: "S" },
+        { AttributeName: "sk", AttributeType: "S" },
+      ],
+      KeySchema: [
+        { AttributeName: "pk", KeyType: "HASH" },
+        { AttributeName: "sk", KeyType: "RANGE" },
+      ],
       GlobalSecondaryIndexes: [],
     },
-  });
+    runTime: (rt) => {
+      if (rt.properties?.ProvisionedThroughput) {
+        if (rt.properties.BillingMode === "PAY_PER_REQUEST") {
+          throw new DevopsError(
+            "The provisioned throughput was set but billing mode was set as PAY_PER_REQUEST. Both can not be true.",
+            "dynamodb/invalid-config"
+          );
+        } else {
+          rt.properties.BillingMode = "PROVISIONED";
+        }
+      } else {
+        // provisioned throughput not configured
+        if (rt.properties?.BillingMode === "PROVISIONED") {
+          throw new DevopsError(
+            "The billing mode is set as PROVISIONED but you haven't stated details for the provisioned throughput!",
+            "dynamodb/invalid-config"
+          );
+        } else {
+          rt.properties.BillingMode = "PAY_PER_REQUEST";
+        }
+      }
 
-  const api = {
-    billingMode: (mode: DynamoBillingMode) => {
-      // 
+      return {
+        ...rt.properties,
+        TableName: `${table}-${rt.stage}`,
+      };
     },
-    addGSI: ()
+    permissions: (_rt) => {
+      return [];
+    },
   };
+
+  const resource = config
+    ? { ...defaultConfig, Properties: { ...defaultConfig.Properties, ...config } }
+    : defaultConfig;
+
+  const pk = resource.Properties.KeySchema.find((i) => i.KeyType === "HASH");
+  const sk = resource.Properties.KeySchema.find((i) => i.KeyType === "RANGE");
+  const gsi = resource.Properties.GlobalSecondaryIndexes?.shift();
+  const lsi = resource.Properties.LocalSecondaryIndexes?.shift();
+  const gsi1 = gsi //
+    ? `${gsi ? `::gsi1('${gsi?.IndexName + ":" + gsi?.KeySchema.join("/")}')` : ""}`
+    : "";
+  const lsi1 = lsi //
+    ? `${lsi ? `::lsi1('${lsi?.IndexName + ":" + lsi?.KeySchema.join("/")}')` : ""}`
+    : "";
+
+  const info = `dynamodb::table(${table})::pk('${pk?.AttributeName}')${
+    sk ? `::sort('${pk?.AttributeName}')${gsi1}${lsi1}` : ""
+  }`;
+
+  // const api: IDynamoTableApi = {
+  //   provision(read: number, write: number) {
+  //     resource.Properties.ProvisionedThroughput = {
+  //       ReadCapacityUnits: read,
+  //       WriteCapacityUnits: write,
+  //     };
+  //     resource.Properties.BillingMode = "PROVISIONED";
+  //   },
+  // };
+
+  return {
+    type: AwsResourceType.dynamoTable,
+    name: table,
+    resource,
+    // api,
+    toString() {
+      return info;
+    },
+    toJSON() {
+      return info;
+    },
+  } as IStackResource<R, AwsResourceType.dynamoTable>;
 }

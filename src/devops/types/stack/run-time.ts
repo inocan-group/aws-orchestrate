@@ -6,11 +6,11 @@ import { AwsArnPartition, AwsRegion } from "common-types";
  * The properties typically are derived from ENV variables,
  * option hashes, and sensible defaults.
  */
-export interface IStackRuntime<S extends readonly string[] = never> {
+export type IStackRuntime<K extends {} = {}> = {
   /** the stack name */
   stack: string;
   /** The lifecycle stage the serverless framework CLI is being run in */
-  stage: S extends never ? string : keyof S;
+  stage: string;
 
   /** the AWS profile used to credentialize */
   profile: string;
@@ -30,10 +30,14 @@ export interface IStackRuntime<S extends readonly string[] = never> {
   semver: string;
   /** The **git** branch the stack is being deployed from */
   branch: string;
-}
+} & K;
 
-/**
- * Type utility which converts a type `T` to be a function which receives
- * the `IStackRuntime` parameters to dynamically generate type `T`.
- */
-export type RunTime<T> = (rt: IStackRuntime) => T;
+export type IResourceRunTime<T extends {}> = {
+  /** the static properties at design time */
+  properties: T;
+};
+
+export type IPermissionsRunTime<T extends {}> = {
+  /** the resolved properties at run-time */
+  properties: T;
+};

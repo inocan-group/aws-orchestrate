@@ -1,13 +1,12 @@
 // #autoindex
 // #region autoindexed files
 
-// index last changed at: 12th Dec, 2021, 09:05 PM ( GMT-8 )
+// index last changed at: 12th Dec, 2021, 04:37 PM ( GMT-8 )
 // export: named; exclusions: index, private.
-// files: hasConfigProperty, isResource.
+// files: hasConfigProperty.
 
 // local file exports
 export * from "./hasConfigProperty";
-export * from "./isResource";
 
 // Note:
 // -----

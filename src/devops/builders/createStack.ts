@@ -9,7 +9,7 @@ import type {
   IStackOptions,
 } from "~/devops/types/stack";
 import { findHandlerFunctions } from "~/devops/utils";
-import { hasConfigProperty } from "..";
+import { hasConfigProperty, IStackResource } from "..";
 import { prepareFunctions } from "./compute";
 
 /**
@@ -33,10 +33,8 @@ function createApi<N extends string, S extends readonly string[], E extends stri
 
   return {
     stack: newStack as IServerlessStack<N, S>,
-    addResource: (resources) => {
-      return resources
-        ? createApi<N, S, E>(stack, options, { resources })
-        : createApi<N, S, E>(stack, options);
+    resources: <R extends IStackResource<string, string>>(r: R[]) => {
+      return r;
     },
     addStepFunction: () => createApi<N, S, E>(stack, options),
     prepareLambda: (cb: <T extends string>(api: IPrepareFunctions) => IPrepareFunctions<T>) => {
@@ -83,7 +81,7 @@ export function createStack<N extends string, S extends readonly string[] = Defa
       stage: "dev" as keyof S,
       profile,
     },
-    resources: {},
+    resources: [],
     functions: {},
     stepFunctions: {},
     iam: {},
