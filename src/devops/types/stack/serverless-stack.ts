@@ -57,7 +57,7 @@ export type IStackApi<
     /**
      * Adds a named resource to the stack
      */
-    resources: any;
+    resources: <R extends readonly any[]>(r: R) => IStackApi<N, S, E | "resources">;
   },
   E
 >;

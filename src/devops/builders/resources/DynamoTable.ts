@@ -17,11 +17,11 @@ import { DevopsError } from "~/errors";
 export function DynamoTable<R extends string>(
   table: R,
   config?: ResourceProps<IDynamoDbTableResource<R>, "TableName">
-) {
+): IStackResource<R, AwsResourceType.dynamoTable> {
   const defaultConfig: AtDesignTime<IDynamoDbTableResource<R>> = {
     Type: AwsResourceType.dynamoTable,
     Properties: {
-      TableName: `${table}-{{stage}}`,
+      TableName: `${table}_{{stage}}`,
       AttributeDefinitions: [
         { AttributeName: "pk", AttributeType: "S" },
         { AttributeName: "sk", AttributeType: "S" },
@@ -32,7 +32,7 @@ export function DynamoTable<R extends string>(
       ],
       GlobalSecondaryIndexes: [],
     },
-    runTime: (rt) => {
+    transformProperties: (rt) => {
       if (rt.properties?.ProvisionedThroughput) {
         if (rt.properties.BillingMode === "PAY_PER_REQUEST") {
           throw new DevopsError(

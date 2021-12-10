@@ -31,6 +31,35 @@ export type ResourceProps<T extends IGenericResource, E extends string = never> 
   : Partial<Omit<T["Properties"], E>>;
 
 /**
+ * Allows a _resource_ to **provide** a set of permissions used to interact with it.
+ * These permission groups will then be offered to both Lambda functions
+ * and Step Functions. This function receives all _run time_ properties plus
+ * a copy of the _transformed_ properties from the resource.
+ * ```ts
+ * providePermissions(rt) => [
+ *    allow("ssm:GetParameter", "ssm:GetParametersByPath").to(self()).as("getSecrets"),
+ *    allow("ssm:PutParameter").to(self()).as("addSecret")
+ * ]
+ * ```
+ */
+export type ResourceProvidedPermissions<T extends IGenericResource> = (
+  rt: IStackRuntime<IPermissionsRunTime<T["Properties"]>>
+) => IServerlessIamRolePolicy[];
+
+/**
+ * a function which recieves all the "run-time" properties as well as a
+ * `properties` property which represents the _design time_ representation
+ * of a resources's properties and then returns a transformed version of
+ * the same data structure.
+ * ```ts
+ * transformProperties(rt) => ({...rt, Name: `${name}_${rt.stage}`})
+ * ```
+ */
+export type RuntimeResourceTransformer<T extends IGenericResource> = (
+  rt: IStackRuntime<IResourceRunTime<T["Properties"]>>
+) => T["Properties"];
+
+/**
  * Type utility which adds two optional properties so that
  * at "design time" you can add hooks to react to the specifics
  * provided at "run time" (aka, when you deploy a stack with
@@ -44,22 +73,26 @@ export type ResourceProps<T extends IGenericResource, E extends string = never> 
  */
 export type AtDesignTime<T extends IGenericResource> = T & {
   /**
-   * optionally allow a function to be added which will transform
-   * `properties` when deploying.
+   * a function which can transform a resources's `properties` when deploying.
+   * ```ts
+   * transformProperties(rt) => ({...rt, Name: `${name}_${rt.stage}`})
+   * ```
    */
-  runTime?: (
-    // eslint-disable-next-line no-use-before-define
-    rt: IStackRuntime<IResourceRunTime<T["Properties"]>>
-  ) => T["Properties"];
+  transformResource?: RuntimeResourceTransformer<T>;
 
   /**
-   * Optionally allows any resource to be configured with a set of IAM role permissions
-   * which would allow access to this resource. Permissions provided here will
-   * be offered to consumers who chose the resource.
+   * Allows a _resource_ to **provide** a set of permissions used to interact with it.
+   * These permission groups will then be offered to both Lambda functions
+   * and Step Functions. This function receives all _run time_ properties plus
+   * a copy of the _transformed_ properties from the resource.
+   * ```ts
+   * providePermissions(rt) => [
+   *    allow("ssm:GetParameter", "ssm:GetParametersByPath").to(self()).as("getSecrets"),
+   *    allow("ssm:PutParameter").to(self()).as("addSecret")
+   * ]
+   * ```
    */
-  permissions?: (
-    rt: IStackRuntime<IPermissionsRunTime<T["Properties"]>>
-  ) => IServerlessIamRolePolicy[];
+  providePermissions?: ResourceProvidedPermissions<T>;
 };
 
 /**
@@ -109,5 +142,4 @@ export type IStackResource<R extends string, T extends string> = {
   name: R;
   type: T;
   resource: ResourceProperties<R, T>;
-  toString: () => string;
 };

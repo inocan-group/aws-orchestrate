@@ -60,6 +60,7 @@
   },
   "dependencies": {
     "brilliant-errors": "^0.4.3",
+    "cdk-iam-actions": "^1.0.0",
     "common-types": "^1.31.0",
     "destr": "^1.1.0",
     "globby": "^11.0.4",
