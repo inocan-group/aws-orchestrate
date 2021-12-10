@@ -11,9 +11,9 @@ describe("DynamoTable() resource helper", () => {
     expect(JSON.stringify(t)).toInclude("customers");
     expect(t.resource.Type).toBe(AwsResourceType.dynamoTable);
 
-    expect(t.resource.runTime).toBeTruthy();
-    if (t.resource.runTime) {
-      const props = t.resource?.runTime(rt) || undefined;
+    expect(t.resource.transformResource).toBeTruthy();
+    if (t.resource.transformResource) {
+      const props = t.resource?.transformResource(rt) || undefined;
       expect(typeof props).toBe("object");
       expect(props.TableName).toBe("customers-dev");
       expect(props.BillingMode).toBe("PAY_PER_REQUEST");
@@ -30,9 +30,9 @@ describe("DynamoTable() resource helper", () => {
     const rt = { ...(await getRuntime()), properties: t.resource.Properties };
 
     expect(typeof t.resource.Properties.ProvisionedThroughput).toBe("object");
-    expect(t.resource.runTime).toBeTruthy();
-    if (t.resource.runTime) {
-      const props = t.resource?.runTime(rt) || undefined;
+    expect(t.resource.transformResource).toBeTruthy();
+    if (t.resource.transformResource) {
+      const props = t.resource?.transformResource(rt) || undefined;
       expect(props.BillingMode).toBe("PROVISIONED");
     }
   });
@@ -69,6 +69,10 @@ describe("DynamoTable() resource helper", () => {
 
     expect(t.resource.Properties.GlobalSecondaryIndexes).not.toBeUndefined();
     expect(JSON.stringify(t)).toInclude("lsi1");
-    console.log(JSON.stringify(t));
+  });
+
+  it.todo("The default permissions provided by a Table are found on returned resource", () => {
+    const t = DynamoTable("customers");
+    const p = t.
   });
 });

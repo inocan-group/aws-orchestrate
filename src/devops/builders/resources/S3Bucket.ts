@@ -1,6 +1,5 @@
-import { AwsResourceType, IAwsS3Bucket, IDynamoDbTableResource } from "common-types";
+import { AwsResourceType, IAwsS3Bucket } from "common-types";
 import type { AtDesignTime, IStackResource, ResourceProps } from "~/devops/types";
-import { DevopsError } from "~/errors";
 
 /**
  * **S3Bucket**
@@ -25,7 +24,7 @@ export function S3Bucket<R extends string>(
         BucketName: `${bucketName}-${rt.stage}`,
       };
     },
-    permissions: (_rt) => {
+    providePermissions: (_rt) => {
       return [];
     },
   };
@@ -34,20 +33,7 @@ export function S3Bucket<R extends string>(
     ? { ...defaultConfig, Properties: { ...defaultConfig.Properties, ...config } }
     : defaultConfig;
 
-  const pk = resource.Properties.KeySchema.find((i) => i.KeyType === "HASH");
-  const sk = resource.Properties.KeySchema.find((i) => i.KeyType === "RANGE");
-  const gsi = resource.Properties.GlobalSecondaryIndexes?.shift();
-  const lsi = resource.Properties.LocalSecondaryIndexes?.shift();
-  const gsi1 = gsi //
-    ? `${gsi ? `::gsi1('${gsi?.IndexName + ":" + gsi?.KeySchema.join("/")}')` : ""}`
-    : "";
-  const lsi1 = lsi //
-    ? `${lsi ? `::lsi1('${lsi?.IndexName + ":" + lsi?.KeySchema.join("/")}')` : ""}`
-    : "";
-
-  const info = `s3::bucket(${bucketName})::pk('${pk?.AttributeName}')${
-    sk ? `::sort('${pk?.AttributeName}')${gsi1}${lsi1}` : ""
-  }`;
+  const info = `s3::bucket(${bucketName})`;
 
   // const api: IDynamoTableApi = {
   //   provision(read: number, write: number) {
@@ -60,7 +46,7 @@ export function S3Bucket<R extends string>(
   // };
 
   return {
-    type: AwsResourceType.dynamoTable,
+    type: AwsResourceType.s3Bucket,
     name: bucketName,
     resource,
     // api,
@@ -70,5 +56,5 @@ export function S3Bucket<R extends string>(
     toJSON() {
       return info;
     },
-  } as IStackResource<R, AwsResourceType.dynamoTable>;
+  } as IStackResource<R, AwsResourceType.s3Bucket>;
 }

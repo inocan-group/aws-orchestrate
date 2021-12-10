@@ -32,7 +32,7 @@ export function DynamoTable<R extends string>(
       ],
       GlobalSecondaryIndexes: [],
     },
-    transformProperties: (rt) => {
+    transformResource: (rt) => {
       if (rt.properties?.ProvisionedThroughput) {
         if (rt.properties.BillingMode === "PAY_PER_REQUEST") {
           throw new DevopsError(
@@ -59,7 +59,7 @@ export function DynamoTable<R extends string>(
         TableName: `${table}-${rt.stage}`,
       };
     },
-    permissions: (_rt) => {
+    providePermissions: (_rt) => {
       return [];
     },
   };

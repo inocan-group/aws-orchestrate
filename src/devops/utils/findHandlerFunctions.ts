@@ -6,7 +6,6 @@ import { parseSourceFile } from "./ast/index";
  * **findHandlerFunctions**
  *
  * Finds all handler functions given the passed in glob pattern
- * and returns meta discovered for each.
  */
 export function findHandlerFunctions(glob: string | string[]) {
   const g = Array.isArray(glob) ? glob : [glob];

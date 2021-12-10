@@ -1,5 +1,5 @@
-// eslint-disable no-eval
 import { VariableDeclaration, WriterFunction, Type, ts } from "ts-morph";
+
 /**
  * A simplified set of information about a given variable
  */
@@ -61,7 +61,6 @@ export function parseVariables(v: VariableDeclaration[]): IParsedVariable[] {
       kind: i.getKindName(),
       name: i.getName(),
       text: i.getText(),
-      // ts:
       value: initializer?.getText() ? eval(`(${initializer?.getText()})`) : undefined,
       valueKind: initializer?.getKindName(),
       isExported: i.isExported(),

@@ -15,7 +15,6 @@ import {
 
 export type IParsedSourceFile = {
   file: string;
-  source: SourceFile;
   imports: Omit<IParsedImport, "file">[];
   exports: Omit<IParsedExport, "file">[];
   functions: Omit<IParsedFunction, "file">[];
@@ -39,7 +38,6 @@ export function parseSourceFile(source: SourceFile | string): IParsedSourceFile 
 
   return {
     file,
-    source,
     imports,
     exports,
     variables,
