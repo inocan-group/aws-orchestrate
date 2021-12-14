@@ -11,12 +11,104 @@ import {
   IAwsEventRule,
   IAwsEventSchema,
 } from "common-types";
-import { IPermissionsRunTime, IResourceRunTime, IServerlessIamRolePolicy, IStackRuntime } from "..";
+import { PermissionsRunTime, PropertiesTransformerRt, PermissionSet } from "..";
 
+/**
+ * A resource from AWS where typing is still generic to the specific `Type`
+ */
 export interface IGenericResource<T extends string = string> {
   Type: T;
+  DeletionPolicy?: string;
   Properties: Record<string, any>;
 }
+
+/**
+ * A `NamedResource` is a _typed_ AWS resource which has had the non-AWS property
+ * `Name` added. This property represents a unique property for a given stack and serves
+ * as the base for resulting ARN which will be produced.
+ */
+export interface INamedResource<TResourceName extends string, TAwsType extends string>
+  extends IGenericResource<TAwsType> {
+  Name: TResourceName;
+}
+
+/**
+ * Allows a **resource** to _provide_ a set of permissions used to interact with it.
+ * These permission groups will then be offered to both Lambda functions
+ * and Step Functions. This function receives all _run time_ properties plus
+ * a copy of the _transformed_ properties from the resource.
+ * ```ts
+ * providePermissions: ({ partition, stage }) => [
+ *    allow(`arn:${partition}:ssm:yyy:${name}}-${stage}`)
+ *      .to("ssm:GetParameter", "ssm:GetParametersByPath").as("getSecrets"),
+ *    allow(`arn:${partition}:ssm:yyy:${name}}-${stage}`)
+ *      .to(a => [a.SSM.GET_PARAMETER, a.SSM.PUT_PARAMETER].as("getAndPut")
+ * ]
+ * ```
+ * - where the function is passed the normal run-time dictionary plus a `properties`
+ * hash which has all of the run-time properties on the resource
+ */
+export type ResourceProvidedPermissions<R extends string, T extends IGenericResource> = (
+  rt: PermissionsRunTime<T>
+) => PermissionSet<R>[];
+
+/**
+ * A function which can transform a resources's `properties` when deploying. If defined,
+ * responsible for returning a valid set of `Properties` on the AWS resource type.
+ *
+ * Example:
+ * ```ts
+ * transformProperties: (rt) => ({...rt, Name: `${name}_${rt.stage}`})
+ * ```
+ */
+export type RuntimeResourceTransformer<R extends INamedResource<string, string>> = (
+  rt: PropertiesTransformerRt<R>
+) => R["Properties"];
+
+export type DesignTimeCallbacks<R extends string, T extends INamedResource<R, string>> = {
+  /**
+   * A function which can transform a resources's `properties` when deploying. If defined,
+   * responsible for returning a valid set of `Properties` on the AWS resource type.
+   *
+   * Example:
+   * ```ts
+   * transformProperties: (rt) => ({...rt, Name: `${name}_${rt.stage}`})
+   * ```
+   */
+  transformResource?: RuntimeResourceTransformer<T>;
+
+  /**
+   * Allows a **resource** to _provide_ a set of permissions used to interact with it.
+   * These permission groups will then be offered to both Lambda functions
+   * and Step Functions. This function receives all _run time_ properties plus
+   * a copy of the _transformed_ properties from the resource.
+   * ```ts
+   * providePermissions: ({ partition, stage }) => [
+   *    allow(`arn:${partition}:ssm:yyy:${name}}-${stage}`)
+   *      .to("ssm:GetParameter", "ssm:GetParametersByPath").as("getSecrets"),
+   *    allow(`arn:${partition}:ssm:yyy:${name}}-${stage}`)
+   *      .to(a => [a.SSM.GET_PARAMETER, a.SSM.PUT_PARAMETER].as("getAndPut")
+   * ]
+   * ```
+   * - where the function is passed the normal run-time dictionary plus a `properties`
+   * hash which has all of the run-time properties on the resource
+   */
+  providePermissions?: ResourceProvidedPermissions<R, T>;
+};
+
+/**
+ * Type utility which adds properties so that
+ * at "design time" you can add hooks to the resource's `Properties`
+ * property.
+ *
+ * Where `R` is the resource name, and `T` is the resource itself.
+ */
+export type AtDesignTime<
+  TResourceName extends string,
+  TAwsType extends INamedResource<TResourceName, string>
+> = TAwsType & {
+  Properties: DesignTimeCallbacks<TResourceName, TAwsType>;
+};
 
 /**
  * **ResourceProps<T,E>**
@@ -27,73 +119,8 @@ export interface IGenericResource<T extends string = string> {
  * to the consumer.
  */
 export type ResourceProps<T extends IGenericResource, E extends string = never> = E extends never
-  ? Partial<T["Properties"]>
-  : Partial<Omit<T["Properties"], E>>;
-
-/**
- * Allows a _resource_ to **provide** a set of permissions used to interact with it.
- * These permission groups will then be offered to both Lambda functions
- * and Step Functions. This function receives all _run time_ properties plus
- * a copy of the _transformed_ properties from the resource.
- * ```ts
- * providePermissions(rt) => [
- *    allow("ssm:GetParameter", "ssm:GetParametersByPath").to(self()).as("getSecrets"),
- *    allow("ssm:PutParameter").to(self()).as("addSecret")
- * ]
- * ```
- */
-export type ResourceProvidedPermissions<T extends IGenericResource> = (
-  rt: IStackRuntime<IPermissionsRunTime<T["Properties"]>>
-) => IServerlessIamRolePolicy[];
-
-/**
- * a function which recieves all the "run-time" properties as well as a
- * `properties` property which represents the _design time_ representation
- * of a resources's properties and then returns a transformed version of
- * the same data structure.
- * ```ts
- * transformProperties(rt) => ({...rt, Name: `${name}_${rt.stage}`})
- * ```
- */
-export type RuntimeResourceTransformer<T extends IGenericResource> = (
-  rt: IStackRuntime<IResourceRunTime<T["Properties"]>>
-) => T["Properties"];
-
-/**
- * Type utility which adds two optional properties so that
- * at "design time" you can add hooks to react to the specifics
- * provided at "run time" (aka, when you deploy a stack with
- * specific environment considerations like stage, region, etc.)
- *
- * - `runTime` property allows a resource's
- * properties to be _transformed_ at run time when a user
- * deploys.
- * - `permissions` allows adding named permissions to the given
- * resource which provide utility for the resource.
- */
-export type AtDesignTime<T extends IGenericResource> = T & {
-  /**
-   * a function which can transform a resources's `properties` when deploying.
-   * ```ts
-   * transformProperties(rt) => ({...rt, Name: `${name}_${rt.stage}`})
-   * ```
-   */
-  transformResource?: RuntimeResourceTransformer<T>;
-
-  /**
-   * Allows a _resource_ to **provide** a set of permissions used to interact with it.
-   * These permission groups will then be offered to both Lambda functions
-   * and Step Functions. This function receives all _run time_ properties plus
-   * a copy of the _transformed_ properties from the resource.
-   * ```ts
-   * providePermissions(rt) => [
-   *    allow("ssm:GetParameter", "ssm:GetParametersByPath").to(self()).as("getSecrets"),
-   *    allow("ssm:PutParameter").to(self()).as("addSecret")
-   * ]
-   * ```
-   */
-  providePermissions?: ResourceProvidedPermissions<T>;
-};
+  ? Partial<AtDesignTime<string, T>["Properties"]>
+  : Partial<Omit<AtDesignTime<string, T>["Properties"], E>>;
 
 /**
  * A type utility for CloudFormation resources. It allows you to pass in a
@@ -101,36 +128,34 @@ export type AtDesignTime<T extends IGenericResource> = T & {
  * resource.
  *
  * If the _type_ of resource is not recognized then it will type it as a
- * `IGenericResource`. In all cases, however, an optional property `runTime` will
- * be provided as a callback hook which allows for transforming the resources
- * properties at deployment time.
+ * `IGenericResource`.
  */
-export type ResourceProperties<
+export type Resource<
   /** the resource name */
-  R extends string,
+  TResourceName extends string,
   /** the resource type */
-  T extends string
-> = T extends AwsResourceType.dynamoTable
-  ? AtDesignTime<IDynamoDbTableResource<R>>
-  : T extends AwsResourceType.s3Bucket
-  ? AtDesignTime<IAwsS3Bucket<R>>
-  : T extends AwsResourceType.eventBridgeEventBus
-  ? AtDesignTime<IAwsEventBus<R>>
-  : T extends AwsResourceType.eventBridgeRule
-  ? AtDesignTime<IAwsEventRule<R>>
-  : T extends AwsResourceType.eventBridgeSchema
-  ? AtDesignTime<IAwsEventSchema<R>>
-  : T extends AwsResourceType.cognitoIdentityPool
-  ? AtDesignTime<IAwsCognitoIdentityPool<R>>
-  : T extends AwsResourceType.cognitoUserPool
-  ? AtDesignTime<IAwsCognitoUserPool<R>>
-  : T extends AwsResourceType.iamRole
-  ? AtDesignTime<IAwsIamRole<R>>
-  : T extends AwsResourceType.cloudwatchAlarm
-  ? AtDesignTime<IAwsCloudwatchAlarm<R>>
-  : T extends AwsResourceType.cloudwatchAnomalyDetector
-  ? AtDesignTime<IAwsCloudwatchAnomalyDetector<R>>
-  : AtDesignTime<IGenericResource<T>>;
+  TAwsType extends string
+> = TAwsType extends `${AwsResourceType.dynamoTable}`
+  ? IDynamoDbTableResource<TResourceName>
+  : TAwsType extends `${AwsResourceType.s3Bucket}`
+  ? IAwsS3Bucket<TResourceName>
+  : TAwsType extends `${AwsResourceType.eventBridgeEventBus}`
+  ? IAwsEventBus<TResourceName>
+  : TAwsType extends `${AwsResourceType.eventBridgeRule}`
+  ? IAwsEventRule<TResourceName>
+  : TAwsType extends `${AwsResourceType.eventBridgeSchema}`
+  ? IAwsEventSchema<TResourceName>
+  : TAwsType extends `${AwsResourceType.cognitoIdentityPool}`
+  ? IAwsCognitoIdentityPool<TResourceName>
+  : TAwsType extends `${AwsResourceType.cognitoUserPool}`
+  ? IAwsCognitoUserPool<TResourceName>
+  : TAwsType extends `${AwsResourceType.iamRole}`
+  ? IAwsIamRole<TResourceName>
+  : TAwsType extends `${AwsResourceType.cloudwatchAlarm}`
+  ? IAwsCloudwatchAlarm<TResourceName>
+  : TAwsType extends `${AwsResourceType.cloudwatchAnomalyDetector}`
+  ? IAwsCloudwatchAnomalyDetector<TResourceName>
+  : IGenericResource<TAwsType>;
 
 /**
  * The configuration of a serverless _resources_ which will be deployed as part of
@@ -138,8 +163,11 @@ export type ResourceProperties<
  *
  * This representation is done at _configuration_ time and
  */
-export type IStackResource<R extends string, T extends string> = {
-  name: R;
-  type: T;
-  resource: ResourceProperties<R, T>;
-};
+export type IStackResource<TResourceName extends string, TAwsType extends string> = {
+  /** The unique name of the resource */
+  name: TResourceName;
+  /** the AWS type of the resource */
+  type: TAwsType;
+  /** the full AWS resource description */
+  resource: Resource<TResourceName, TAwsType>;
+} & DesignTimeCallbacks<TResourceName, Resource<TResourceName, TAwsType>>;

@@ -36,7 +36,7 @@ function createApi<N extends string, S extends readonly string[], E extends stri
     resources: <R extends readonly any[]>(resources: R[]) => {
       return createApi<N, S, E | "resources">(stack, options, { resources });
     },
-    addStepFunction: () => createApi<N, S, E>(stack, options),
+    stepFunctions: () => createApi<N, S, E | "stepFunctions">(stack, options),
     prepareLambda: (cb: <T extends string>(api: IPrepareFunctions) => IPrepareFunctions<T>) => {
       const api = cb(prepareFunctions());
       if (!hasConfigProperty<IFunctionPrepConfig>(api)) {
@@ -64,6 +64,7 @@ function createApi<N extends string, S extends readonly string[], E extends stri
 
       return createApi<N, S, E | "prepareLambda">(stack, options);
     },
+    policies: () => createApi<N, S, E | "policies">(stack, options),
   } as IStackApi<N, S, E>;
 }
 
@@ -83,7 +84,7 @@ export function createStack<N extends string, S extends readonly string[] = Defa
     },
     resources: [],
     functions: {},
-    stepFunctions: {},
+    stepFunctions: [],
     iam: {},
     plugins: [],
   };

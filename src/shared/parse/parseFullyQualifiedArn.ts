@@ -1,4 +1,4 @@
-import { AwsArn, AwsArnPartition, AwsArnService, AwsStage } from "common-types";
+import { arn, AwsStage } from "common-types";
 import { IParsedArn } from "~/types";
 
 import {
@@ -43,9 +43,7 @@ function findAppNameAtStartOfRest(input: string, stage: AwsStage | false) {
  * - app name
  * - function name
  */
-export function parseFullyQualifiedArn<S extends AwsArnService = AwsArnService>(
-  arn: AwsArn<string, AwsArnPartition, S>
-): IParsedArn {
+export function parseFullyQualifiedArn(arn: arn): IParsedArn {
   const { partition } = extractPartition(arn);
   const { service } = extractService(arn);
   const { resource, post: rest } = extractResource(arn);

@@ -1,7 +1,6 @@
 import { DefaultStages, IPrepareFunctions } from "~/devops/types";
 import type {
   IServerlessProvider,
-  IServerlessStepFunctions,
   IServerlessFunctionConfig,
   IServerlessIamConfig,
 } from "~/devops/types";
@@ -27,7 +26,7 @@ export type IServerlessStack<N extends string, S extends readonly string[] = Def
   provider: IServerlessProvider<S>;
   resources: any[];
   functions: Record<string, IServerlessFunctionConfig>;
-  stepFunctions: IServerlessStepFunctions;
+  stepFunctions: any[];
   iam: IServerlessIamConfig;
   plugins: string[];
 };
@@ -52,12 +51,21 @@ export type IStackApi<
     /**
      * Add a step function to your configuration
      */
-    addStepFunction: () => IStackApi<N, S, E>;
+    stepFunctions: <SF extends readonly any[]>(sf: SF) => IStackApi<N, S, E | "stepFunctions">;
 
     /**
-     * Adds a named resource to the stack
+     * Adds a named resource to the stack (e.g., S3 Bucket, Dynamo Table, etc.).
+     *
+     * Note: _resources added will become available to computational resource's (e.g.,
+     * Lambda and Step Functions)_ configuration so that they can nominate themselves
+     * for needing certain
      */
     resources: <R extends readonly any[]>(r: R) => IStackApi<N, S, E | "resources">;
+
+    /**
+     * Allows adding policies at the stack level
+     */
+    policies: <P extends readonly any[]>(p: P) => IStackApi<N, S, E | "policies">;
   },
   E
 >;

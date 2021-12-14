@@ -2,12 +2,13 @@
 
 // #region autoindexed files
 
-// index last changed at: 12th Dec, 2021, 07:55 PM ( GMT-8 )
+// index last changed at: 12th Dec, 2021, 10:05 AM ( GMT-8 )
 // export: named; exclusions: index, private.
-// files: step-functions.
+// files: permissions, step-functions.
 // directories: resources, sls, stack.
 
 // local file exports
+export * from "./permissions";
 export * from "./step-functions";
 
 // directory exports

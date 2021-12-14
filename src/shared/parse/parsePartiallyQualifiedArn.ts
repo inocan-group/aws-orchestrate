@@ -235,7 +235,7 @@ export function parsePartiallyQualifiedArn(
   )}`;
 
   try {
-    arn.arn = buildArn(arn as Omit<IParsedArn, "arn">);
+    arn.arn = buildArn(arn as Omit<IParsedArn, "arn">) as Partial<IParsedArn>["arn"];
   } catch (buildError) {
     (buildError as Error).message = errMessage;
     throw buildError;

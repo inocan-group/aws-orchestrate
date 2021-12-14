@@ -1,4 +1,4 @@
-import { AwsArn, isArn } from "common-types";
+import { arn, isArn } from "common-types";
 import { ServerlessError } from "~/errors";
 import { IParsedArn } from "~/types";
 /**
@@ -7,8 +7,9 @@ import { IParsedArn } from "~/types";
  * Given the components of ARN, this function will build a
  * fully qualified ARN in the right format.
  */
-export function buildArn(parts: Omit<IParsedArn, "arn">): AwsArn {
-  const { partition, service, region, account, resource, appName, stage, fn, stepFunction, rest } = parts;
+export function buildArn(parts: Omit<IParsedArn, "arn">): arn {
+  const { partition, service, region, account, resource, appName, stage, fn, stepFunction, rest } =
+    parts;
   let separator: string;
   let hasAppName: boolean;
   switch (resource) {
@@ -35,7 +36,9 @@ export function buildArn(parts: Omit<IParsedArn, "arn">): AwsArn {
     ? `${separator}${appName}-${stage}-${fn || stepFunction || rest}`
     : `${separator}${fn || stepFunction || rest}`;
 
-  const arn = `arn:${partition}:${service}${region ? ":" + region : ":"}:${account}:${resource}${tail}`;
+  const arn = `arn:${partition}:${service}${
+    region ? ":" + region : ":"
+  }:${account}:${resource}${tail}`;
   if (isArn(arn)) {
     return arn;
   } else {

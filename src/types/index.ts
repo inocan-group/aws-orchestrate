@@ -2,9 +2,9 @@
 
 // #region autoindexed files
 
-// index last changed at: 12th Dec, 2021, 02:55 PM ( GMT-8 )
+// index last changed at: 12th Dec, 2021, 04:51 PM ( GMT-8 )
 // export: named; exclusions: index, private.
-// files: api-gateway, arn, body-types, cookies, defaultHandling, devops-types, error-types, general, invocation-types, timing, wrapper-context, wrapper-types.
+// files: api-gateway, arn, body-types, cookies, defaultHandling, error-types, general, invocation-types, timing, wrapper-context, wrapper-types.
 // directories: step-fns.
 
 // local file exports
@@ -13,7 +13,6 @@ export * from "./arn";
 export * from "./body-types";
 export * from "./cookies";
 export * from "./defaultHandling";
-export * from "./devops-types";
 export * from "./error-types";
 export * from "./general";
 export * from "./invocation-types";

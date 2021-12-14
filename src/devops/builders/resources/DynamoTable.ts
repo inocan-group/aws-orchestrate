@@ -1,6 +1,8 @@
-import { AwsResourceType, IDynamoDbTableResource } from "common-types";
-import type { AtDesignTime, IStackResource, ResourceProps } from "~/devops/types";
+import { AwsResourceType, IDynamoDbTableResource, arn } from "common-types";
+import type { AtDesignTime, PermissionSet, ResourceProps } from "~/devops/types";
 import { DevopsError } from "~/errors";
+import { addResource } from "~/devops/builders/resources";
+import { allow } from "../permissions/allow";
 
 /**
  * **DynamoTable**
@@ -17,8 +19,8 @@ import { DevopsError } from "~/errors";
 export function DynamoTable<R extends string>(
   table: R,
   config?: ResourceProps<IDynamoDbTableResource<R>, "TableName">
-): IStackResource<R, AwsResourceType.dynamoTable> {
-  const defaultConfig: AtDesignTime<IDynamoDbTableResource<R>> = {
+) {
+  const defaultConfig: AtDesignTime<R, IDynamoDbTableResource<R>> = {
     Type: AwsResourceType.dynamoTable,
     Properties: {
       TableName: `${table}_{{stage}}`,
@@ -31,36 +33,56 @@ export function DynamoTable<R extends string>(
         { AttributeName: "sk", KeyType: "RANGE" },
       ],
       GlobalSecondaryIndexes: [],
-    },
-    transformResource: (rt) => {
-      if (rt.properties?.ProvisionedThroughput) {
-        if (rt.properties.BillingMode === "PAY_PER_REQUEST") {
-          throw new DevopsError(
-            "The provisioned throughput was set but billing mode was set as PAY_PER_REQUEST. Both can not be true.",
-            "dynamodb/invalid-config"
-          );
+      //
+      transformResource: ({ properties, stage }) => {
+        if (properties?.ProvisionedThroughput) {
+          if (properties.BillingMode === "PAY_PER_REQUEST") {
+            throw new DevopsError(
+              "The provisioned throughput was set but billing mode was set as PAY_PER_REQUEST. Both can not be true.",
+              "dynamodb/invalid-config"
+            );
+          } else {
+            properties.BillingMode = "PROVISIONED";
+          }
         } else {
-          rt.properties.BillingMode = "PROVISIONED";
+          // provisioned throughput not configured
+          if (properties?.BillingMode === "PROVISIONED") {
+            throw new DevopsError(
+              "The billing mode is set as PROVISIONED but you haven't stated details for the provisioned throughput!",
+              "dynamodb/invalid-config"
+            );
+          } else {
+            properties.BillingMode = "PAY_PER_REQUEST";
+          }
         }
-      } else {
-        // provisioned throughput not configured
-        if (rt.properties?.BillingMode === "PROVISIONED") {
-          throw new DevopsError(
-            "The billing mode is set as PROVISIONED but you haven't stated details for the provisioned throughput!",
-            "dynamodb/invalid-config"
-          );
-        } else {
-          rt.properties.BillingMode = "PAY_PER_REQUEST";
-        }
-      }
-
-      return {
-        ...rt.properties,
-        TableName: `${table}-${rt.stage}`,
-      };
-    },
-    providePermissions: (_rt) => {
-      return [];
+        return {
+          ...properties,
+          TableName: `${table}_${stage}`,
+        };
+      },
+      providePermissions: ({ partition, stage }) => {
+        const arn: arn = `arn:${partition}:dynamo:table:${table}_${stage}`;
+        return [
+          allow(arn)
+            .to((a) => [a.DynamoDB.QUERY, a.DynamoDB.GET_RECORDS])
+            .as("queryAndRead"),
+          allow(arn)
+            .to((a) => [a.DynamoDB.QUERY, a.DynamoDB.GET_RECORDS, a.DynamoDB.SCAN])
+            .as("queryScanAndRead"),
+          allow(arn)
+            .to((a) => [
+              "dynamodb:Describe*",
+              a.DynamoDB.UPDATE_TABLE,
+              a.DynamoDB.CREATE_TABLE,
+              a.DynamoDB.DELETE_TABLE,
+              a.DynamoDB.LIST_TABLES,
+              a.DynamoDB.TAG_RESOURCE,
+              a.DynamoDB.UNTAG_RESOURCE,
+            ])
+            .as("admin"),
+          allow(arn).to("dynamodb:*").as("all"),
+        ] as PermissionSet<R>[];
+      },
     },
   };
 
@@ -93,16 +115,5 @@ export function DynamoTable<R extends string>(
   //   },
   // };
 
-  return {
-    type: AwsResourceType.dynamoTable,
-    name: table,
-    resource,
-    // api,
-    toString() {
-      return info;
-    },
-    toJSON() {
-      return info;
-    },
-  } as IStackResource<R, AwsResourceType.dynamoTable>;
+  return addResource(table as R, resource, info);
 }

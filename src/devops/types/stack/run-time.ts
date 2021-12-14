@@ -1,4 +1,5 @@
 import { AwsArnPartition, AwsRegion } from "common-types";
+import { INamedResource } from "~/devops/types";
 
 /**
  * The _run time_ configuration of a Serverless stack.
@@ -32,12 +33,16 @@ export type IStackRuntime<K extends {} = {}> = {
   branch: string;
 } & K;
 
-export type IResourceRunTime<T extends {}> = {
-  /** the static properties at design time */
-  properties: T;
-};
+export type PropertiesTransformerRt<TResource extends INamedResource<string, string>> =
+  IStackRuntime<{
+    /** the static properties at design time */
+    properties: TResource["Properties"];
+  }>;
 
-export type IPermissionsRunTime<T extends {}> = {
+/**
+ * The normal run-time information, plus resolved _properties_ for the AWS resource
+ */
+export type PermissionsRunTime<TResource extends INamedResource<string, string>> = IStackRuntime<{
   /** the resolved properties at run-time */
-  properties: T;
-};
+  properties: TResource["Properties"];
+}>;

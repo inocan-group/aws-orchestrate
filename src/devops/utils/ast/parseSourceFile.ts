@@ -14,11 +14,19 @@ import {
 } from ".";
 
 export type IParsedSourceFile = {
+  /** file path, file name, file extension */
   file: string;
+
+  source: SourceFile;
+  /** imports found in the file */
   imports: Omit<IParsedImport, "file">[];
+  /** exports from the file */
   exports: Omit<IParsedExport, "file">[];
+  /** functions defined in the file */
   functions: Omit<IParsedFunction, "file">[];
+  /** variables defined in the file */
   variables: Omit<IParsedVariable, "file">[];
+  /** comment statements found in the file */
   comments: Omit<IParsedComment, "file">[];
 };
 
@@ -38,6 +46,7 @@ export function parseSourceFile(source: SourceFile | string): IParsedSourceFile 
 
   return {
     file,
+    source,
     imports,
     exports,
     variables,

@@ -60,7 +60,7 @@ const api = <E extends string = never>(
     withConditions: (c: any[]) => {
       return api(resource, allows, denies, c);
     },
-    as(knownAs) {
+    as<T extends string>(knownAs: T) {
       return { name: knownAs, to: resource, allows, denies, conditions } as PermissionSet<T>;
     },
   } as AllowApi<E>;

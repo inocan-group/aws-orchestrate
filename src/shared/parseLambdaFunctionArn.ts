@@ -9,7 +9,7 @@ import { parsePartiallyQualifiedArn, parseFullyQualifiedArn } from "./parse/inde
  */
 export function parseLambdaFunctionArn(arn: string) {
   return isLambdaArn(arn)
-    ? (parseFullyQualifiedArn<"lambda">(arn) as IParsedFunctionArn)
+    ? (parseFullyQualifiedArn(arn) as IParsedFunctionArn)
     : (parsePartiallyQualifiedArn(arn, {
         service: "lambda",
         resource: "function",
